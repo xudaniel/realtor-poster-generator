@@ -347,4 +347,131 @@ class PosterRenderer:
                 y += line_h
             y += self.y(13)
 
-    def _draw_location_band(self, canvas: Imag
+    def _draw_location_band(self, canvas: Image.Image) -> None:
+        draw = ImageDraw.Draw(canvas)
+        top, bottom = self.y(2070), self.y(2200)
+        draw.rounded_rectangle((self.x(70), top, self.x(1730), bottom), radius=self.y(28), fill=self.accent_light)
+        highlights = list(self.content.get("location_highlights") or [])[:5]
+        if not highlights:
+            highlights = ["Transit", "Parks", "Shopping", "Dining", "Highways"]
+        cell_w = self.x(1660) / len(highlights)
+        for index, text in enumerate(highlights):
+            x0 = self.x(70) + round(index * cell_w)
+            x1 = self.x(70) + round((index + 1) * cell_w)
+            if index:
+                draw.line((x0, top + self.y(25), x0, bottom - self.y(25)), fill=self.accent, width=self.x(2))
+            draw.ellipse((x0 + self.x(22), top + self.y(35), x0 + self.x(78), top + self.y(91)), fill=self.accent)
+            draw.ellipse((x0 + self.x(44), top + self.y(57), x0 + self.x(56), top + self.y(69)), fill=self.hero_overlay)
+            face = fit_single_line(
+                draw, _safe_text(text), max(self.x(80), x1 - x0 - self.x(108)), self.fs(19), self.fs(13), "bold", self.theme.get("font_bold", "")
+            )
+            draw.text((x0 + self.x(94), (top + bottom) // 2), _safe_text(text), font=face, fill=self.ink, anchor="lm")
+
+    def _draw_footer(self, canvas: Image.Image) -> None:
+        draw = ImageDraw.Draw(canvas)
+        top = self.y(2230)
+        draw.rectangle((0, top, self.width, self.height), fill=self.hero_overlay)
+        draw.rectangle((0, top, self.width, top + self.y(9)), fill=self.accent)
+
+        logo_box = (self.x(70), self.y(2265), self.x(300), self.y(2370))
+        if self.brand.get("logo"):
+            # Transparent logos often contain dark lettering. A quiet paper pill
+            # keeps the lockup readable regardless of the uploaded logo colors.
+            draw.rounded_rectangle(
+                (logo_box[0] - self.x(12), logo_box[1] - self.y(8), logo_box[2] + self.x(12), logo_box[3] + self.y(8)),
+                radius=self.y(18),
+                fill=self.paper,
+            )
+            _draw_logo(canvas, self.brand["logo"], logo_box)
+
+        name_x = self.x(330) if self.brand.get("logo") else self.x(80)
+        name = _safe_text(self.contact["name"])
+        name_face = fit_single_line(
+            draw, name, self.x(440), self.fs(38), self.fs(24), "bold", self.theme.get("font_bold", "")
+        )
+        draw.text((name_x, self.y(2274)), name, font=name_face, fill=self.paper, anchor="la")
+        title = _safe_text(self.contact.get("title"), "Sales Representative")
+        draw.text((name_x, self.y(2330)), title, font=self.face("regular", 20), fill=self.accent_light, anchor="la")
+        brokerage = _safe_text(self.brand.get("name"))
+        draw.text((name_x, self.y(2365)), brokerage, font=self.face("bold", 18), fill=self.paper, anchor="la")
+
+        contact_x = self.x(910)
+        draw_icon(draw, "phone", (contact_x, self.y(2269), contact_x + self.x(55), self.y(2324)), self.accent, width=self.x(4))
+        draw.text((contact_x + self.x(75), self.y(2296)), _safe_text(self.contact["phone"]), font=self.face("bold", 24), fill=self.paper, anchor="lm")
+        draw_icon(draw, "email", (contact_x, self.y(2331), contact_x + self.x(55), self.y(2386)), self.accent, width=self.x(4))
+        email_face = fit_single_line(
+            draw, _safe_text(self.contact["email"]), self.x(430), self.fs(22), self.fs(15), "regular", self.theme.get("font_regular", "")
+        )
+        draw.text((contact_x + self.x(75), self.y(2358)), _safe_text(self.contact["email"]), font=email_face, fill=self.paper, anchor="lm")
+
+        website = _safe_text(self.brand.get("website"))
+        cta = _safe_text(self.brand.get("tagline"), "Your next move starts here.")
+        right_x = self.x(1715)
+        cta_face = fit_single_line(draw, cta, self.x(380), self.fs(27), self.fs(17), "serif", self.theme.get("font_serif", ""))
+        draw.text((right_x, self.y(2290)), cta, font=cta_face, fill=self.accent, anchor="ra")
+        if website:
+            website_face = fit_single_line(draw, website, self.x(380), self.fs(20), self.fs(14), "bold", self.theme.get("font_bold", ""))
+            draw.text((right_x, self.y(2355)), website, font=website_face, fill=self.paper, anchor="ra")
+
+
+def render_poster(data: Mapping[str, Any]) -> Image.Image:
+    return PosterRenderer(data).render()
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _collect_assets(data: Mapping[str, Any]) -> List[Path]:
+    values: List[str] = [data["photos"]["hero"]]
+    values.extend(data["photos"].get("gallery") or [])
+    if data["photos"].get("floorplan"):
+        values.append(data["photos"]["floorplan"])
+    if data["brand"].get("logo"):
+        values.append(data["brand"]["logo"])
+    for key in ("font_regular", "font_bold", "font_serif"):
+        if data["theme"].get(key):
+            values.append(data["theme"][key])
+    # Preserve first-use order while removing duplicates.
+    return list(dict.fromkeys(Path(value) for value in values))
+
+
+def export_poster(data: Mapping[str, Any], output_png: Path, make_pdf: bool = False) -> Dict[str, Path]:
+    output_png = output_png.expanduser().resolve()
+    if output_png.suffix.lower() != ".png":
+        output_png = output_png.with_suffix(".png")
+    output_png.parent.mkdir(parents=True, exist_ok=True)
+
+    image = render_poster(data)
+    dpi = int(data["canvas"]["dpi"])
+    image.save(output_png, "PNG", optimize=True, dpi=(dpi, dpi))
+    outputs: Dict[str, Path] = {"png": output_png}
+
+    if make_pdf:
+        pdf_path = output_png.with_suffix(".pdf")
+        image.save(pdf_path, "PDF", resolution=float(dpi), quality=95)
+        outputs["pdf"] = pdf_path
+
+    input_path = Path(data["_input_path"])
+    assets = _collect_assets(data)
+    manifest = {
+        "generator": f"realtor-poster {__version__}",
+        "input": {"filename": input_path.name, "sha256": _sha256(input_path)},
+        "canvas": {
+            "width": image.width,
+            "height": image.height,
+            "dpi": dpi,
+            "color_mode": image.mode,
+        },
+        "assets": [{"filename": path.name, "sha256": _sha256(path)} for path in assets],
+        "outputs": {name: {"filename": path.name, "sha256": _sha256(path)} for name, path in outputs.items()},
+        "provenance": "Exact listing text is rendered from the validated input. Images are cropped, never generated, by this tool.",
+    }
+    manifest_path = output_png.with_suffix(".manifest.json")
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    outputs["manifest"] = manifest_path
+    return outputs
