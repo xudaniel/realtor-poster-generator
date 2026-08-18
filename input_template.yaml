@@ -1,0 +1,88 @@
+# Copy this file, replace every placeholder, and keep asset paths relative to it.
+# Required fields are marked REQUIRED. Quotes are recommended around phone numbers,
+# dates, prices, and any value containing punctuation.
+
+listing:
+  status: "FOR LEASE"
+  demo: false
+  address: "REQUIRED — street address"
+  unit: "REQUIRED — unit number"
+  city: "Toronto, ON"
+  postal_code: "A1A 1A1"
+  tagline: "A short, factual positioning line"
+  rent: "$0,000"                 # REQUIRED; include the desired currency symbol
+  rent_period: "per month"
+  mls: "REQUIRED"
+  beds: 1                         # REQUIRED; positive number
+  baths: 1                        # REQUIRED; positive number
+  sqft: "600-699"                 # REQUIRED; positive number or ASCII-hyphen range
+  floor: "10th"                   # REQUIRED
+  exposure: "South"               # REQUIRED
+  parking: "1 Space"              # REQUIRED
+  availability: "Immediately"     # REQUIRED
+
+brand:
+  name: "REQUIRED — brokerage or team name"
+  tagline: "Your next move starts here."
+  website: "example.com"
+  logo: "assets/logo.png"         # Optional transparent PNG; delete line if unused
+
+contact:
+  name: "REQUIRED — agent name"
+  title: "Sales Representative"
+  phone: "+1 (416) 555-0100"      # REQUIRED; 10–15 digits
+  email: "agent@example.com"      # REQUIRED; validated before rendering
+
+photos:
+  hero: "assets/exterior.jpg"     # REQUIRED
+  hero_focal: [0.60, 0.45]        # Optional [x, y] crop focus, each from 0 to 1
+  gallery:                         # Optional; first 3 are shown, max 4 accepted
+    - "assets/living-room.jpg"
+    - "assets/kitchen.jpg"
+  floorplan: "assets/floorplan.png"  # Optional
+
+content:
+  photo_caption: "RESIDENCE"
+  floorplan_caption: "FLOORPLAN"
+  lease_details:                   # Up to the available space; concise phrases work best
+    - "Entire property"
+    - "12-month lease"
+    - "No smoking"
+    - "Pets with restrictions"
+  features:                        # Maximum 8
+    - "Open-concept layout"
+    - "Floor-to-ceiling windows"
+    - "In-suite laundry"
+  amenities:                       # Maximum 10
+    - "24-hour concierge"
+    - "Fitness centre"
+    - "Rooftop terrace"
+  utilities:                       # Maximum 8
+    - "Water included"
+    - "Hydro paid by tenant"
+    - "Internet paid by tenant"
+  location_highlights:             # Up to 5 are displayed
+    - "Steps to transit"
+    - "Waterfront"
+    - "Parks"
+    - "Dining"
+    - "Shopping"
+
+theme:
+  # Six-digit hex colors. These defaults create the included warm editorial theme.
+  background: "#F4F0E7"
+  paper: "#FFFDF8"
+  ink: "#102A2A"
+  muted: "#6A746F"
+  accent: "#D99A55"
+  accent_light: "#F2DEC3"
+  hero_overlay: "#0A2526"
+  # Optional .ttf/.otf paths. If omitted, the generator finds common system fonts.
+  font_regular: ""
+  font_bold: ""
+  font_serif: ""
+
+canvas:
+  width: 1800
+  height: 2400
+  dpi: 150

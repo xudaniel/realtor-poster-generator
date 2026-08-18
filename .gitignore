@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+listings/
+inputs/
+private/
+outputs/*
+!outputs/sample-poster.png
+!outputs/sample-poster.pdf
+!outputs/sample-poster.manifest.json
+*.local.yaml
+*.local.yml
+AGENTS.md
+sources/

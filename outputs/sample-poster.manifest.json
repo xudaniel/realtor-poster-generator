@@ -1,0 +1,46 @@
+{
+  "generator": "realtor-poster 1.0.0",
+  "input": {
+    "filename": "sample_listing.yaml",
+    "sha256": "2a444757e8e804bd28200c01aa25547661e794d62a7bf8e914cbc159cc5a5a80"
+  },
+  "canvas": {
+    "width": 1800,
+    "height": 2400,
+    "dpi": 150,
+    "color_mode": "RGB"
+  },
+  "assets": [
+    {
+      "filename": "sample_exterior.png",
+      "sha256": "128e33c350983359e4ce01c55d048dd88ca4fb72c8a3f4c2d139be09186186ca"
+    },
+    {
+      "filename": "sample_living_room.png",
+      "sha256": "1fd9bb82ec4d9fd2f5301a91ea228cfaa3e493f693fa6964daee1e76bcfa214b"
+    },
+    {
+      "filename": "sample_kitchen.png",
+      "sha256": "f02edfd4b4cd7f3ab30e16c794fdaa848b6dd5fdbdae4478658b613dfa202d83"
+    },
+    {
+      "filename": "sample_floorplan.png",
+      "sha256": "f11404aed580d4e9a1f84524dfafcc2a596defac8f8135a34d9b9e9393ed9859"
+    },
+    {
+      "filename": "sample_logo.png",
+      "sha256": "12eba53c0bfcc6b813853f48fcb7f2eda6661a420dd7904bfc83071fcac695eb"
+    }
+  ],
+  "outputs": {
+    "png": {
+      "filename": "sample-poster.png",
+      "sha256": "4f5520c8ca6cc2a6b892ea04209ca7f3f288a92c5d3e858374c84bf454ecc784"
+    },
+    "pdf": {
+      "filename": "sample-poster.pdf",
+      "sha256": "cf71e3fe09552f5ebf81f5d903ca04ca7aa89c7160bb6fd1f3d6b9cd42f37575"
+    }
+  },
+  "provenance": "Exact listing text is rendered from the validated input. Images are cropped, never generated, by this tool."
+}

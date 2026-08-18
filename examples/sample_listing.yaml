@@ -1,0 +1,88 @@
+listing:
+  status: "FOR LEASE"
+  demo: true
+  address: "188 Harbourline Avenue"
+  unit: "2608"
+  city: "Toronto, ON"
+  postal_code: "M5J 2N8"
+  tagline: "Elevated waterfront living with skyline views"
+  rent: "$3,150"
+  rent_period: "per month"
+  mls: "DEMO2608"
+  beds: 2
+  baths: 2
+  sqft: 815
+  floor: "26th"
+  exposure: "South-East"
+  parking: "1 Space"
+  availability: "September 1, 2026"
+
+brand:
+  name: "Northline Realty"
+  tagline: "Move beautifully."
+  website: "northline.example"
+  logo: "assets/sample_logo.png"
+
+contact:
+  name: "Christine Lee"
+  title: "Sales Representative"
+  phone: "+1 (416) 555-0142"
+  email: "christine@example.com"
+
+photos:
+  hero: "assets/sample_exterior.png"
+  hero_focal: [0.62, 0.48]
+  gallery:
+    - "assets/sample_living_room.png"
+    - "assets/sample_kitchen.png"
+  floorplan: "assets/sample_floorplan.png"
+
+content:
+  photo_caption: "DESIGNER INTERIORS"
+  floorplan_caption: "2 BED • 2 BATH"
+  lease_details:
+    - "Available Sep. 1, 2026"
+    - "Entire condo apartment"
+    - "12-month lease"
+    - "1 parking space"
+    - "No smoking"
+  features:
+    - "Floor-to-ceiling windows"
+    - "Private balcony"
+    - "Quartz kitchen counters"
+    - "Integrated appliances"
+    - "In-suite laundry"
+  amenities:
+    - "24-hour concierge"
+    - "Fitness studio"
+    - "Rooftop terrace"
+    - "Guest suites"
+    - "Bike storage"
+  utilities:
+    - "Water included"
+    - "Building insurance included"
+    - "Hydro paid by tenant"
+    - "Internet paid by tenant"
+  location_highlights:
+    - "5 min to TTC"
+    - "Waterfront"
+    - "Union Station"
+    - "Dining"
+    - "Shopping"
+
+theme:
+  background: "#F4F0E7"
+  paper: "#FFFDF8"
+  ink: "#102A2A"
+  muted: "#6A746F"
+  accent: "#D99A55"
+  accent_light: "#F2DEC3"
+  hero_overlay: "#0A2526"
+  font_regular: ""
+  font_bold: ""
+  font_serif: ""
+
+canvas:
+  width: 1800
+  height: 2400
+  dpi: 150
