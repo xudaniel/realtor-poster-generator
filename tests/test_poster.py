@@ -5,8 +5,15 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
+import yaml
+from PIL import Image, ImageChops
+
+from realtor_poster.batch import discover_listing_files, export_batch
 from realtor_poster.config import ConfigError, load_config, validate_config
+from realtor_poster.preview import create_focal_preview
 from realtor_poster.renderer import render_poster
+from realtor_poster.social import SOCIAL_PRESETS, render_social
+from realtor_poster.visual_regression import compare_images
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +55,93 @@ class PosterTests(unittest.TestCase):
         ranged = deepcopy(data)
         ranged["listing"]["sqft"] = "600-699"
         validate_config(ranged)
+
+    def test_social_presets_render_to_documented_sizes(self) -> None:
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        data = load_config(ROOT / "examples" / "sample_listing.yaml")
+        for preset, expected_size in SOCIAL_PRESETS.items():
+            with self.subTest(preset=preset):
+                image = render_social(data, preset)
+                self.assertEqual(image.size, expected_size)
+                self.assertEqual(image.mode, "RGB")
+
+    def test_render_is_pixel_deterministic_in_one_environment(self) -> None:
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        data = load_config(ROOT / "examples" / "sample_listing.yaml")
+        first = render_poster(data)
+        second = render_poster(data)
+        self.assertIsNone(ImageChops.difference(first, second).getbbox())
+
+    def test_focal_preview_is_self_contained(self) -> None:
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        data = load_config(ROOT / "examples" / "sample_listing.yaml")
+        with tempfile.TemporaryDirectory() as folder:
+            output = create_focal_preview(data, Path(folder) / "preview.html")
+            content = output.read_text(encoding="utf-8")
+        self.assertIn("data:image/jpeg;base64,", content)
+        self.assertIn("hero_focal", content)
+        self.assertNotIn("https://", content)
+
+    def test_visual_regression_detects_real_change(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            folder_path = Path(folder)
+            baseline = folder_path / "baseline.png"
+            same = folder_path / "same.png"
+            changed = folder_path / "changed.png"
+            Image.new("RGB", (80, 60), "white").save(baseline)
+            Image.new("RGB", (80, 60), "white").save(same)
+            changed_image = Image.new("RGB", (80, 60), "white")
+            for x in range(30):
+                for y in range(30):
+                    changed_image.putpixel((x, y), (0, 0, 0))
+            changed_image.save(changed)
+            self.assertTrue(compare_images(baseline, same, threshold=0).passed)
+            result = compare_images(baseline, changed, threshold=0.01, diff_path=folder_path / "diff.png")
+            self.assertFalse(result.passed)
+            self.assertGreater(result.changed_pixel_ratio, 0.1)
+
+    def test_batch_discovers_validates_and_renders_multiple_listings(self) -> None:
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        raw = yaml.safe_load((ROOT / "examples" / "sample_listing.yaml").read_text(encoding="utf-8"))
+        asset_dir = ROOT / "examples" / "assets"
+        raw["photos"]["hero"] = str(asset_dir / "sample_exterior.png")
+        raw["photos"]["gallery"] = [
+            str(asset_dir / "sample_living_room.png"),
+            str(asset_dir / "sample_kitchen.png"),
+        ]
+        raw["photos"]["floorplan"] = str(asset_dir / "sample_floorplan.png")
+        raw["brand"]["logo"] = str(asset_dir / "sample_logo.png")
+        raw["canvas"] = {"width": 900, "height": 1200, "dpi": 150}
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            inputs = root / "inputs"
+            outputs = root / "outputs"
+            inputs.mkdir()
+            for index in (1, 2):
+                item = deepcopy(raw)
+                item["listing"]["unit"] = str(2600 + index)
+                (inputs / f"listing-{index}.yaml").write_text(
+                    yaml.safe_dump(item, sort_keys=False, allow_unicode=True), encoding="utf-8"
+                )
+            self.assertEqual(len(discover_listing_files(inputs)), 2)
+            summary = export_batch(inputs, outputs)
+            self.assertEqual(summary["listing_count"], 2)
+            self.assertTrue((outputs / "listing-1.png").is_file())
+            self.assertTrue((outputs / "listing-2.manifest.json").is_file())
+
+            broken = deepcopy(raw)
+            broken["listing"].pop("address")
+            (inputs / "broken.yaml").write_text(
+                yaml.safe_dump(broken, sort_keys=False, allow_unicode=True), encoding="utf-8"
+            )
+            blocked_outputs = root / "blocked-outputs"
+            with self.assertRaises(ConfigError):
+                export_batch(inputs, blocked_outputs)
+            self.assertFalse(blocked_outputs.exists())
 
 
 if __name__ == "__main__":

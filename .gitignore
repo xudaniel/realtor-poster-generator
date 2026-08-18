@@ -11,6 +11,11 @@ outputs/*
 !outputs/sample-poster.png
 !outputs/sample-poster.pdf
 !outputs/sample-poster.manifest.json
+!outputs/sample-poster.square.png
+!outputs/sample-poster.portrait.png
+!outputs/sample-poster.story.png
+!outputs/sample-poster.landscape.png
+!outputs/sample-focal-preview.html
 *.local.yaml
 *.local.yml
 AGENTS.md

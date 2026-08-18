@@ -1,8 +1,8 @@
 {
-  "generator": "realtor-poster 1.0.0",
+  "generator": "realtor-poster 1.2.0",
   "input": {
     "filename": "sample_listing.yaml",
-    "sha256": "2a444757e8e804bd28200c01aa25547661e794d62a7bf8e914cbc159cc5a5a80"
+    "sha256": "1c50a3855132eeb00e1724abea9e1ee001d1e3163480235110da45e7241313ca"
   },
   "canvas": {
     "width": 1800,
@@ -39,7 +39,23 @@
     },
     "pdf": {
       "filename": "sample-poster.pdf",
-      "sha256": "cf71e3fe09552f5ebf81f5d903ca04ca7aa89c7160bb6fd1f3d6b9cd42f37575"
+      "sha256": "ece1bae095780eaa700667168ebc5e4d86c6d624be3f8edb112dad7cc3834cc5"
+    },
+    "social_square": {
+      "filename": "sample-poster.square.png",
+      "sha256": "fbe8e0596d397aa319f2d456593737ea36d3d3e5f6b75a0ef936c71437a4b6b0"
+    },
+    "social_portrait": {
+      "filename": "sample-poster.portrait.png",
+      "sha256": "8a4bf6840ac19d63524532a0085bdb88a046b4573bdcca74f38e509705371794"
+    },
+    "social_story": {
+      "filename": "sample-poster.story.png",
+      "sha256": "f6a0c963433fb1d80d431539fbe96c0b8c34ddb91b332a13667687f63a4d4071"
+    },
+    "social_landscape": {
+      "filename": "sample-poster.landscape.png",
+      "sha256": "7dfebaebbb8df30a8efb937b63d18866d00e9def0a3089acee9f28af068f5aa7"
     }
   },
   "provenance": "Exact listing text is rendered from the validated input. Images are cropped, never generated, by this tool."

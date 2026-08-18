@@ -3,7 +3,10 @@
 
 Example:
     python3 generate_poster.py listings/my-listing.yaml \
-        --output outputs/my-listing.png --pdf
+        --output outputs/my-listing.png --pdf --social all
+
+Batch example:
+    python3 generate_poster.py listings/ --output outputs/batch --social all
 """
 
 from realtor_poster.cli import main
