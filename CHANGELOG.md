@@ -4,6 +4,8 @@ All notable changes to Realtor Poster Generator are documented here. The project
 
 ## [1.3.0] - 2026-08-20
 
+See the complete [bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md).
+
 ### Added
 
 - Versioned browser project schema with complete listing fields, four ordered interior photos, floor plans, dual logo variants, and YAML/JSON interchange

@@ -6,7 +6,7 @@
 
 由 **Daniel Xu** 创建并维护。Created and maintained by **Daniel Xu**.
 
-[English README](README.en.md) · [中文产品需求文档](PRD.md) · [English PRD](PRD.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
+[English README](README.en.md) · [v1.3.0 中英双语发布说明](RELEASE_NOTES_v1.3.0.md) · [中文产品需求文档](PRD.md) · [English PRD](PRD.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
 
 当前版本：**1.3.0**
 
