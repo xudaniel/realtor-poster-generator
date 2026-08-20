@@ -15,6 +15,7 @@ from realtor_poster.preview import create_focal_preview
 from realtor_poster.renderer import render_poster
 from realtor_poster.social import SOCIAL_PRESETS, render_social
 from realtor_poster.visual_regression import compare_images
+from realtor_poster import __version__
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -177,15 +178,28 @@ class PosterTests(unittest.TestCase):
     def test_browser_editor_is_local_and_has_core_exports(self) -> None:
         index = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
         script = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        core = (ROOT / "web" / "core.js").read_text(encoding="utf-8")
         self.assertIn("Daniel Xu", index)
         self.assertIn('id="hero-upload"', index)
+        self.assertIn('id="gallery-upload"', index)
+        self.assertIn('id="floorplan-upload"', index)
+        self.assertIn('id="import-listing"', index)
+        self.assertIn('id="compliance-profile"', index)
+        self.assertIn('id="save-template"', index)
+        self.assertIn('id="language-mode"', index)
+        self.assertIn('id="download-approval"', index)
         self.assertIn('id="download-png"', index)
         self.assertIn('id="print-pdf"', index)
         self.assertIn('id="download-pack"', index)
         self.assertIn("makeZip", script)
         self.assertIn("drawPoster", script)
-        self.assertNotIn("fetch(", script)
-        self.assertNotIn("XMLHttpRequest", script)
+        self.assertIn("validateProject", core)
+        self.assertIn("buildManifest", core)
+        self.assertIn("diffProjects", core)
+        self.assertEqual(__version__, "1.3.0")
+        combined = index + script + core
+        self.assertNotIn("fetch(", combined)
+        self.assertNotIn("XMLHttpRequest", combined)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A private, browser-local real-estate poster editor by Daniel Xu.">
+  <meta name="description" content="A private, bilingual, browser-local real-estate campaign editor by Daniel Xu.">
   <title>Realtor Poster Studio</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,44 +11,79 @@
   <header class="site-header">
     <a class="brand" href="#top" aria-label="Realtor Poster Studio home">
       <span class="brand-mark" aria-hidden="true">DX</span>
-      <span><strong>Realtor Poster Studio</strong><small>by Daniel Xu</small></span>
+      <span><strong>Realtor Poster Studio</strong><small>by Daniel Xu · v1.3</small></span>
     </a>
-    <div class="privacy-badge"><span aria-hidden="true">●</span> Private by design — files stay in this tab</div>
+    <div class="privacy-badge"><span aria-hidden="true">●</span> Private by design — no uploads or analytics</div>
   </header>
 
   <main id="top" class="app-shell">
     <section class="editor-panel" aria-labelledby="editor-title">
       <div class="panel-heading">
         <div>
-          <p class="eyebrow">LISTING WORKSPACE</p>
-          <h1 id="editor-title">Build the campaign once.</h1>
+          <p class="eyebrow">CAMPAIGN WORKSPACE</p>
+          <h1 id="editor-title">Build once. Review carefully.</h1>
         </div>
         <button id="reset-button" class="button button-quiet" type="button">Reset</button>
       </div>
-      <p class="intro">Add listing facts and photos, tune the crop, then export print and social artwork without uploading client material.</p>
+      <p class="intro">Create complete English, Chinese, or bilingual print and social artwork. Listing files and photos stay inside this browser tab.</p>
 
       <details open>
-        <summary><span>01</span> Listing details</summary>
+        <summary><span>01</span> Listing and language</summary>
         <div class="form-grid">
-          <label class="span-2">Address<input data-field="address" autocomplete="street-address" value="88 Harbour Street"></label>
-          <label>Unit<input data-field="unit" value="2608"></label>
-          <label>Status<select data-field="status"><option>FOR LEASE</option><option>FOR SALE</option><option>JUST LISTED</option><option>OPEN HOUSE</option></select></label>
-          <label>Price<input data-field="price" value="$3,850 / month"></label>
-          <label>MLS®<input data-field="mls" value="C1234567"></label>
-          <label>Beds<input data-field="beds" value="2 + Den"></label>
-          <label>Baths<input data-field="baths" value="2"></label>
-          <label>Area<input data-field="sqft" value="815 sq. ft."></label>
-          <label>Parking<input data-field="parking" value="1"></label>
-          <label class="span-2">Headline<input data-field="headline" value="Lake views. Downtown energy. A home above it all."></label>
+          <label class="span-2">Address<input data-path="listing.address" autocomplete="street-address" value="88 Harbour Street"></label>
+          <label>Unit<input data-path="listing.unit" value="2608"></label>
+          <label>Status<select data-path="listing.status"><option>FOR LEASE</option><option>FOR SALE</option><option>JUST LISTED</option><option>OPEN HOUSE</option></select></label>
+          <label>City<input data-path="listing.city" value="Toronto, ON"></label>
+          <label>Postal code<input data-path="listing.postalCode" value="M5J 2N8"></label>
+          <label>Price<input data-path="listing.price" value="$3,850"></label>
+          <label>Price period<input data-path="listing.rentPeriod" value="per month"></label>
+          <label>MLS®<input data-path="listing.mls" value="C1234567"></label>
+          <label>Bedrooms<input data-path="listing.beds" inputmode="decimal" value="2"></label>
+          <label>Bathrooms<input data-path="listing.baths" inputmode="decimal" value="2"></label>
+          <label>Area<input data-path="listing.sqft" value="815"></label>
+          <label>Floor<input data-path="listing.floor" value="26th"></label>
+          <label>Exposure<input data-path="listing.exposure" value="South-East"></label>
+          <label>Parking<input data-path="listing.parking" value="1 Space"></label>
+          <label class="span-2">Availability / open-house time<input data-path="listing.availability" value="Immediately"></label>
+          <label>Artwork language<select data-path="language.mode" id="language-mode"><option value="english">English</option><option value="chinese">中文</option><option value="bilingual">English + 中文</option></select></label>
+          <label class="span-2">English headline<input data-path="listing.headlineEn" value="Lake views. Downtown energy. A home above it all."></label>
+          <label class="span-2">中文标题<input data-path="listing.headlineZh" lang="zh-Hans" value="湖景之上，都市生活触手可及"></label>
+        </div>
+        <p class="field-note">Translations are entered and approved by the user. The editor does not automatically translate listing claims.</p>
+      </details>
+
+      <details>
+        <summary><span>02</span> Campaign content</summary>
+        <div class="form-grid">
+          <label class="span-2">English features — one per line<textarea data-path="content.featuresEn" rows="4">Floor-to-ceiling windows
+Flexible den and generous storage
+Steps to transit and waterfront
+Amenities for work and wellness</textarea></label>
+          <label class="span-2">中文特色 — 每行一项<textarea data-path="content.featuresZh" rows="4" lang="zh-Hans">落地窗，采光充足
+灵活书房与充裕储物空间
+步行可达公共交通与湖滨
+工作与休闲配套齐全</textarea></label>
+          <label>English amenities<textarea data-path="content.amenitiesEn" rows="3">24-hour concierge
+Fitness studio
+Rooftop terrace</textarea></label>
+          <label>English utilities<textarea data-path="content.utilitiesEn" rows="3">Water included
+Hydro paid by tenant</textarea></label>
+          <label class="span-2">English location highlights<textarea data-path="content.locationEn" rows="3">Waterfront
+Union Station
+Dining and shopping</textarea></label>
         </div>
       </details>
 
       <details open>
-        <summary><span>02</span> Photos and crop</summary>
+        <summary><span>03</span> Photos, floor plan, and crop</summary>
         <div class="upload-grid">
           <label class="upload-card"><strong>Hero photo</strong><small>JPG, PNG or WebP</small><input id="hero-upload" type="file" accept="image/jpeg,image/png,image/webp"></label>
-          <label class="upload-card"><strong>Logo</strong><small>Transparent PNG recommended</small><input id="logo-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <label class="upload-card"><strong>Interior photos</strong><small>Choose up to four</small><input id="gallery-upload" type="file" multiple accept="image/jpeg,image/png,image/webp"></label>
+          <label class="upload-card"><strong>Floor plan</strong><small>Optional JPG, PNG or WebP</small><input id="floorplan-upload" type="file" accept="image/jpeg,image/png,image/webp"></label>
+          <label class="upload-card"><strong>Light logo</strong><small>For dark backgrounds</small><input id="logo-light-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <label class="upload-card"><strong>Dark logo</strong><small>For light backgrounds</small><input id="logo-dark-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
         </div>
+        <div id="media-list" class="media-list" aria-live="polite"></div>
         <div id="focal-pad" class="focal-pad" role="button" tabindex="0" aria-label="Choose the focal point of the hero image">
           <div id="focal-marker" class="focal-marker" aria-hidden="true"></div>
           <p id="focal-empty">Upload a hero photo, then click its most important point.</p>
@@ -59,21 +94,70 @@
         </div>
       </details>
 
-      <details open>
-        <summary><span>03</span> Agent and brand</summary>
+      <details>
+        <summary><span>04</span> Agent, brand, and template</summary>
         <div class="form-grid">
-          <label>Agent<input data-field="agentName" value="Daniel Xu"></label>
-          <label>Brokerage<input data-field="brokerage" value="Harbour Realty Group"></label>
-          <label>Phone<input data-field="phone" inputmode="tel" value="416-555-0198"></label>
-          <label>Email<input data-field="email" inputmode="email" value="hello@example.com"></label>
-          <label>Accent<input data-color="accent" type="color" value="#d6a25e"></label>
-          <label>Ink<input data-color="ink" type="color" value="#102c2b"></label>
+          <label>Agent<input data-path="contact.name" value="Daniel Xu"></label>
+          <label>Title<input data-path="contact.title" value="Sales Representative"></label>
+          <label>Brokerage<input data-path="brand.name" value="Harbour Realty Group"></label>
+          <label>Brand tagline<input data-path="brand.tagline" value="Move beautifully."></label>
+          <label>Phone<input data-path="contact.phone" inputmode="tel" value="416-555-0198"></label>
+          <label>Email<input data-path="contact.email" inputmode="email" value="hello@example.com"></label>
+          <label class="span-2">Website<input data-path="brand.website" value="example.com"></label>
+          <label>Accent<input data-path="theme.accent" data-color="accent" type="color" value="#d6a25e"></label>
+          <label>Ink<input data-path="theme.ink" data-color="ink" type="color" value="#102c2b"></label>
+          <label>Paper<input data-path="theme.paper" data-color="paper" type="color" value="#fffdf8"></label>
+          <label>Template name<input data-path="template.name" value="Harbour Editorial"></label>
+          <label>Template version<input data-path="template.version" value="1.0.0"></label>
+        </div>
+        <fieldset class="lock-grid">
+          <legend>Lock selected template fields</legend>
+          <label><input type="checkbox" data-lock="brand.name"> Brokerage</label>
+          <label><input type="checkbox" data-lock="brand.tagline"> Tagline</label>
+          <label><input type="checkbox" data-lock="brand.website"> Website</label>
+          <label><input type="checkbox" data-lock="theme.accent"> Accent</label>
+          <label><input type="checkbox" data-lock="theme.ink"> Ink</label>
+          <label><input type="checkbox" data-lock="theme.paper"> Paper</label>
+        </fieldset>
+        <div class="project-actions">
+          <button id="save-template" class="button button-quiet" type="button">Export template</button>
+          <label class="button button-quiet file-button">Import template<input id="open-template" type="file" accept="application/json"></label>
         </div>
       </details>
 
-      <div class="project-actions">
+      <details id="compliance-section" open>
+        <summary><span>05</span> Compliance preflight</summary>
+        <div class="form-grid">
+          <label>Profile<select id="compliance-profile" data-path="compliance.profileId"><option value="lease">Residential lease</option><option value="sale">Residential sale</option><option value="open_house">Open house</option><option value="just_listed">Just listed</option></select></label>
+          <label class="span-2">Required disclaimer<textarea data-path="compliance.disclaimer" rows="4"></textarea></label>
+        </div>
+        <div class="project-actions">
+          <button id="save-compliance" class="button button-quiet" type="button">Export profile</button>
+          <label class="button button-quiet file-button">Import profile<input id="open-compliance" type="file" accept="application/json"></label>
+        </div>
+        <div id="validation-summary" class="validation-summary" aria-live="polite"></div>
+        <p class="field-note"><strong>Important:</strong> this preflight checks configured fields only. It is not legal, regulatory, MLS®, or brokerage approval.</p>
+      </details>
+
+      <details>
+        <summary><span>06</span> Review and approval record</summary>
+        <div class="form-grid">
+          <label>Status<select data-path="review.status"><option>Draft</option><option>Changes Requested</option><option>Approved</option></select></label>
+          <label>Reviewer<input data-path="review.reviewer" placeholder="Reviewer name"></label>
+          <label>Review date<input data-path="review.reviewedAt" type="date"></label>
+          <label class="span-2">Review notes<textarea data-path="review.notes" rows="3"></textarea></label>
+        </div>
+        <label class="button button-quiet file-button">Compare approved project<input id="open-baseline" type="file" accept="application/json"></label>
+        <div id="change-summary" class="change-summary">No comparison project loaded.</div>
+        <p class="field-note">Approval is an internal local workflow record. It is not an electronic signature or legal approval.</p>
+      </details>
+
+      <div class="project-actions project-actions-wrap">
         <button id="save-project" class="button button-quiet" type="button">Save project</button>
         <label class="button button-quiet file-button">Open project<input id="open-project" type="file" accept="application/json"></label>
+        <label class="button button-quiet file-button">Import YAML / JSON<input id="import-listing" type="file" accept=".yaml,.yml,.json,application/json,text/yaml"></label>
+        <button id="export-yaml" class="button button-quiet" type="button">Export YAML</button>
+        <button id="export-json" class="button button-quiet" type="button">Export JSON</button>
       </div>
     </section>
 
@@ -100,15 +184,19 @@
         <button id="download-png" class="button button-primary" type="button">Download PNG</button>
         <button id="print-pdf" class="button button-secondary" type="button">Print / Save PDF</button>
         <button id="download-pack" class="button button-secondary" type="button">Social ZIP</button>
+        <button id="download-manifest" class="button button-secondary" type="button">Manifest JSON</button>
+        <button id="download-approval" class="button button-secondary" type="button">Approval ZIP</button>
       </div>
+      <p id="active-profile" class="active-profile"></p>
       <p id="status" class="status" aria-live="polite">Ready. Your work is processed locally.</p>
     </section>
   </main>
 
   <footer>
     <span>Realtor Poster Studio · Daniel Xu</span>
-    <span>Open source under the MIT License</span>
+    <span>Browser-local · English / 中文 · MIT License</span>
   </footer>
+  <script src="core.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

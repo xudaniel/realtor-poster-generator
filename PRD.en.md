@@ -5,10 +5,10 @@
 ## 1. Document information
 
 - Product: Realtor Poster Generator
-- Current version: 1.2.1
+- Current version: 1.3.0
 - Language: English
 - Product forms: browser-local visual editor, local Python command-line tools, and a self-contained offline HTML preview
-- Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON, provenance manifest JSON, batch summary JSON, and focal-preview HTML
+- Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON/YAML, template and compliance profiles, approval ZIP, provenance manifest JSON, batch summary JSON, and focal-preview HTML
 
 ## 2. Background
 
@@ -21,7 +21,7 @@ Real-estate agents creating rental or sale artwork repeatedly assemble addresses
 - Artwork made by different team members may not follow one brand system.
 - Output packages may lack traceable input and asset checksums.
 
-The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.2 adds batch processing, four social formats, offline focal-point selection, quantitative visual-regression checks, and a browser-local editor that does not upload listing data.
+The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace with compliance gates, reusable templates, English/Chinese artwork, and approval packages.
 
 ## 3. Product goals
 
@@ -39,6 +39,8 @@ The product transforms structured listing data into a professional vertical post
 10. Detect and review layout changes with automated metrics.
 11. Provide a no-install browser workflow with live previews and local exports.
 12. Provide equivalent English and Chinese user and product documentation.
+13. Gate browser exports with configurable compliance preflight and preserve a traceable local review record.
+14. Make brand templates and bilingual content portable, reusable, and selectively lockable.
 
 ### 3.2 Non-goals
 
@@ -92,7 +94,7 @@ A developer or marketing owner compares candidate artwork with an approved basel
 
 ### Use case G: browser-local campaign creation
 
-An agent opens the hosted or locally served visual editor, enters listing, agent, and brand information, drops in a hero photo and logo, selects the important image point, and previews the complete poster plus four social layouts. All information remains in the current browser tab.
+An agent opens the hosted or locally served visual editor, enters complete listing, agent, brand, and bilingual content, manages the hero, interiors, floor plan, and dual logos, selects a compliance profile and focal point, and previews the complete poster plus four social layouts. All information remains in the current browser tab.
 
 ## 6. User flow
 
@@ -108,7 +110,7 @@ An agent opens the hosted or locally served visual editor, enters listing, agent
 10. Complete factual, compliance, and visual review.
 11. Publish or print the final artwork.
 
-The browser editor provides a separate no-install path for entering core listing, agent, and brand details; selecting a hero image and logo; setting the hero focal point; previewing five layouts; and exporting PNG, browser-printed PDF, project JSON, and a social-image ZIP. Interior and floor-plan inputs, YAML/JSON validation, provenance manifests, batch processing, and visual regression remain Python command-line workflows.
+The browser editor provides a complete no-install path for entering all core details; managing the hero, interiors, floor plan, and dual logos; setting the focal point; running validation aligned with Python rules; using compliance profiles and brand templates; previewing five formats in three language modes; and exporting PNG, browser-printed PDF, project JSON/YAML, a social ZIP, a manifest, or an approval package. Folder batch processing and pixel-level visual regression remain Python command-line workflows.
 
 ## 7. Functional requirements
 
@@ -275,6 +277,12 @@ The system must:
 - Preview full, square, portrait, story, and landscape layouts in real time.
 - Download PNG, use browser printing for PDF, and export four social images in a ZIP.
 - Save and reopen project JSON containing the form, theme, focal point, and selected images.
+- Round-trip project JSON/YAML; reorder, replace, and remove interior photos; and preserve a floor plan and light/dark logos.
+- Apply lease, sale, open-house, and just-listed compliance profiles and block export while required errors remain.
+- Import and export versioned brand templates with selective field locks.
+- Render English, Chinese, and bilingual content in all five formats.
+- Compare with an approved project, record reviewer/date/notes, and export a complete approval ZIP.
+- Build a local manifest covering language, profile, template, assets, outputs, and SHA-256 hashes.
 - Run from GitHub Pages or locally through `scripts/serve_web.py`.
 
 ### 7.14 Bilingual documentation
@@ -330,7 +338,7 @@ The system must provide:
 
 ## 9. Acceptance criteria
 
-Version 1.2.1 is acceptable when:
+Version 1.3.0 is acceptable when:
 
 1. The sample YAML validates.
 2. It produces an 1800 × 2400 RGB PNG.
@@ -351,11 +359,16 @@ Version 1.2.1 is acceptable when:
 17. Focal-preview HTML references no external images or scripts.
 18. Repeated rendering of the same input is pixel-identical in one environment.
 19. Visual regression passes identical images and rejects meaningful changes.
-20. The manifest records version 1.2.1 and social-output SHA-256 hashes.
+20. The manifest records version 1.3.0 and social-output SHA-256 hashes.
 21. The browser editor has no upload or analytics code and processes data only in the current tab.
 22. The browser editor previews and exports the full poster and four social sizes.
 23. Project JSON preserves and reopens form, theme, focal, and selected images.
 24. English and Chinese README and PRD files have direct language links and equivalent feature coverage.
+25. Browser JSON/YAML projects preserve every listing field, interior order, floor plan, and dual logos.
+26. Compliance-profile errors block every publication export and the UI states that the tool does not grant legal approval.
+27. Versioned brand templates lock selected fields while unlocked project overrides remain editable.
+28. English, Chinese, and bilingual content each render in all five formats with suitable CJK font fallback.
+29. Approved status requires a reviewer and date; the approval package contains five proofs, source data, the review record, manifest, and SHA-256 catalog.
 
 ## 10. Risks and mitigations
 
@@ -383,13 +396,20 @@ Version 1.2.1 is acceptable when:
 - Browser-local editor, five live previews, portable projects, and ZIP export
 - Complete English and Chinese README and PRD documentation
 
+### Completed in 1.3
+
+- Complete browser-local campaign editor with a versioned project schema
+- Compliance profiles with blocking export preflight
+- Portable brand templates and selective field locks
+- English, Chinese, and bilingual artwork in five formats
+- Baseline comparison, review records, and checksummed approval packages
+
 ### 2.0 candidates
 
 - Optional desktop application
-- Brand-template management
 - Shared brokerage-team configurations
 - External listing-data integration only after explicit authorization
-- Dedicated sale, open-house, bilingual-field, and QR-code layouts
+- Optional QR-code layouts
 
 ## 12. Compliance principles
 

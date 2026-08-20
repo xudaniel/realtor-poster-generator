@@ -2,6 +2,24 @@
 
 All notable changes to Realtor Poster Generator are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-08-20
+
+### Added
+
+- Versioned browser project schema with complete listing fields, four ordered interior photos, floor plans, dual logo variants, and YAML/JSON interchange
+- Browser validation aligned with the Python renderer, blocking preflight errors, translation warnings, and local SHA-256 provenance manifests
+- Reusable lease, sale, open-house, and just-listed compliance profiles with configurable export gates and portable profile files
+- Versioned brand templates with selectively locked brand fields, dual logos, and portable template files
+- English, Chinese, and bilingual artwork across print, square, portrait, story, and landscape formats
+- Local comparison against an approved project plus Draft, Changes Requested, and Approved review records
+- Approval ZIP containing five proofs, source data, project data, approval record, provenance manifest, and SHA-256 catalog
+- Testable browser core and Node-based coverage for validation, YAML round-trips, manifests, approval requirements, and project comparisons
+
+### Changed
+
+- Browser exports now require compliance preflight and include explicit privacy and non-legal-approval boundaries
+- Package and runtime manifest metadata now report 1.3.0
+
 ## [1.2.1] - 2026-08-20
 
 ### Documentation
@@ -42,4 +60,5 @@ All notable changes to Realtor Poster Generator are documented here. The project
 
 [1.2.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.2.0
 [1.2.1]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.2.1
+[1.3.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.3.0
 [1.0.0]: https://github.com/xudaniel/realtor-poster-generator/commits/main/

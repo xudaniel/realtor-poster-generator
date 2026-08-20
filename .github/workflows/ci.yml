@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, codex/v1.2-upgrade]
+    branches: [main]
   pull_request:
 
 permissions:
@@ -47,7 +47,9 @@ jobs:
         with:
           node-version: "20"
       - name: JavaScript syntax
-        run: node --check web/app.js
+        run: node --check web/core.js && node --check web/app.js
+      - name: Browser core tests
+        run: node tests/test_web_core.js
       - name: Confirm editor has no network calls or remote assets
         run: |
-          ! grep -R -E "fetch\(|XMLHttpRequest|https?://" web/app.js web/index.html web/styles.css
+          ! grep -R -E "fetch\(|XMLHttpRequest|https?://" web/core.js web/app.js web/index.html web/styles.css
