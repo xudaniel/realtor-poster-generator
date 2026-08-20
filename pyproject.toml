@@ -4,10 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "realtor-poster"
-version = "1.0.0"
+version = "1.2.0"
 description = "Deterministic, data-driven real-estate poster generator"
 readme = "README.md"
 requires-python = ">=3.9"
+authors = [{name = "Daniel Xu"}]
+license = {file = "LICENSE"}
+keywords = ["real-estate", "realtor", "poster", "social-media", "pillow"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Multimedia :: Graphics",
+]
 dependencies = [
   "Pillow>=10.2,<12",
   "PyYAML>=6.0,<7",
@@ -15,6 +24,14 @@ dependencies = [
 
 [project.scripts]
 realtor-poster = "realtor_poster.cli:main"
+realtor-poster-preview = "realtor_poster.preview:main"
+realtor-poster-visual = "realtor_poster.visual_regression:main"
+
+[project.urls]
+Homepage = "https://github.com/xudaniel/realtor-poster-generator"
+Documentation = "https://github.com/xudaniel/realtor-poster-generator#readme"
+Issues = "https://github.com/xudaniel/realtor-poster-generator/issues"
+Editor = "https://xudaniel.github.io/realtor-poster-generator/"
 
 [tool.setuptools.packages.find]
 include = ["realtor_poster*"]

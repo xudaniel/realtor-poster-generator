@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A private, browser-local real-estate poster editor by Daniel Xu.">
+  <title>Realtor Poster Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Realtor Poster Studio home">
+      <span class="brand-mark" aria-hidden="true">DX</span>
+      <span><strong>Realtor Poster Studio</strong><small>by Daniel Xu</small></span>
+    </a>
+    <div class="privacy-badge"><span aria-hidden="true">●</span> Private by design — files stay in this tab</div>
+  </header>
+
+  <main id="top" class="app-shell">
+    <section class="editor-panel" aria-labelledby="editor-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">LISTING WORKSPACE</p>
+          <h1 id="editor-title">Build the campaign once.</h1>
+        </div>
+        <button id="reset-button" class="button button-quiet" type="button">Reset</button>
+      </div>
+      <p class="intro">Add listing facts and photos, tune the crop, then export print and social artwork without uploading client material.</p>
+
+      <details open>
+        <summary><span>01</span> Listing details</summary>
+        <div class="form-grid">
+          <label class="span-2">Address<input data-field="address" autocomplete="street-address" value="88 Harbour Street"></label>
+          <label>Unit<input data-field="unit" value="2608"></label>
+          <label>Status<select data-field="status"><option>FOR LEASE</option><option>FOR SALE</option><option>JUST LISTED</option><option>OPEN HOUSE</option></select></label>
+          <label>Price<input data-field="price" value="$3,850 / month"></label>
+          <label>MLS®<input data-field="mls" value="C1234567"></label>
+          <label>Beds<input data-field="beds" value="2 + Den"></label>
+          <label>Baths<input data-field="baths" value="2"></label>
+          <label>Area<input data-field="sqft" value="815 sq. ft."></label>
+          <label>Parking<input data-field="parking" value="1"></label>
+          <label class="span-2">Headline<input data-field="headline" value="Lake views. Downtown energy. A home above it all."></label>
+        </div>
+      </details>
+
+      <details open>
+        <summary><span>02</span> Photos and crop</summary>
+        <div class="upload-grid">
+          <label class="upload-card"><strong>Hero photo</strong><small>JPG, PNG or WebP</small><input id="hero-upload" type="file" accept="image/jpeg,image/png,image/webp"></label>
+          <label class="upload-card"><strong>Logo</strong><small>Transparent PNG recommended</small><input id="logo-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
+        </div>
+        <div id="focal-pad" class="focal-pad" role="button" tabindex="0" aria-label="Choose the focal point of the hero image">
+          <div id="focal-marker" class="focal-marker" aria-hidden="true"></div>
+          <p id="focal-empty">Upload a hero photo, then click its most important point.</p>
+        </div>
+        <div class="range-grid">
+          <label>Horizontal focus <output id="focus-x-output">50%</output><input id="focus-x" type="range" min="0" max="100" value="50"></label>
+          <label>Vertical focus <output id="focus-y-output">50%</output><input id="focus-y" type="range" min="0" max="100" value="50"></label>
+        </div>
+      </details>
+
+      <details open>
+        <summary><span>03</span> Agent and brand</summary>
+        <div class="form-grid">
+          <label>Agent<input data-field="agentName" value="Daniel Xu"></label>
+          <label>Brokerage<input data-field="brokerage" value="Harbour Realty Group"></label>
+          <label>Phone<input data-field="phone" inputmode="tel" value="416-555-0198"></label>
+          <label>Email<input data-field="email" inputmode="email" value="hello@example.com"></label>
+          <label>Accent<input data-color="accent" type="color" value="#d6a25e"></label>
+          <label>Ink<input data-color="ink" type="color" value="#102c2b"></label>
+        </div>
+      </details>
+
+      <div class="project-actions">
+        <button id="save-project" class="button button-quiet" type="button">Save project</button>
+        <label class="button button-quiet file-button">Open project<input id="open-project" type="file" accept="application/json"></label>
+      </div>
+    </section>
+
+    <section class="preview-panel" aria-labelledby="preview-title">
+      <div class="preview-toolbar">
+        <div>
+          <p class="eyebrow">LIVE PREVIEW</p>
+          <h2 id="preview-title">Campaign artwork</h2>
+        </div>
+        <label class="preset-select">Format
+          <select id="preset-select">
+            <option value="poster">Print poster · 1800 × 2400</option>
+            <option value="square">Square · 1080 × 1080</option>
+            <option value="portrait">Portrait · 1080 × 1350</option>
+            <option value="story">Story · 1080 × 1920</option>
+            <option value="landscape">Landscape · 1200 × 630</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="canvas-stage"><canvas id="poster-canvas" width="1800" height="2400" aria-label="Generated real-estate poster preview"></canvas></div>
+
+      <div class="export-bar">
+        <button id="download-png" class="button button-primary" type="button">Download PNG</button>
+        <button id="print-pdf" class="button button-secondary" type="button">Print / Save PDF</button>
+        <button id="download-pack" class="button button-secondary" type="button">Social ZIP</button>
+      </div>
+      <p id="status" class="status" aria-live="polite">Ready. Your work is processed locally.</p>
+    </section>
+  </main>
+
+  <footer>
+    <span>Realtor Poster Studio · Daniel Xu</span>
+    <span>Open source under the MIT License</span>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>

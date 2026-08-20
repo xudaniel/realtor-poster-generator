@@ -440,7 +440,13 @@ def _collect_assets(data: Mapping[str, Any]) -> List[Path]:
     return list(dict.fromkeys(Path(value) for value in values))
 
 
-def export_poster(data: Mapping[str, Any], output_png: Path, make_pdf: bool = False) -> Dict[str, Path]:
+def export_poster(
+    data: Mapping[str, Any],
+    output_png: Path,
+    make_pdf: bool = False,
+    social_presets: Sequence[str] = (),
+) -> Dict[str, Path]:
+    """Export the full poster, optional PDF, social cards, and provenance manifest."""
     output_png = output_png.expanduser().resolve()
     if output_png.suffix.lower() != ".png":
         output_png = output_png.with_suffix(".png")
@@ -455,6 +461,17 @@ def export_poster(data: Mapping[str, Any], output_png: Path, make_pdf: bool = Fa
         pdf_path = output_png.with_suffix(".pdf")
         image.save(pdf_path, "PDF", resolution=float(dpi), quality=95)
         outputs["pdf"] = pdf_path
+
+    if social_presets:
+        # Import here to keep the core poster renderer independent from the
+        # optional adaptive social layouts.
+        from .social import normalize_social_presets, render_social, social_output_path
+
+        for preset in normalize_social_presets(social_presets):
+            social_path = social_output_path(output_png, preset)
+            social_image = render_social(data, preset)
+            social_image.save(social_path, "PNG", optimize=True, dpi=(dpi, dpi))
+            outputs[f"social_{preset}"] = social_path
 
     input_path = Path(data["_input_path"])
     assets = _collect_assets(data)

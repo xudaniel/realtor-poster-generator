@@ -1,8 +1,38 @@
-# 房地产海报生成器
+# 房地产海报生成器 · Realtor Poster Generator
+
+[![Tests](https://img.shields.io/github/actions/workflow/status/xudaniel/realtor-poster-generator/ci.yml?branch=main&label=tests)](https://github.com/xudaniel/realtor-poster-generator/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/license-MIT-d6a25e.svg)](LICENSE)
+[![Browser local](https://img.shields.io/badge/privacy-browser--local-2f7654.svg)](web/)
+
+由 **Daniel Xu** 创建并维护。Created and maintained by **Daniel Xu**.
+
+[English documentation](README.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
+
+当前版本：**1.2.0**
 
 这是一个可重复使用、由结构化数据驱动的房地产租售海报生成工具。设计参考了用户提供样图的信息层级，例如醒目的租售状态、地址与价格、房屋数据栏、室内照片、户型图、详细信息分区、周边亮点和经纪人联系方式；整体构图、字体、配色、形状和排版均为重新设计，并非对参考图逐像素复制。
 
 所有地址、价格、MLS 编号、联系方式和房屋说明，都由 Pillow 根据经过验证的 YAML 或 JSON 数据确定性绘制，不使用生成式人工智能生成文字，因此不会出现 AI 拼错地址、电话号码或价格的问题。
+
+<p align="center">
+  <img src="outputs/sample-poster.png" width="420" alt="房地产海报生成器的虚构房源示例">
+</p>
+
+## 无需安装：浏览器可视化编辑器
+
+打开[在线编辑器](https://xudaniel.github.io/realtor-poster-generator/)，即可在浏览器中完成完整流程：
+
+1. 填写房源、经纪人和品牌资料；
+2. 拖入主图与标志，直接点击照片重点位置调整裁切；
+3. 实时预览海报、方形、竖版、限时动态和横版，下载 PNG、打印为 PDF，或下载四种社交媒体图片的 ZIP。
+
+照片、联系资料和项目文件只在当前浏览器标签页中处理，不会上传到服务器。也可以完全离线运行：
+
+```bash
+python3 scripts/serve_web.py
+```
+
+然后打开 `http://127.0.0.1:8765`。浏览器项目文件会把表单、主题和已选择图片保存到一个可重新打开的 JSON 文件。
 
 ## 主要功能
 
@@ -15,6 +45,10 @@
 - 可配置品牌颜色、字体、画布尺寸和输出分辨率
 - 可同时导出 PNG、PDF 和带 SHA-256 校验值的清单文件
 - 提供交互式经纪人填写脚本和可直接编辑的 YAML 模板
+- 1.2 支持一次处理整个文件夹中的多套 YAML 或 JSON 房源
+- 1.2 支持方形、竖版、限时动态和横版四种社交媒体尺寸
+- 1.2 提供无需联网的主图焦点选择与完整海报预览页面
+- 1.2 提供像素确定性测试、差异指标和可选视觉差异图
 
 ## 快速开始
 
@@ -26,13 +60,17 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 python scripts/create_sample_assets.py
 python3 generate_poster.py examples/sample_listing.yaml \
-  --output outputs/sample-poster.png --pdf
+  --output outputs/sample-poster.png --pdf --social all
 ```
 
 最后一条命令会生成：
 
 - `outputs/sample-poster.png`
 - `outputs/sample-poster.pdf`
+- `outputs/sample-poster.square.png`，1080 × 1080
+- `outputs/sample-poster.portrait.png`，1080 × 1350
+- `outputs/sample-poster.story.png`，1080 × 1920
+- `outputs/sample-poster.landscape.png`，1200 × 630
 - `outputs/sample-poster.manifest.json`
 
 示例房源、图片、品牌和联系方式均为虚构内容，只用于测试生成器，不应当作真实房地产广告发布。
@@ -47,7 +85,8 @@ python3 generate_poster.py examples/sample_listing.yaml \
 python3 scripts/new_listing.py \
   --output listings/my-listing.yaml \
   --render outputs/my-listing.png \
-  --pdf
+  --pdf \
+  --social all
 ```
 
 脚本会依次询问：
@@ -59,7 +98,7 @@ python3 scripts/new_listing.py \
 - 主图、室内照片、户型图和品牌标志路径
 - 房屋特色、大楼设施和周边亮点
 
-完成后，脚本会保存 YAML 数据，并按指定参数生成 PNG 和 PDF。
+完成后，脚本会保存 YAML 数据，并按指定参数生成 PNG、PDF 和社交媒体图片。
 
 ### 方法二：直接编辑模板
 
@@ -85,6 +124,89 @@ python3 generate_poster.py my-listing.yaml \
 python -m pip install -e .
 realtor-poster my-listing.yaml -o outputs/my-listing.png --pdf
 ```
+
+## 1.2 批量生成
+
+把多套房源 YAML 或 JSON 放入同一个文件夹，例如 `listings/`，然后直接把文件夹作为输入：
+
+```bash
+python3 generate_poster.py listings/ \
+  --output outputs/batch \
+  --pdf \
+  --social all
+```
+
+程序会先验证所有房源；只要有一套资料无效，就不会开始渲染，从而避免交付一半成功、一半失败的广告包。全部资料通过后，每套房源会获得独立的 PNG、可选 PDF、社交媒体图片和清单文件，批次结果记录在：
+
+```text
+outputs/batch/batch-summary.json
+```
+
+只检查整个文件夹而不生成图片：
+
+```bash
+python3 generate_poster.py listings/ --validate-only
+```
+
+## 1.2 社交媒体尺寸
+
+使用 `--social` 选择需要的尺寸：
+
+```bash
+# 一次生成全部四种尺寸
+python3 generate_poster.py my-listing.yaml -o outputs/my-listing.png --social all
+
+# 只生成方形和限时动态尺寸
+python3 generate_poster.py my-listing.yaml -o outputs/my-listing.png \
+  --social square --social story
+```
+
+| 参数 | 尺寸 | 建议用途 |
+|---|---:|---|
+| `square` | 1080 × 1080 | Instagram、Facebook 方形贴文 |
+| `portrait` | 1080 × 1350 | Instagram 竖版贴文 |
+| `story` | 1080 × 1920 | Instagram、Facebook 限时动态 |
+| `landscape` | 1200 × 630 | Facebook、LinkedIn 和网页分享图 |
+
+社交版本使用与完整海报相同的已验证资料和品牌主题，但采用适合手机阅读的精简版式，不会简单拉伸或压缩完整海报。
+
+## 1.2 主图焦点选择与预览
+
+如果自动裁切没有保留建筑、房间或景观的重点，可生成一个无需联网的预览页面：
+
+```bash
+python3 scripts/focal_preview.py examples/sample_listing.yaml \
+  --output outputs/sample-focal-preview.html
+```
+
+用浏览器打开生成的 HTML，在完整主图上点击重点位置。页面会立即显示横幅裁切效果，并提供可复制的 YAML：
+
+```yaml
+hero_focal: [0.620, 0.480]
+```
+
+预览页面把图片直接嵌入单一 HTML 文件，不会向外部网站上传房源照片。
+
+## 1.2 视觉回归检查
+
+当品牌颜色、字体或渲染代码改变后，可以把新版图片与已经批准的基准图进行比较：
+
+```bash
+python3 scripts/visual_regression.py \
+  approved/sample-poster.png \
+  outputs/sample-poster.png \
+  --diff outputs/sample-poster.diff.png \
+  --threshold 0.004
+```
+
+命令会输出：
+
+- 是否通过阈值
+- 标准化平均绝对差异
+- 明显变化的像素比例
+- 最大颜色通道差异
+
+完全一致时返回成功状态；超过阈值时返回非零状态，便于在自动化检查中阻止意外版式变化。差异图只用于检查，不应作为正式广告发布。
 
 ## 输入字段
 
@@ -136,8 +258,16 @@ python3 generate_poster.py listing.json \
 ```text
 generate_poster.py                 简单的海报生成入口
 realtor_poster/                    渲染、绘图、验证和命令行模块
+realtor_poster/batch.py            批量发现、预验证和输出摘要
+realtor_poster/social.py           四种自适应社交媒体版式
+realtor_poster/preview.py          离线主图焦点与版面预览页面
+realtor_poster/visual_regression.py 视觉差异指标和差异图
+web/                              无上传、浏览器本地运行的可视化编辑器
 scripts/new_listing.py             经纪人交互式填写工具
 scripts/create_sample_assets.py    虚构示例素材生成脚本
+scripts/serve_web.py               本地可视化编辑器启动脚本
+scripts/focal_preview.py           经纪人可直接运行的焦点预览入口
+scripts/visual_regression.py       可直接运行的视觉回归入口
 examples/sample_listing.yaml       示例房源数据
 examples/assets/                   虚构示例图片与品牌标志
 input_template.yaml                可复制使用的数据模板
@@ -158,6 +288,13 @@ python -m unittest discover -s tests -v
 - 示例数据验证和 1800 × 2400 海报渲染
 - 非法电子邮箱和电话号码的错误提示
 - 单一面积和面积范围的输入支持
+- 四种社交媒体输出尺寸和颜色模式
+- 同一环境内重复渲染的像素确定性
+- 离线焦点页面的图片嵌入和隐私边界
+- 视觉回归对真实变化的识别
+- 多套房源的批量发现、预验证和输出
+- 浏览器编辑器的隐私边界、导出功能与核心静态资源
+- GitHub Actions 中的多版本 Python、JavaScript 语法、示例渲染和软件包构建
 
 ## 发布前检查
 
@@ -169,3 +306,7 @@ python -m unittest discover -s tests -v
 - 所需免责声明、公司注册名称和经纪人身份信息完整
 
 本工具负责排版和技术验证，不替代经纪人、经纪公司或法律专业人士对广告内容的最终审核。
+
+## 开源许可与作者
+
+Copyright © 2026 **Daniel Xu**。本项目根据 [MIT License](LICENSE) 开源。欢迎阅读[贡献指南](CONTRIBUTING.md)后提交问题或拉取请求。

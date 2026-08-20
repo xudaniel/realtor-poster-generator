@@ -23,6 +23,7 @@ if str(ROOT) not in sys.path:
 
 from realtor_poster.config import ConfigError, EMAIL_RE, PHONE_ALLOWED_RE, load_config
 from realtor_poster.renderer import export_poster
+from realtor_poster.social import SOCIAL_PRESETS
 
 
 def ask(label: str, default: str = "", required: bool = False) -> str:
@@ -207,6 +208,13 @@ def parser() -> argparse.ArgumentParser:
     )
     result.add_argument("--render", type=Path, help="Also generate a PNG at this path")
     result.add_argument("--pdf", action="store_true", help="With --render, also generate PDF")
+    result.add_argument(
+        "--social",
+        action="append",
+        choices=(*SOCIAL_PRESETS, "all"),
+        default=[],
+        help="With --render, add a social size; repeat or use 'all'",
+    )
     return result
 
 
@@ -221,7 +229,7 @@ def main() -> int:
     if args.render:
         try:
             loaded = load_config(output)
-            generated = export_poster(loaded, args.render, make_pdf=args.pdf)
+            generated = export_poster(loaded, args.render, make_pdf=args.pdf, social_presets=args.social)
         except ConfigError as exc:
             print(f"The YAML was saved, but rendering failed:\n{exc}", file=sys.stderr)
             return 2
@@ -229,7 +237,7 @@ def main() -> int:
             print(f"{kind.upper()}: {path}")
     else:
         print("Generate it with:")
-        print(f"  python3 generate_poster.py {output} --output outputs/poster.png --pdf")
+        print(f"  python3 generate_poster.py {output} --output outputs/poster.png --pdf --social all")
     return 0
 
 
