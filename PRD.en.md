@@ -108,7 +108,7 @@ An agent opens the hosted or locally served visual editor, enters listing, agent
 10. Complete factual, compliance, and visual review.
 11. Publish or print the final artwork.
 
-The browser editor can complete steps 2 through 9 in one page and save the project as reopenable JSON.
+The browser editor provides a separate no-install path for entering core listing, agent, and brand details; selecting a hero image and logo; setting the hero focal point; previewing five layouts; and exporting PNG, browser-printed PDF, project JSON, and a social-image ZIP. Interior and floor-plan inputs, YAML/JSON validation, provenance manifests, batch processing, and visual regression remain Python command-line workflows.
 
 ## 7. Functional requirements
 

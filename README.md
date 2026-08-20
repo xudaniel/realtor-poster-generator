@@ -20,7 +20,7 @@
 
 ## 无需安装：浏览器可视化编辑器
 
-打开[在线编辑器](https://xudaniel.github.io/realtor-poster-generator/)，即可在浏览器中完成完整流程：
+打开[在线编辑器](https://xudaniel.github.io/realtor-poster-generator/)，即可在浏览器中完成无需安装的可视化广告流程：
 
 1. 填写房源、经纪人和品牌资料；
 2. 拖入主图与标志，直接点击照片重点位置调整裁切；
