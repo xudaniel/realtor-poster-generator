@@ -6,9 +6,9 @@
 
 由 **Daniel Xu** 创建并维护。Created and maintained by **Daniel Xu**.
 
-[English documentation](README.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
+[English README](README.en.md) · [中文产品需求文档](PRD.md) · [English PRD](PRD.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
 
-当前版本：**1.2.0**
+当前版本：**1.2.1**
 
 这是一个可重复使用、由结构化数据驱动的房地产租售海报生成工具。设计参考了用户提供样图的信息层级，例如醒目的租售状态、地址与价格、房屋数据栏、室内照片、户型图、详细信息分区、周边亮点和经纪人联系方式；整体构图、字体、配色、形状和排版均为重新设计，并非对参考图逐像素复制。
 
@@ -274,6 +274,7 @@ input_template.yaml                可复制使用的数据模板
 tests/test_poster.py               自动化测试
 outputs/                           生成的海报和清单
 PRD.md                             中文产品需求文档
+PRD.en.md                          English product requirements document
 ```
 
 ## 运行测试

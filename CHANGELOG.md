@@ -2,6 +2,19 @@
 
 All notable changes to Realtor Poster Generator are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-08-20
+
+### Documentation
+
+- Expanded the English README to match the Chinese guide's installation, batch, social, focal-preview, visual-regression, input, branding, testing, and publishing coverage
+- Added a complete English product requirements document in `PRD.en.md`
+- Added direct English/中文 navigation between both README and PRD documents
+- Updated the Chinese PRD to include the browser-local editor, portable project files, social ZIP export, privacy requirements, and current acceptance tests
+
+### Changed
+
+- Bumped package and manifest version metadata to 1.2.1
+
 ## [1.2.0] - 2026-08-20
 
 ### Added
@@ -28,4 +41,5 @@ All notable changes to Realtor Poster Generator are documented here. The project
 - Validation, sample assets, manifest hashing, and unit tests
 
 [1.2.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.2.0
+[1.2.1]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.2.1
 [1.0.0]: https://github.com/xudaniel/realtor-poster-generator/commits/main/
