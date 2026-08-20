@@ -1,10 +1,38 @@
-# 房地产海报生成器
+# 房地产海报生成器 · Realtor Poster Generator
+
+[![Tests](https://img.shields.io/github/actions/workflow/status/xudaniel/realtor-poster-generator/ci.yml?branch=main&label=tests)](https://github.com/xudaniel/realtor-poster-generator/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/license-MIT-d6a25e.svg)](LICENSE)
+[![Browser local](https://img.shields.io/badge/privacy-browser--local-2f7654.svg)](web/)
+
+由 **Daniel Xu** 创建并维护。Created and maintained by **Daniel Xu**.
+
+[English documentation](README.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
 
 当前版本：**1.2.0**
 
 这是一个可重复使用、由结构化数据驱动的房地产租售海报生成工具。设计参考了用户提供样图的信息层级，例如醒目的租售状态、地址与价格、房屋数据栏、室内照片、户型图、详细信息分区、周边亮点和经纪人联系方式；整体构图、字体、配色、形状和排版均为重新设计，并非对参考图逐像素复制。
 
 所有地址、价格、MLS 编号、联系方式和房屋说明，都由 Pillow 根据经过验证的 YAML 或 JSON 数据确定性绘制，不使用生成式人工智能生成文字，因此不会出现 AI 拼错地址、电话号码或价格的问题。
+
+<p align="center">
+  <img src="outputs/sample-poster.png" width="420" alt="房地产海报生成器的虚构房源示例">
+</p>
+
+## 无需安装：浏览器可视化编辑器
+
+打开[在线编辑器](https://xudaniel.github.io/realtor-poster-generator/)，即可在浏览器中完成完整流程：
+
+1. 填写房源、经纪人和品牌资料；
+2. 拖入主图与标志，直接点击照片重点位置调整裁切；
+3. 实时预览海报、方形、竖版、限时动态和横版，下载 PNG、打印为 PDF，或下载四种社交媒体图片的 ZIP。
+
+照片、联系资料和项目文件只在当前浏览器标签页中处理，不会上传到服务器。也可以完全离线运行：
+
+```bash
+python3 scripts/serve_web.py
+```
+
+然后打开 `http://127.0.0.1:8765`。浏览器项目文件会把表单、主题和已选择图片保存到一个可重新打开的 JSON 文件。
 
 ## 主要功能
 
@@ -234,8 +262,10 @@ realtor_poster/batch.py            批量发现、预验证和输出摘要
 realtor_poster/social.py           四种自适应社交媒体版式
 realtor_poster/preview.py          离线主图焦点与版面预览页面
 realtor_poster/visual_regression.py 视觉差异指标和差异图
+web/                              无上传、浏览器本地运行的可视化编辑器
 scripts/new_listing.py             经纪人交互式填写工具
 scripts/create_sample_assets.py    虚构示例素材生成脚本
+scripts/serve_web.py               本地可视化编辑器启动脚本
 scripts/focal_preview.py           经纪人可直接运行的焦点预览入口
 scripts/visual_regression.py       可直接运行的视觉回归入口
 examples/sample_listing.yaml       示例房源数据
@@ -263,6 +293,8 @@ python -m unittest discover -s tests -v
 - 离线焦点页面的图片嵌入和隐私边界
 - 视觉回归对真实变化的识别
 - 多套房源的批量发现、预验证和输出
+- 浏览器编辑器的隐私边界、导出功能与核心静态资源
+- GitHub Actions 中的多版本 Python、JavaScript 语法、示例渲染和软件包构建
 
 ## 发布前检查
 
@@ -274,3 +306,7 @@ python -m unittest discover -s tests -v
 - 所需免责声明、公司注册名称和经纪人身份信息完整
 
 本工具负责排版和技术验证，不替代经纪人、经纪公司或法律专业人士对广告内容的最终审核。
+
+## 开源许可与作者
+
+Copyright © 2026 **Daniel Xu**。本项目根据 [MIT License](LICENSE) 开源。欢迎阅读[贡献指南](CONTRIBUTING.md)后提交问题或拉取请求。

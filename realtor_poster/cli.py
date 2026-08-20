@@ -49,6 +49,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     print(f"Valid: {path.name}")
                 print(f"Validated {len(files)} listing files")
                 return 0
+            if args.output and args.output.suffix.lower() in {".png", ".jpg", ".jpeg", ".pdf"}:
+                raise ConfigError(
+                    "Batch --output must be a folder, not an image or PDF path: "
+                    f"{args.output}"
+                )
             output_folder = args.output or Path("outputs/batch")
             summary = export_batch(
                 args.input,

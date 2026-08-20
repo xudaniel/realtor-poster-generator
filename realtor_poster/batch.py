@@ -29,7 +29,7 @@ def discover_listing_files(folder: Path) -> List[Path]:
         for path in folder.rglob("*")
         if path.is_file()
         and path.suffix.lower() in SUPPORTED_INPUT_SUFFIXES
-        and not path.name.startswith(".")
+        and not any(part.startswith(".") for part in path.relative_to(folder).parts)
         and not path.name.endswith(".manifest.json")
         and path.name != "batch-summary.json"
     ]

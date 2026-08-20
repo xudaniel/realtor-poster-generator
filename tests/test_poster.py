@@ -9,6 +9,7 @@ import yaml
 from PIL import Image, ImageChops
 
 from realtor_poster.batch import discover_listing_files, export_batch
+from realtor_poster.cli import main as cli_main
 from realtor_poster.config import ConfigError, load_config, validate_config
 from realtor_poster.preview import create_focal_preview
 from realtor_poster.renderer import render_poster
@@ -103,6 +104,16 @@ class PosterTests(unittest.TestCase):
             self.assertFalse(result.passed)
             self.assertGreater(result.changed_pixel_ratio, 0.1)
 
+    def test_visual_regression_counts_largest_rgb_channel_delta(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            folder_path = Path(folder)
+            baseline = folder_path / "baseline.png"
+            changed = folder_path / "changed.png"
+            Image.new("RGB", (8, 8), (0, 0, 0)).save(baseline)
+            Image.new("RGB", (8, 8), (20, 0, 0)).save(changed)
+            result = compare_images(baseline, changed, threshold=1)
+            self.assertEqual(result.changed_pixel_ratio, 1.0)
+
     def test_batch_discovers_validates_and_renders_multiple_listings(self) -> None:
         if self.skip_reason:
             self.skipTest(self.skip_reason)
@@ -142,6 +153,39 @@ class PosterTests(unittest.TestCase):
             with self.assertRaises(ConfigError):
                 export_batch(inputs, blocked_outputs)
             self.assertFalse(blocked_outputs.exists())
+
+    def test_batch_ignores_files_inside_hidden_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            visible = root / "listing.yaml"
+            hidden_dir = root / ".drafts"
+            hidden_dir.mkdir()
+            visible.write_text("listing: {}\n", encoding="utf-8")
+            (hidden_dir / "private.yaml").write_text("listing: {}\n", encoding="utf-8")
+            self.assertEqual(discover_listing_files(root), [visible.resolve()])
+
+    def test_batch_rejects_file_shaped_output_path(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            inputs = root / "inputs"
+            inputs.mkdir()
+            (inputs / "listing.yaml").write_text("listing: {}\n", encoding="utf-8")
+            output = root / "poster.png"
+            self.assertEqual(cli_main([str(inputs), "--output", str(output)]), 2)
+            self.assertFalse(output.exists())
+
+    def test_browser_editor_is_local_and_has_core_exports(self) -> None:
+        index = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+        script = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("Daniel Xu", index)
+        self.assertIn('id="hero-upload"', index)
+        self.assertIn('id="download-png"', index)
+        self.assertIn('id="print-pdf"', index)
+        self.assertIn('id="download-pack"', index)
+        self.assertIn("makeZip", script)
+        self.assertIn("drawPoster", script)
+        self.assertNotIn("fetch(", script)
+        self.assertNotIn("XMLHttpRequest", script)
 
 
 if __name__ == "__main__":

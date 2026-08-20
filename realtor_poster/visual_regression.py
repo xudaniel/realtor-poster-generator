@@ -45,7 +45,9 @@ def compare_images(
     stats = ImageStat.Stat(diff)
     mean_error = sum(stats.mean) / (3 * 255)
     maximum = max(channel[1] for channel in diff.getextrema())
-    changed_mask = diff.convert("L").point(lambda value: 255 if value > 12 else 0)
+    red, green, blue = diff.split()
+    largest_channel_delta = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+    changed_mask = largest_channel_delta.point(lambda value: 255 if value > 12 else 0)
     changed_ratio = ImageStat.Stat(changed_mask).mean[0] / 255
 
     if diff_path:
