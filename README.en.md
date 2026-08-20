@@ -20,7 +20,7 @@ Pillow renders every address, price, MLS® number, contact detail, and property 
 
 ## No-install browser editor
 
-Open the [live editor](https://xudaniel.github.io/realtor-poster-generator/) to complete the full workflow in a browser:
+Open the [live editor](https://xudaniel.github.io/realtor-poster-generator/) for a no-install visual campaign workflow:
 
 1. Enter listing, agent, and brand details.
 2. Drop in a hero photo and logo, then click the important point in the photo to control the crop.
