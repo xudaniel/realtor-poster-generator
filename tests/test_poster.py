@@ -9,6 +9,7 @@ import yaml
 from PIL import Image, ImageChops
 
 from realtor_poster.batch import discover_listing_files, export_batch
+from realtor_poster.bedrooms import bedroom_display
 from realtor_poster.cli import main as cli_main
 from realtor_poster.config import ConfigError, load_config, validate_config
 from realtor_poster.preview import create_focal_preview
@@ -57,6 +58,39 @@ class PosterTests(unittest.TestCase):
         ranged = deepcopy(data)
         ranged["listing"]["sqft"] = "600-699"
         validate_config(ranged)
+
+    def test_bedroom_plus_den_is_structured_and_validated(self) -> None:
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        data = load_config(ROOT / "examples" / "sample_listing.yaml")
+        self.assertEqual(data["listing"]["beds_additional"], 0)
+        self.assertEqual(bedroom_display(data["listing"]), "2")
+        data["listing"]["beds"] = 2
+        data["listing"]["beds_additional"] = 1
+        validate_config(data)
+        self.assertEqual(bedroom_display(data["listing"]), "2 + 1")
+        invalid = deepcopy(data); invalid["listing"]["beds_additional"] = 1.5
+        with self.assertRaises(ConfigError) as caught:
+            validate_config(invalid)
+        self.assertIn("listing.beds_additional must be a whole number", str(caught.exception))
+
+    def test_compound_bedroom_input_migrates_without_inference(self) -> None:
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        raw = yaml.safe_load((ROOT / "examples" / "sample_listing.yaml").read_text(encoding="utf-8"))
+        raw["listing"]["beds"] = "1 + 1"
+        asset_dir = ROOT / "examples" / "assets"
+        raw["photos"]["hero"] = str(asset_dir / "sample_exterior.png")
+        raw["photos"]["gallery"] = [str(asset_dir / "sample_living_room.png"), str(asset_dir / "sample_kitchen.png")]
+        raw["photos"]["floorplan"] = str(asset_dir / "sample_floorplan.png")
+        raw["brand"]["logo"] = str(asset_dir / "sample_logo.png")
+        with tempfile.TemporaryDirectory() as folder:
+            listing_path = Path(folder) / "listing.yaml"
+            listing_path.write_text(yaml.safe_dump(raw, sort_keys=False, allow_unicode=True), encoding="utf-8")
+            loaded = load_config(listing_path)
+        self.assertEqual(loaded["listing"]["beds"], 1)
+        self.assertEqual(loaded["listing"]["beds_additional"], 1)
+        self.assertEqual(bedroom_display(loaded["listing"]), "1 + 1")
 
     def test_social_presets_render_to_documented_sizes(self) -> None:
         if self.skip_reason:
@@ -192,6 +226,9 @@ class PosterTests(unittest.TestCase):
         self.assertIn('id="requirements-editor"', index)
         self.assertIn('id="mls-connector-url"', index)
         self.assertIn('id="mls-generate"', index)
+        self.assertIn('id="bedrooms-primary"', index)
+        self.assertIn('id="bedrooms-additional"', index)
+        self.assertIn('id="bedroom-display-preview"', index)
         self.assertIn('id="portrait-upload"', index)
         self.assertIn('id="media-section"', index)
         self.assertIn('id="import-listing"', index)
@@ -220,7 +257,7 @@ class PosterTests(unittest.TestCase):
         self.assertTrue((ROOT / "web" / "mls.js").exists())
         self.assertTrue((ROOT / "realtor_poster" / "mls_connector.py").exists())
         self.assertIn("OUTPUT_DIMENSIONS", core)
-        self.assertEqual(__version__, "1.4.2")
+        self.assertEqual(__version__, "1.4.3")
         combined = index + script + core
         self.assertNotIn("fetch(", combined)
         self.assertNotIn("XMLHttpRequest", combined)

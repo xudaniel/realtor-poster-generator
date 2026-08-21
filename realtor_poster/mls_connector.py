@@ -97,7 +97,7 @@ def fetch_authorized_listing(
     except ValueError as exc:
         return 503, error_payload("MLS_PROVIDER_UNAVAILABLE", str(exc))
     auth_value = token if config.auth_header.lower() != "authorization" else f"Bearer {token}"
-    request = Request(endpoint, headers={config.auth_header: auth_value, "Accept": "application/json", "User-Agent": "realtor-poster-mls/1.4.2"})
+    request = Request(endpoint, headers={config.auth_header: auth_value, "Accept": "application/json", "User-Agent": "realtor-poster-mls/1.4.3"})
     try:
         with opener(request, timeout=20) as response:
             payload = json.loads(response.read().decode("utf-8"))
@@ -142,7 +142,7 @@ def lookup(config: ConnectorConfig, provider_id: str, listing_number: str) -> Tu
 
 def handler_for(config: ConnectorConfig):
     class ConnectorHandler(BaseHTTPRequestHandler):
-        server_version = "RealtorPosterMLS/1.4.2"
+        server_version = "RealtorPosterMLS/1.4.3"
 
         def _origin(self) -> Optional[str]:
             origin = self.headers.get("Origin", "")

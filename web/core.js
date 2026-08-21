@@ -6,8 +6,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const APP_VERSION = "1.4.2";
-  const PROJECT_SCHEMA_VERSION = 5;
+  const APP_VERSION = "1.4.3";
+  const PROJECT_SCHEMA_VERSION = 6;
   const OUTPUT_DIMENSIONS = Object.freeze({
     poster: [1800, 2400], square: [1080, 1080], portrait: [1080, 1350], story: [1080, 1920], landscape: [1200, 630],
   });
@@ -105,10 +105,39 @@
     return String(value || "").split(/\r?\n/).map(item => item.trim()).filter(Boolean);
   }
   function populated(value) { return value != null && String(value).trim() !== ""; }
+  function parseBedroomCount(value) {
+    const text = String(value == null ? "" : value).trim();
+    return /^\d+$/.test(text) ? Number(text) : null;
+  }
+  function parseCompoundBedrooms(value) {
+    const match = String(value == null ? "" : value).match(/^\s*(\d+)\s*\+\s*(\d+)\s*$/);
+    return match ? {primary: Number(match[1]), additional: Number(match[2]), sourceValue: String(value)} : null;
+  }
+  function bedroomCounts(value) {
+    const listing = value && value.listing ? value.listing : (value || {});
+    const compound = parseCompoundBedrooms(listing.beds);
+    const primary = compound ? compound.primary : parseBedroomCount(listing.beds);
+    const additionalValue = Object.prototype.hasOwnProperty.call(listing, "bedsAdditional") ? listing.bedsAdditional : (compound ? compound.additional : 0);
+    return {primary, additional: parseBedroomCount(additionalValue)};
+  }
+  function bedroomDisplay(value) {
+    const {primary, additional} = bedroomCounts(value);
+    if (primary == null) return String((value && value.listing ? value.listing.beds : value && value.beds) || "").trim();
+    return additional > 0 ? `${primary} + ${additional}` : String(primary);
+  }
+  function bedroomAccessibleCopy(value, mode = "english") {
+    const {primary, additional} = bedroomCounts(value); const display = bedroomDisplay(value);
+    if (primary == null || additional == null) return display;
+    const english = `${primary} ${primary === 1 ? "bedroom" : "bedrooms"}${additional > 0 ? ` + ${additional} additional ${additional === 1 ? "room/den" : "rooms/dens"}` : ""}`;
+    const chinese = `${primary} 间卧室${additional > 0 ? ` + ${additional} 个额外房间/书房` : ""}`;
+    if (mode === "chinese") return chinese;
+    if (mode === "bilingual") return `${english} / ${chinese}`;
+    return english;
+  }
   const MLS_SCALAR_MAPPING = Object.freeze([
     ["status", "listing.status"], ["address", "listing.address"], ["unit", "listing.unit"],
     ["city", "listing.city"], ["postalCode", "listing.postalCode"], ["price", "listing.price"],
-    ["rentPeriod", "listing.rentPeriod"], ["listingNumber", "listing.mls"], ["beds", "listing.beds"],
+    ["rentPeriod", "listing.rentPeriod"], ["listingNumber", "listing.mls"], ["beds", "listing.beds"], ["bedsAdditional", "listing.bedsAdditional"],
     ["baths", "listing.baths"], ["sqft", "listing.sqft"], ["floor", "listing.floor"],
     ["exposure", "listing.exposure"], ["balcony", "listing.balcony"], ["parking", "listing.parking"],
     ["availability", "listing.availability"], ["openHouse", "listing.openHouse"],
@@ -143,6 +172,7 @@
   function normalizedMlsFieldValue(sourceKey, value) {
     if (sourceKey === "featuresEn" || sourceKey === "featuresZh") return list(value).join("\n");
     if (sourceKey === "openHouse" && isObject(value)) return canonicalStringify(value);
+    if (sourceKey === "beds" || sourceKey === "bedsAdditional") return value == null ? "" : String(value).trim();
     return value == null ? "" : value;
   }
   function imageRightsBlocked(image) {
@@ -179,14 +209,20 @@
     const sourceAge = sourceUpdatedAt ? Date.now() - new Date(sourceUpdatedAt).getTime() : 0;
     const stale = response.stale === true || (Number.isFinite(sourceAge) && sourceAge > 24 * 60 * 60 * 1000);
     const fields = {}; const candidate = {};
+    const compoundBedrooms = parseCompoundBedrooms(listing.beds);
     [...MLS_SCALAR_MAPPING, ...MLS_MODULE_MAPPING].forEach(([sourceKey, targetPath]) => {
-      const hasValue = Object.prototype.hasOwnProperty.call(listing, sourceKey);
-      const value = normalizedMlsFieldValue(sourceKey, hasValue ? listing[sourceKey] : "");
+      const compoundComponent = compoundBedrooms && (sourceKey === "beds" || sourceKey === "bedsAdditional");
+      const hasValue = compoundComponent || Object.prototype.hasOwnProperty.call(listing, sourceKey);
+      if (sourceKey === "bedsAdditional" && !hasValue) return;
+      const sourceValue = compoundComponent ? compoundBedrooms.sourceValue : listing[sourceKey];
+      const rawValue = compoundComponent ? (sourceKey === "beds" ? compoundBedrooms.primary : compoundBedrooms.additional) : sourceValue;
+      const value = normalizedMlsFieldValue(sourceKey, hasValue ? rawValue : "");
       const missing = !hasValue || (Array.isArray(value) ? !value.length : !populated(value));
       fields[targetPath] = {
         status: missing ? "missing" : (stale ? "stale" : "imported"), originalValue: missing ? null : clone(value),
         currentValue: missing ? null : clone(value), providerId, board, listingNumber, retrievedAt, sourceUpdatedAt,
       };
+      if (compoundComponent) fields[targetPath].sourceValue = clone(sourceValue);
       if (!missing) candidate[targetPath] = clone(value);
     });
     const previous = getPath(project, "mlsImport") || {}; const changes = [];
@@ -273,7 +309,7 @@
   }
   function allPropertyFacts(project) {
     return moduleItems(project, "propertyFacts").map((fact, order) => {
-      const value = fact.source ? getPath(project, fact.source) : fact.value;
+      const value = fact.id === "beds" || fact.source === "listing.beds" ? bedroomDisplay(project) : (fact.source ? getPath(project, fact.source) : fact.value);
       return {...clone(fact), value: value == null ? "" : String(value), order};
     });
   }
@@ -418,6 +454,8 @@
         rentPeriod: project.listing.rentPeriod,
         mls: project.listing.mls,
         beds: project.listing.beds,
+        bedsAdditional: project.listing.bedsAdditional,
+        bedroomsDisplay: bedroomDisplay(project),
         baths: project.listing.baths,
         sqft: project.listing.sqft,
         contact: clone(project.contact),
@@ -461,10 +499,11 @@
     if (phone && (!PHONE_RE.test(phone) || digits.length < 10 || digits.length > 15)) {
       errors.push("Invalid contact.phone: use 10-15 digits with normal phone punctuation");
     }
-    ["beds", "baths"].forEach(name => {
-      const value = Number(getPath(project, `listing.${name}`));
-      if (!Number.isFinite(value) || value <= 0) errors.push(`listing.${name} must be a positive number`);
-    });
+    const bedroomValues = bedroomCounts(project);
+    if (bedroomValues.primary == null || bedroomValues.primary < 0 || bedroomValues.primary > 20) errors.push("listing.beds must be a whole number from 0 to 20");
+    if (bedroomValues.additional == null || bedroomValues.additional < 0 || bedroomValues.additional > 10) errors.push("listing.bedsAdditional must be a whole number from 0 to 10");
+    const baths = Number(getPath(project, "listing.baths"));
+    if (!Number.isFinite(baths) || baths <= 0) errors.push("listing.baths must be a positive number");
     const sqft = String(getPath(project, "listing.sqft") || "").trim();
     const singleArea = Number(sqft) > 0;
     const range = sqft.match(/^(\d{2,5})\s*-\s*(\d{2,5})$/);
@@ -620,7 +659,7 @@
   }
 
   const PREFLIGHT_FIELD_LABELS = Object.freeze({
-    "listing.address": "address", "listing.unit": "unit", "listing.status": "listing status", "listing.city": "city", "listing.postalCode": "postal code", "listing.price": "price", "listing.mls": "MLS number", "listing.beds": "bedrooms", "listing.baths": "bathrooms", "listing.sqft": "area", "listing.floor": "floor", "listing.exposure": "exposure", "listing.balcony": "balcony", "listing.parking": "parking", "listing.availability": "availability", "listing.openHouse": "open-house time", "listing.headlineZh": "Chinese headline",
+    "listing.address": "address", "listing.unit": "unit", "listing.status": "listing status", "listing.city": "city", "listing.postalCode": "postal code", "listing.price": "price", "listing.mls": "MLS number", "listing.beds": "main bedrooms", "listing.bedsAdditional": "additional room / den", "listing.baths": "bathrooms", "listing.sqft": "area", "listing.floor": "floor", "listing.exposure": "exposure", "listing.balcony": "balcony", "listing.parking": "parking", "listing.availability": "availability", "listing.openHouse": "open-house time", "listing.headlineZh": "Chinese headline",
     "contact.name": "agent name", "contact.title": "agent title", "contact.license": "agent licence", "contact.phone": "agent phone", "contact.email": "agent email", "contact.website": "agent website", "contact.portraitMode": "portrait mode", "contact.ctaTitleZh": "Chinese call to action",
     "brand.name": "brokerage name", "brand.website": "brokerage website", "content.featuresZh": "Chinese features",
     "media.heroDataUrl": "hero photo", "media.gallery": "interior photos", "media.floorplans": "floor plans",
@@ -801,7 +840,7 @@
         status: project.listing.status, demo: false, address: project.listing.address, unit: project.listing.unit,
         city: project.listing.city, postal_code: project.listing.postalCode, tagline: project.listing.headlineEn,
         rent: project.listing.price, rent_period: project.listing.rentPeriod, mls: project.listing.mls,
-        beds: Number(project.listing.beds), baths: Number(project.listing.baths), sqft: project.listing.sqft,
+        beds: Number(project.listing.beds), beds_additional: Number(project.listing.bedsAdditional || 0), baths: Number(project.listing.baths), sqft: project.listing.sqft,
         floor: project.listing.floor, exposure: project.listing.exposure, balcony: project.listing.balcony, parking: project.listing.parking,
         availability: project.listing.availability, open_house: project.listing.openHouse || "",
         description_en: project.listing.descriptionEn || "", description_zh: project.listing.descriptionZh || "",
@@ -833,11 +872,13 @@
   function projectFromListingData(raw, defaults) {
     if (raw && raw.schemaVersion) return normalizeProject(raw, defaults);
     const project = clone(defaults); const listing = raw.listing || {}; const photos = raw.photos || {}; const content = raw.content || {};
+    const importedCompoundBedrooms = parseCompoundBedrooms(listing.beds);
     Object.assign(project.listing, {
       status: listing.status || project.listing.status, address: listing.address || "", unit: listing.unit || "",
       city: listing.city || "", postalCode: listing.postal_code || "", headlineEn: listing.tagline || "",
       headlineZh: getPath(content, "translations.headline_zh") || "", price: listing.rent || listing.price || "",
-      rentPeriod: listing.rent_period || "", mls: listing.mls || "", beds: listing.beds || "", baths: listing.baths || "",
+      rentPeriod: listing.rent_period || "", mls: listing.mls || "", beds: importedCompoundBedrooms ? String(importedCompoundBedrooms.primary) : (listing.beds == null ? "" : String(listing.beds)),
+      bedsAdditional: importedCompoundBedrooms ? String(importedCompoundBedrooms.additional) : String(listing.beds_additional == null ? 0 : listing.beds_additional), baths: listing.baths || "",
       sqft: listing.sqft || "", floor: listing.floor || "", exposure: listing.exposure || "", balcony: listing.balcony || "", parking: listing.parking || "",
       availability: listing.availability || "", openHouse: listing.open_house || "",
       descriptionEn: listing.description_en || "", descriptionZh: listing.description_zh || "",
@@ -872,6 +913,13 @@
   }
   function normalizeProject(saved, defaults) {
     const migrated = deepMerge(defaults, saved || {}); migrated.schemaVersion = PROJECT_SCHEMA_VERSION; migrated.appVersion = APP_VERSION;
+    const savedListing = saved && isObject(saved.listing) ? saved.listing : {};
+    const savedHasAdditionalBedrooms = Object.prototype.hasOwnProperty.call(savedListing, "bedsAdditional");
+    if (!savedHasAdditionalBedrooms) {
+      const compound = parseCompoundBedrooms(savedListing.beds);
+      migrated.listing.beds = compound ? String(compound.primary) : String(migrated.listing.beds == null ? "" : migrated.listing.beds);
+      migrated.listing.bedsAdditional = compound ? String(compound.additional) : "0";
+    } else migrated.listing.bedsAdditional = String(migrated.listing.bedsAdditional == null ? 0 : migrated.listing.bedsAdditional);
     if (!Array.isArray(migrated.media.gallery)) migrated.media.gallery = [];
     migrated.media.gallery = migrated.media.gallery.slice(0, 4).map(item => typeof item === "string" ? {name: "interior.jpg", dataUrl: item, type: "image/jpeg"} : item);
     if (!Array.isArray(migrated.media.floorplans)) migrated.media.floorplans = [];
@@ -1016,6 +1064,7 @@
         },
       },
       modules: {
+        bedrooms: {primary: bedroomCounts(project).primary, additional: bedroomCounts(project).additional, display: bedroomDisplay(project)},
         propertyFacts: allPropertyFacts(project).map(({id, icon, source, value, labelEn, labelZh, visible, priority, order}) => ({id, icon, source, value, labelEn, labelZh, visible: visible !== false, priority, order})),
         floorPlans: activeFloorPlans(project).map(({role, name, fit, focal, captionEn, captionZh, noteEn, noteZh, pixelWidth, pixelHeight}) => ({role, name, fit, focal, captionEn, captionZh, noteEn, noteZh, pixelWidth, pixelHeight})),
         spotlights: activeSpotlights(project).map(({id, name, mask, focal, titleEn, titleZh, detailEn, detailZh}) => ({id, name, mask, focal, titleEn, titleZh, detailEn, detailZh})),
@@ -1053,6 +1102,7 @@
 
   return {
     APP_VERSION, PROJECT_SCHEMA_VERSION, OUTPUT_DIMENSIONS, MODULE_LIMITS, MODULE_ORDER, COMPLIANCE_PROFILES, TYPOGRAPHY_PRESETS, MLS_SCALAR_MAPPING, MLS_MODULE_MAPPING, clone, getPath, setPath, deepMerge, list,
+    parseBedroomCount, parseCompoundBedrooms, bedroomCounts, bedroomDisplay, bedroomAccessibleCopy,
     profileForStatus, activeComplianceProfile, activeTypography, buildTemplate, applyTemplate, duplicateTemplate,
     allPropertyFacts, resolvedPropertyFacts, activeFloorPlans, activeSpotlights, activeLeaseDetails, activeIncludedCosts, activeTenantPaidCosts,
     activeAmenities, activeApplicationRequirements, costConflicts, layoutSnapshot,

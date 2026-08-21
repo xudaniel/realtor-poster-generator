@@ -7,11 +7,11 @@ const Core = require("../web/core.js");
 
 function project() {
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     appVersion: Core.APP_VERSION,
     listing: {
       address: "88 Harbour Street", unit: "2608", status: "FOR LEASE", city: "Toronto, ON", postalCode: "M5J 2N8",
-      price: "$3,850", rentPeriod: "per month", mls: "C1234567", beds: "2", baths: "2", sqft: "815",
+      price: "$3,850", rentPeriod: "per month", mls: "C1234567", beds: "2", bedsAdditional: "0", baths: "2", sqft: "815",
       floor: "26th", exposure: "South-East", balcony: "Open balcony", parking: "1 Space", availability: "Immediately",
       headlineEn: "Lake views", headlineZh: "湖景生活",
     },
@@ -52,8 +52,16 @@ function project() {
 }
 
 (async () => {
-  assert.equal(Core.APP_VERSION, "1.4.2");
-  assert.equal(Core.PROJECT_SCHEMA_VERSION, 5);
+  assert.equal(Core.APP_VERSION, "1.4.3");
+  assert.equal(Core.PROJECT_SCHEMA_VERSION, 6);
+  assert.equal(Core.bedroomDisplay(project()), "2");
+  for (const [primary, additional, expected] of [["1", "0", "1"], ["1", "1", "1 + 1"], ["2", "0", "2"], ["2", "1", "2 + 1"]]) {
+    const bedroomProject = project(); bedroomProject.listing.beds = primary; bedroomProject.listing.bedsAdditional = additional;
+    assert.equal(Core.bedroomDisplay(bedroomProject), expected);
+  }
+  const bilingualBedrooms = project(); bilingualBedrooms.listing.beds = "2"; bilingualBedrooms.listing.bedsAdditional = "1";
+  assert.equal(Core.bedroomAccessibleCopy(bilingualBedrooms, "english"), "2 bedrooms + 1 additional room/den");
+  assert.equal(Core.bedroomAccessibleCopy(bilingualBedrooms, "chinese"), "2 间卧室 + 1 个额外房间/书房");
 
   const valid = Core.validateProject(project());
   assert.deepEqual(valid.errors, []);
@@ -67,6 +75,10 @@ function project() {
   const errors = Core.validateProject(broken).errors.join("\n");
   assert.match(errors, /contact\.email/);
   assert.match(errors, /listing\.beds/);
+  const invalidAdditional = project(); invalidAdditional.listing.bedsAdditional = "1.5";
+  const additionalErrors = Core.validateProject(invalidAdditional).errors.join("\n");
+  assert.match(additionalErrors, /listing\.bedsAdditional must be a whole number from 0 to 10/);
+  assert.equal(Core.preflightPresentation(invalidAdditional).blockers.find(item => item.targetPath === "listing.bedsAdditional").actionLabel, "Go to field");
 
   const approved = project(); approved.review.status = "Approved";
   const approvalErrors = Core.validateProject(approved).errors.join("\n");
@@ -114,6 +126,7 @@ function project() {
 
   const listingData = Core.toListingData(project());
   assert.equal(listingData.listing.rent, "$3,850");
+  assert.equal(listingData.listing.beds_additional, 0);
   assert.equal(listingData.studio.language_mode, "bilingual");
   assert.equal(listingData.studio.media.heroDataUrl, project().media.heroDataUrl);
   const listingRoundTrip = Core.projectFromListingData(listingData, project());
@@ -122,6 +135,17 @@ function project() {
   assert.deepEqual(listingRoundTrip.modules.propertyFacts, project().modules.propertyFacts);
   assert.deepEqual(listingRoundTrip.modules.leaseDetails, project().modules.leaseDetails);
   assert.deepEqual(listingRoundTrip.modules.includedCosts, project().modules.includedCosts);
+  const bedroomInterchange = {listing: {beds: 2, beds_additional: 1}};
+  const bedroomRoundTrip = Core.projectFromListingData(Core.parseSimpleYaml(Core.toSimpleYaml(bedroomInterchange)), project());
+  assert.equal(bedroomRoundTrip.listing.beds, "2");
+  assert.equal(bedroomRoundTrip.listing.bedsAdditional, "1");
+  assert.equal(Core.bedroomDisplay(bedroomRoundTrip), "2 + 1");
+  const legacyProject = project(); legacyProject.schemaVersion = 5; legacyProject.listing.beds = "2"; delete legacyProject.listing.bedsAdditional;
+  assert.equal(Core.normalizeProject(legacyProject, project()).listing.bedsAdditional, "0");
+  const legacyCompoundProject = project(); legacyCompoundProject.schemaVersion = 5; legacyCompoundProject.listing.beds = "1 + 1"; delete legacyCompoundProject.listing.bedsAdditional;
+  const migratedCompound = Core.normalizeProject(legacyCompoundProject, project());
+  assert.equal(migratedCompound.listing.beds, "1");
+  assert.equal(migratedCompound.listing.bedsAdditional, "1");
 
   const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "mls", "synthetic_provider.json"), "utf8"));
   const exactResponse = {...fixture.scenarios["SYN-EXACT"].body, provider: fixture.provider, retrievedAt: "2026-08-21T12:00:00Z"};
@@ -131,6 +155,7 @@ function project() {
   assert.equal(importPlan.candidate["listing.address"], "100 Test Avenue");
   assert.equal(importPlan.candidate["content.featuresEn"], "Synthetic feature one\nSynthetic feature two");
   assert.equal(importPlan.provider.board, "SYNTH-BOARD");
+  assert.equal(Object.prototype.hasOwnProperty.call(importPlan.fields, "listing.bedsAdditional"), false, "missing optional den data must not be inferred");
   assert.deepEqual(importPlan.blocked, ["synthetic-plan", "synthetic-denied"]);
   const importedProject = Core.applyMlsImport(project(), importPlan, {overwriteLocalImages: true, overwriteUserOverrides: true});
   assert.equal(importedProject.listing.mls, "SYN-EXACT");
@@ -166,7 +191,7 @@ function project() {
   replacedImage.mlsImport.stale = true;
   const multipleWarningPreflight = Core.preflightPresentation(replacedImage);
   assert.ok(multipleWarningPreflight.warnings.length > 1);
-  assert.match(multipleWarningPreflight.warnings.find(item => item.id === "mls-local-overrides").detail, /2 fields differ.*Price, Bedrooms/);
+  assert.match(multipleWarningPreflight.warnings.find(item => item.id === "mls-local-overrides").detail, /2 fields differ.*Price, Main bedrooms/);
   replacedImage.mlsImport.reviewConfirmed = true;
   assert.equal(Core.preflightPresentation(replacedImage).blockers.some(item => item.id === "mls-review-required"), false, "resolving review removes its blocker immediately");
   replacedImage.mlsImport.reviewConfirmed = false;
@@ -180,6 +205,21 @@ function project() {
   assert.equal(preservedOverride.mlsImport.fields["listing.price"].status, "user-overridden");
   assert.equal(preservedOverride.mlsImport.fields["listing.price"].originalValue, "$3,400");
   assert.equal(preservedOverride.mlsImport.fields["listing.price"].currentValue, "$3,350");
+  const explicitAdditionalResponse = JSON.parse(JSON.stringify(exactResponse)); explicitAdditionalResponse.matches[0].bedsAdditional = 1;
+  const explicitAdditionalPlan = Core.buildMlsImportPlan(project(), explicitAdditionalResponse, exactRequest);
+  assert.equal(explicitAdditionalPlan.candidate["listing.beds"], "2");
+  assert.equal(explicitAdditionalPlan.candidate["listing.bedsAdditional"], "1");
+  const compoundResponse = JSON.parse(JSON.stringify(exactResponse)); compoundResponse.matches[0].beds = "2 + 1";
+  const compoundPlan = Core.buildMlsImportPlan(project(), compoundResponse, exactRequest);
+  assert.equal(compoundPlan.candidate["listing.beds"], "2");
+  assert.equal(compoundPlan.candidate["listing.bedsAdditional"], "1");
+  assert.equal(compoundPlan.fields["listing.beds"].sourceValue, "2 + 1");
+  assert.equal(compoundPlan.fields["listing.bedsAdditional"].sourceValue, "2 + 1");
+  const importedCompound = Core.applyMlsImport(project(), compoundPlan, {overwriteUserOverrides: true});
+  importedCompound.mlsImport.reviewConfirmed = true; importedCompound.mlsImport.reviewedAt = "2026-08-21T12:10:00Z";
+  importedCompound.listing.bedsAdditional = "2"; Core.recordMlsOverride(importedCompound, "listing.bedsAdditional", "2");
+  assert.equal(importedCompound.mlsImport.fields["listing.bedsAdditional"].status, "user-overridden");
+  assert.equal(importedCompound.mlsImport.reviewConfirmed, false);
   assert.throws(() => Core.buildMlsImportPlan(project(), {...fixture.scenarios["SYN-AMBIGUOUS"].body, provider: fixture.provider}, {...exactRequest, listingNumber: "SYN-AMBIGUOUS"}), error => error.code === "MLS_AMBIGUOUS");
   assert.throws(() => Core.buildMlsImportPlan(project(), {...fixture.scenarios["SYN-INCOMPLETE"].body, provider: fixture.provider}, {...exactRequest, listingNumber: "SYN-INCOMPLETE"}), error => error.code === "MLS_INCOMPLETE_IDENTITY");
   assert.throws(() => Core.buildMlsImportPlan(project(), {...fixture.scenarios["SYN-WITHDRAWN"].body, provider: fixture.provider}, {...exactRequest, listingNumber: "SYN-WITHDRAWN"}), error => error.code === "MLS_WITHDRAWN");
@@ -219,6 +259,7 @@ function project() {
   const copy = Core.campaignCopy(project());
   assert.equal(copy.shared.address, "88 Harbour Street");
   assert.equal(copy.shared.mls, "C1234567");
+  assert.equal(copy.shared.bedsAdditional, "0");
   assert.equal(copy.english.headline, "Lake views");
   assert.equal(copy.chinese.headline, "湖景生活");
   assert.deepEqual(copy.english.features, ["Windows", "Transit"]);
@@ -230,8 +271,10 @@ function project() {
   assert.ok(!Core.resolvedPropertyFacts(factsProject, "square").some(fact => fact.id === "floor"));
   factsProject.listing.beds = "3";
   assert.equal(Core.resolvedPropertyFacts(factsProject, "poster")[0].value, "3");
+  factsProject.listing.bedsAdditional = "1";
+  assert.equal(Core.resolvedPropertyFacts(factsProject, "poster")[0].value, "3 + 1");
   factsProject.modules.propertyFacts[0].visible = false;
-  assert.equal(Core.allPropertyFacts(factsProject)[0].value, "3");
+  assert.equal(Core.allPropertyFacts(factsProject)[0].value, "3 + 1");
   assert.equal(Core.allPropertyFacts(factsProject)[0].visible, false);
   const tooManyFacts = project();
   tooManyFacts.modules.propertyFacts = Array.from({length: 9}, (_, index) => ({id: `fact-${index}`, icon: "photo", value: String(index), labelEn: "Fact", labelZh: "信息", visible: true, priority: index + 1}));
@@ -326,7 +369,8 @@ function project() {
   planProject.modules.propertyFacts[4].visible = false;
   planProject.contact.portraitMode = "photo"; planProject.media.portraitName = "agent.png"; planProject.media.portraitDataUrl = "data:image/png;base64,BA==";
   const manifest = await Core.buildManifest(planProject, [output]);
-  assert.equal(manifest.generator, "realtor-poster-studio 1.4.2");
+  assert.equal(manifest.generator, "realtor-poster-studio 1.4.3");
+  assert.deepEqual(manifest.modules.bedrooms, {primary: 2, additional: 0, display: "2"});
   assert.equal(manifest.outputs[0].filename, "poster.png");
   assert.equal(manifest.outputs[0].sha256.length, 64);
   assert.equal(manifest.compliance.profile, "Residential lease");

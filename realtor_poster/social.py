@@ -13,6 +13,7 @@ from typing import Any, Dict, Mapping, Sequence, Tuple
 
 from PIL import Image, ImageDraw, ImageOps
 
+from .bedrooms import bedroom_counts, bedroom_display
 from .drawing import crop_to_fill, draw_icon, fit_single_line, fit_wrapped_text, font, hex_color
 
 
@@ -169,7 +170,7 @@ class SocialRenderer:
         facts_top = self.height - footer_h - facts_h
         draw.rectangle((0, facts_top, self.width, facts_top + facts_h), fill=self.paper)
         facts = [
-            ("bed", _safe(self.listing["beds"]), "Beds"),
+            ("bed", bedroom_display(self.listing), "Beds + den" if (bedroom_counts(self.listing)[1] or 0) > 0 else "Beds"),
             ("bath", _safe(self.listing["baths"]), "Baths"),
             ("area", _safe(self.listing["sqft"]), "Sq. Ft."),
             ("parking", _safe(self.listing["parking"]), "Parking"),
@@ -227,7 +228,7 @@ class SocialRenderer:
         draw.text((margin, self.px(360)), _safe(self.listing["rent"]), font=self.face("bold", 56), fill=self.paper, anchor="la")
         draw.text((margin, self.px(430)), f"MLS® {_safe(self.listing['mls'])}", font=self.face("bold", 19), fill=self.paper, anchor="la")
 
-        facts = f"{_safe(self.listing['beds'])} BED  •  {_safe(self.listing['baths'])} BATH  •  {_safe(self.listing['sqft'])} SQ. FT."
+        facts = f"{bedroom_display(self.listing)} BED + DEN  •  {_safe(self.listing['baths'])} BATH  •  {_safe(self.listing['sqft'])} SQ. FT." if (bedroom_counts(self.listing)[1] or 0) > 0 else f"{bedroom_display(self.listing)} BED  •  {_safe(self.listing['baths'])} BATH  •  {_safe(self.listing['sqft'])} SQ. FT."
         facts_face = fit_single_line(draw, facts, self.px(580), self.px(22), self.px(15), "bold")
         draw.text((margin, self.px(485)), facts, font=facts_face, fill=self.accent, anchor="la")
 

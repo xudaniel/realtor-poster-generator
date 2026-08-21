@@ -15,6 +15,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 from . import __version__
+from .bedrooms import bedroom_counts, bedroom_display
 from .drawing import (
     Box,
     crop_to_fill,
@@ -201,7 +202,7 @@ class PosterRenderer:
         draw.rectangle((0, top, self.width, top + self.y(8)), fill=self.accent)
 
         facts = [
-            ("bed", _format_number(self.listing["beds"]), "Beds"),
+            ("bed", bedroom_display(self.listing), "Beds + den" if (bedroom_counts(self.listing)[1] or 0) > 0 else "Beds"),
             ("bath", _format_number(self.listing["baths"]), "Baths"),
             ("area", f"{_format_number(self.listing['sqft'])}", "Sq. Ft."),
             ("building", _safe_text(self.listing["floor"]), "Floor"),

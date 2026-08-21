@@ -153,6 +153,15 @@ input[type="color"] { min-height: 43px; padding: 5px; }
 .range-grid input { grid-column: 1 / -1; padding: 0; accent-color: var(--accent); }
 .range-grid output { color: #9a713e; }
 
+.bedroom-editor {
+  min-width: 0; margin: 0; padding: 13px; border: 1px solid var(--line); border-radius: 14px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 9px 12px; align-items: end; background: #faf8f2;
+}
+.bedroom-editor legend { padding: 0 7px; color: #4d5a57; font-size: 11px; font-weight: 850; }
+.bedroom-plus { padding-bottom: 12px; color: var(--muted); font-size: 21px; font-weight: 800; }
+.bedroom-preview { grid-column: 1 / -1; display: block; padding: 9px 11px; border-radius: 9px; background: #edf4f1; color: #275b43; font-size: 12px; font-weight: 800; }
+.bedroom-editor > small { grid-column: 1 / -1; color: var(--muted); line-height: 1.4; }
+
 .media-list { display: grid; gap: 8px; margin: 10px 0 14px; }
 .media-row {
   display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; align-items: center;
@@ -242,6 +251,8 @@ footer {
   .app-shell { width: min(100% - 22px, 1540px); margin-top: 14px; }
   .editor-panel, .preview-panel { border-radius: 20px; padding: 20px; }
   .form-grid, .upload-grid, .range-grid, .module-card-grid { grid-template-columns: 1fr; }
+  .bedroom-editor { grid-template-columns: 1fr; }
+  .bedroom-plus { display: none; }
   .span-2 { grid-column: span 1; }
   .module-card-grid .span-2 { grid-column: span 1; }
   .lock-grid { grid-template-columns: 1fr 1fr; }

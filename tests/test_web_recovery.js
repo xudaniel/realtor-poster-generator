@@ -7,10 +7,10 @@ const Recovery = require("../web/recovery.js");
 
 function project(overrides = {}) {
   return {
-    schemaVersion: 5,
-    appVersion: "1.4.2",
+    schemaVersion: 6,
+    appVersion: "1.4.3",
     projectId: "project-listing-a",
-    listing: {address: "88 Harbour Street", unit: "2608", price: "$3,850"},
+    listing: {address: "88 Harbour Street", unit: "2608", price: "$3,850", beds: "2", bedsAdditional: "1"},
     media: {
       heroName: "hero.png",
       heroDataUrl: "data:image/png;base64,AAEC",
@@ -85,7 +85,7 @@ class FakeIndexedDb {
     scrollY: 480,
     tabId: "tab-test",
   });
-  assert.deepEqual(Recovery.validateSnapshot(snapshot, {maxProjectSchemaVersion: 5}), {ok: true, error: ""});
+  assert.deepEqual(Recovery.validateSnapshot(snapshot, {maxProjectSchemaVersion: 6}), {ok: true, error: ""});
   assert.equal(snapshot.projectId, "project-listing-a");
   assert.equal(snapshot.projectName, "88 Harbour Street · Unit 2608");
   assert.equal(snapshot.reason, "before-png-export");
@@ -94,6 +94,7 @@ class FakeIndexedDb {
   assert.equal(snapshot.project.media.gallery[0].dataUrl, source.media.gallery[0].dataUrl);
   assert.equal(snapshot.project.media.floorplans[0].dataUrl, source.media.floorplans[0].dataUrl);
   assert.equal(snapshot.project.modules.spotlights[0].dataUrl, source.modules.spotlights[0].dataUrl);
+  assert.equal(snapshot.project.listing.bedsAdditional, "1");
   snapshot.project.listing.price = "$4,000";
   assert.equal(source.listing.price, "$3,850", "snapshots must not mutate live editor state");
 
@@ -109,7 +110,7 @@ class FakeIndexedDb {
 
   assert.equal(Recovery.validateSnapshot({...snapshot, kind: "other"}).ok, false);
   assert.equal(Recovery.validateSnapshot({...snapshot, recoverySchemaVersion: 99}).ok, false);
-  assert.equal(Recovery.validateSnapshot({...snapshot, projectSchemaVersion: 6}, {maxProjectSchemaVersion: 5}).ok, false);
+  assert.equal(Recovery.validateSnapshot({...snapshot, projectSchemaVersion: 7}, {maxProjectSchemaVersion: 6}).ok, false);
   assert.equal(Recovery.validateSnapshot({...snapshot, project: null}).ok, false);
   assert.equal(Recovery.validateSnapshot({...snapshot, projectId: "project-mismatch"}).ok, false);
 

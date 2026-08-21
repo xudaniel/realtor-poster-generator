@@ -11,7 +11,7 @@
   <header class="site-header">
     <a class="brand" href="#top" aria-label="Realtor Poster Studio home">
       <span class="brand-mark" aria-hidden="true">DX</span>
-      <span><strong>Realtor Poster Studio</strong><small>by Daniel Xu · v1.4.2</small></span>
+      <span><strong>Realtor Poster Studio</strong><small>by Daniel Xu · v1.4.3</small></span>
     </a>
     <div class="privacy-badge"><span aria-hidden="true">●</span> Local editing · optional authorized connector · no analytics</div>
   </header>
@@ -70,7 +70,14 @@
           <label>Price<input data-path="listing.price" value="$3,850"></label>
           <label>Price period<input data-path="listing.rentPeriod" value="per month"></label>
           <label>MLS®<input data-path="listing.mls" value="C1234567"></label>
-          <label>Bedrooms<input data-path="listing.beds" inputmode="decimal" value="2"></label>
+          <fieldset class="bedroom-editor span-2">
+            <legend>Bedrooms and additional room / den</legend>
+            <label>Main bedrooms<input id="bedrooms-primary" data-path="listing.beds" type="number" inputmode="numeric" min="0" max="20" step="1" value="2" aria-describedby="bedroom-display-preview"></label>
+            <span class="bedroom-plus" aria-hidden="true">+</span>
+            <label>Additional room / den<input id="bedrooms-additional" data-path="listing.bedsAdditional" type="number" inputmode="numeric" min="0" max="10" step="1" value="0" aria-describedby="bedroom-display-preview"></label>
+            <output id="bedroom-display-preview" class="bedroom-preview" aria-live="polite">Poster display: 2 · 2 bedrooms</output>
+            <small>Enter the den separately. It stays labelled as an additional room and is never counted as a legal bedroom.</small>
+          </fieldset>
           <label>Bathrooms<input data-path="listing.baths" inputmode="decimal" value="2"></label>
           <label>Area<input data-path="listing.sqft" value="815"></label>
           <label>Floor<input data-path="listing.floor" value="26th"></label>
