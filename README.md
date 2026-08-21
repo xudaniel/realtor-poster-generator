@@ -2,11 +2,11 @@
 
 [![Tests](https://img.shields.io/github/actions/workflow/status/xudaniel/realtor-poster-generator/ci.yml?branch=main&label=tests)](https://github.com/xudaniel/realtor-poster-generator/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-d6a25e.svg)](LICENSE)
-[![Browser local](https://img.shields.io/badge/privacy-browser--local-2f7654.svg)](web/)
+[![Manual mode local](https://img.shields.io/badge/privacy-manual_mode_local-2f7654.svg)](web/)
 
 由 **Daniel Xu** 创建并维护。Created and maintained by **Daniel Xu**.
 
-[English README](README.en.md) · [v1.4.0 中英双语发布说明](RELEASE_NOTES_v1.4.0.md) · [v1.3.0 发布说明](RELEASE_NOTES_v1.3.0.md) · [中文产品需求文档](PRD.md) · [English PRD](PRD.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
+[English README](README.en.md) · [v2 MLS 候选说明 / v2 MLS candidate notes](RELEASE_NOTES_v2.0.0-candidate.md) · [v1.4.0 中英双语发布说明](RELEASE_NOTES_v1.4.0.md) · [中文产品需求文档](PRD.md) · [English PRD](PRD.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
 
 当前稳定版本：**1.4.0** · 浏览器项目结构：**第 4 版**
 
@@ -28,7 +28,7 @@ Python 流程使用 Pillow，浏览器流程使用 Canvas；两者都根据经�
 4. 保存可锁定品牌字段的版本化模板，切换英文、中文或双语版式；
 5. 实时预览五种尺寸，下载 PNG、打印为 PDF，或导出社交媒体 ZIP、SHA-256 清单和完整审批包。
 
-照片、联系资料和项目文件只保存在当前设备的浏览器本地存储中，不会上传到服务器。也可以完全离线运行：
+手工添加的照片、联系资料和项目文件只保存在当前设备的浏览器本地存储中，不会上传到服务器，也不包含分析代码。v2 候选功能只有在用户选择授权连接器并点击“生成”后才会发送一次请求；内置 `DEMO1234` 虚构示例保持离线。也可以完全离线运行：
 
 ```bash
 python3 scripts/serve_web.py
@@ -67,6 +67,7 @@ v1.4 编辑器还会在修改后，以及替换项目、重置或导出前，把
 - v1.4 新增照片、插画、姓名首字母或无头像四种经纪人资料页脚，以及双语行动号召
 - v1.4 用原创深绿/金色模块化版式统一打印海报与社交尺寸，并在空间不足时按优先级收拢内容
 - v1.4 横向恢复功能（[#20](https://github.com/xudaniel/realtor-poster-generator/issues/20)）会在生成、导出、刷新、重置或替换项目前保留可编辑字段与本地图片，不改变故事 1–10 的编号
+- v2 候选功能允许通过虚构演示或明确配置的授权连接器输入一个 MLS 号码，生成包含字段来源与图片许可记录的完整可编辑项目
 
 ## v1.4 正式版：故事 1–10
 
@@ -77,6 +78,12 @@ v1.4.0 将浏览器项目结构升级至第 4 版。房屋数据、双户型图�
 申请要求是信息展示，不是自动资格审核。只要启用了申请要求，导出前就必须由用户确认要求并保留免责声明。经纪人头像若缺失或失效，版式会退回姓名首字母，不会显示损坏图片。
 
 Issue #20 是 v1.4 的横向基础能力，不是 Story 11。系统把由项目结构驱动的完整数据保存为同一份恢复快照，因此编号故事中新加入的字段和图片会自动继承同一套保存与恢复路径，不会形成互相冲突的多套持久化机制。
+
+## v2 候选功能：通过授权 MLS 号码生成
+
+Issue [#22](https://github.com/xudaniel/realtor-poster-generator/issues/22) 增加了明确选择的数据源边界。输入 `DEMO1234` 可离线测试虚构房源；也可选择由用户另行运营且已经认证的授权连接器。连接器必须返回唯一且精确匹配的数据商、MLS 系统、号码、状态、地址和单元号，并为每张图片提供明确导出许可。编辑器只映射返回的资料，保留经纪人、品牌与模板，记录逐字段来源及本地修改，不自动猜测、翻译或改写房源陈述。
+
+在负责人核对导入资料、当前房源状态、披露、申请要求和图片权利前，所有发布导出保持阻止状态。刷新会先显示差异，并沿用 v1.4 恢复快照。浏览器不接收 MLS 密码、API Key 或 Bearer Token，也不抓取房源网页。详见[中文连接器协议](docs/MLS_CONNECTOR.md)和[候选发布说明](RELEASE_NOTES_v2.0.0-candidate.md)。
 
 ## 快速开始
 
@@ -292,6 +299,9 @@ realtor_poster/preview.py          离线主图焦点与版面预览页面
 realtor_poster/visual_regression.py 视觉差异指标和差异图
 web/                              无上传、浏览器本地运行的完整广告编辑器
 web/core.js                       项目结构、验证、YAML、清单与比较核心
+web/mls.js                        授权 MLS 连接器协议、演示数据源、映射与来源记录
+docs/MLS_CONNECTOR.en.md          英文连接器协议与信任边界
+docs/MLS_CONNECTOR.md             中文连接器协议与信任边界
 scripts/new_listing.py             经纪人交互式填写工具
 scripts/create_sample_assets.py    虚构示例素材生成脚本
 scripts/serve_web.py               本地可视化编辑器启动脚本
@@ -302,6 +312,7 @@ examples/assets/                   虚构示例图片与品牌标志
 input_template.yaml                可复制使用的数据模板
 tests/test_poster.py               Python 与静态浏览器测试
 tests/test_web_core.js             浏览器核心单元测试
+tests/test_web_mls.js              只使用模拟数据的 MLS 验证、映射、许可与来源测试
 outputs/                           生成的海报和清单
 PRD.md                             中文产品需求文档
 PRD.en.md                          English product requirements document
@@ -312,7 +323,8 @@ PRD.en.md                          English product requirements document
 ```bash
 python scripts/create_sample_assets.py
 python -m unittest discover -s tests -v
-node tests/test_web_core.js
+node --check web/app.js && node --check web/mls.js
+node tests/test_web_core.js && node tests/test_web_recovery.js && node tests/test_web_mls.js && node tests/test_web_layout_goldens.js
 ```
 
 当前测试覆盖：
@@ -327,6 +339,7 @@ node tests/test_web_core.js
 - 多套房源的批量发现、预验证和输出
 - 浏览器编辑器的隐私边界、导出功能与核心静态资源
 - 浏览器 YAML 往返、合规门禁、模板清单、审批要求和项目比较
+- MLS 精确匹配、连接器请求限制、确定性映射、禁用无许可图片、来源记录、刷新差异、恢复往返与修改后审核失效
 - GitHub Actions 中的多版本 Python、JavaScript 语法、示例渲染和软件包构建
 
 ## 发布前检查

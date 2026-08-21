@@ -5,6 +5,8 @@
   if (!Core) throw new Error("RealtorPosterCore is required");
   const Recovery = window.RealtorPosterRecovery;
   if (!Recovery) throw new Error("RealtorPosterRecovery is required");
+  const Mls = window.RealtorPosterMls;
+  if (!Mls) throw new Error("RealtorPosterMls is required");
 
   const PRESETS = Core.OUTPUT_DIMENSIONS;
   const SOCIAL_PRESETS = ["square", "portrait", "story", "landscape"];
@@ -119,6 +121,15 @@
   const downloadRecoveryButton = document.getElementById("download-recovery");
   const autosaveBar = document.querySelector(".autosave-bar");
   const autosaveState = document.getElementById("autosave-state");
+  const mlsProviderSelect = document.getElementById("mls-provider");
+  const mlsConnectorRow = document.getElementById("mls-connector-row");
+  const mlsConnectorUrl = document.getElementById("mls-connector-url");
+  const mlsNumberInput = document.getElementById("mls-number");
+  const generateFromMlsButton = document.getElementById("generate-from-mls");
+  const mlsStatus = document.getElementById("mls-status");
+  const mlsSummary = document.getElementById("mls-summary");
+  const mlsReviewRow = document.getElementById("mls-review-row");
+  const mlsReviewCheckbox = document.getElementById("mls-review");
   const encoder = new TextEncoder();
   const tabId = Recovery.newProjectId("tab");
   let draftStore = null;
@@ -143,6 +154,52 @@
   }
   function escapeHtml(value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
+  }
+  function setMlsStatus(message, mode = "") {
+    mlsStatus.textContent = message;
+    mlsStatus.classList.toggle("is-error", mode === "error");
+    mlsStatus.classList.toggle("is-success", mode === "success");
+  }
+  function mlsProjectAnalysis() {
+    const source = state.mlsImport; if (!source) return null;
+    const media = Array.isArray(source.media) ? source.media : []; const sourceFields = source.sourceFields || {};
+    return {
+      importedFieldCount: Object.values(sourceFields).filter(value => String(value || "").trim()).length,
+      missing: source.missingFields || [], permittedMedia: media.filter(item => item.rights && item.rights.exportAllowed),
+      blockedMedia: source.blockedMedia || media.filter(item => !item.rights || !item.rights.exportAllowed),
+      overrides: Object.entries(source.fieldSources || {}).filter(([_path, detail]) => detail && detail.overriddenAt),
+      stale: Date.now() - new Date(source.retrievedAt).getTime() > 24 * 60 * 60 * 1000,
+    };
+  }
+  function renderMlsSummary(changes = []) {
+    const source = state.mlsImport; const analysis = mlsProjectAnalysis();
+    if (!source || !analysis) { mlsSummary.hidden = true; mlsReviewRow.hidden = true; return; }
+    const provider = source.provider || {}; const missing = analysis.missing.length ? analysis.missing.join(", ") : "None / 无";
+    const changed = changes.length ? `<li><strong>Refresh changes / 刷新变更:</strong> ${changes.map(item => escapeHtml(item.path)).join(", ")}</li>` : "";
+    mlsSummary.innerHTML = `<strong>Import completeness / 导入完整度</strong><ul>
+      <li><strong>Source / 来源:</strong> ${escapeHtml(provider.name || provider.id)} · ${escapeHtml(provider.board || "")}</li>
+      <li><strong>MLS®:</strong> ${escapeHtml(source.listingNumber)} · <strong>Retrieved / 获取:</strong> ${escapeHtml(new Date(source.retrievedAt).toLocaleString())}${analysis.stale ? " · STALE / 已过期" : ""}</li>
+      <li><strong>Imported / 已导入:</strong> ${analysis.importedFieldCount} fields · ${analysis.permittedMedia.length} permitted media</li>
+      <li><strong>Missing / 缺失:</strong> ${escapeHtml(missing)} · <strong>Blocked media / 禁用图片:</strong> ${analysis.blockedMedia.length}</li>
+      <li><strong>Local overrides / 本地修改:</strong> ${analysis.overrides.length} · <strong>Refreshes / 刷新:</strong> ${Number(source.refreshCount || 0)}</li>${changed}</ul>`;
+    mlsSummary.classList.toggle("is-warning", analysis.missing.length > 0 || analysis.blockedMedia.length > 0 || analysis.stale || analysis.overrides.length > 0);
+    mlsSummary.hidden = false; mlsReviewRow.hidden = false; mlsReviewCheckbox.disabled = false; mlsReviewCheckbox.checked = Boolean(source.humanReviewedAt && source.rightsReviewedAt);
+  }
+  function syncMlsControls() {
+    mlsConnectorRow.hidden = mlsProviderSelect.value !== "connector";
+    if (state.mlsImport) {
+      mlsProviderSelect.value = state.mlsImport.provider && state.mlsImport.provider.id === "demo-fixture" ? "demo" : "connector";
+      mlsConnectorRow.hidden = mlsProviderSelect.value !== "connector";
+      if (!mlsNumberInput.value || mlsNumberInput.value === "DEMO1234") mlsNumberInput.value = state.mlsImport.listingNumber || "";
+      renderMlsSummary();
+    } else { mlsSummary.hidden = true; mlsReviewRow.hidden = true; mlsReviewCheckbox.disabled = true; mlsReviewCheckbox.checked = false; }
+  }
+  function markMlsMediaOverride(action) {
+    if (!state.mlsImport) return;
+    if (!Array.isArray(state.mlsImport.mediaOverrides)) state.mlsImport.mediaOverrides = [];
+    const at = new Date().toISOString(); const previous = state.mlsImport.mediaOverrides[state.mlsImport.mediaOverrides.length - 1];
+    if (previous && previous.action === action) previous.at = at; else state.mlsImport.mediaOverrides.push({action, at});
+    state.mlsImport.humanReviewedAt = ""; state.mlsImport.rightsReviewedAt = "";
   }
   function downloadBlob(blob, filename) {
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename;
@@ -298,6 +355,52 @@
       setAutosaveState(message, "warning"); showRecoveryPanel(null, "warning", message);
     }
   }
+  async function generateFromMls() {
+    const number = Mls.normalizeMlsNumber(mlsNumberInput.value);
+    if (!number) { setMlsStatus("Enter an MLS number. / 请输入 MLS 号码。", "error"); mlsNumberInput.focus(); return; }
+    generateFromMlsButton.disabled = true; setMlsStatus("Resolving an exact authorized match… / 正在核对授权房源…");
+    let rollbackState = null;
+    try {
+      const provider = mlsProviderSelect.value === "demo" ? new Mls.DemoMlsProvider() : new Mls.AuthorizedConnectorProvider(mlsConnectorUrl.value);
+      const envelope = await provider.resolve(number); const source = state.mlsImport;
+      const refresh = Boolean(source && source.provider && source.provider.id === envelope.provider.id && Mls.normalizeMlsNumber(source.listingNumber) === number);
+      const nextFields = Mls.sourceFields(envelope);
+      const fieldChanges = refresh ? Object.entries(nextFields).filter(([path, value]) => JSON.stringify(Core.getPath(state, path) == null ? "" : Core.getPath(state, path)) !== JSON.stringify(value == null ? "" : value)).map(([path, after]) => ({path, before: Core.getPath(state, path), after})) : [];
+      const mediaChanges = refresh ? Mls.diffMedia(source.media, envelope.media) : [];
+      if (refresh && (source.mediaOverrides || []).length) mediaChanges.push({path: "media.localOverrides", before: source.mediaOverrides, after: "provider media"});
+      const changes = [...fieldChanges, ...mediaChanges];
+      if (refresh && changes.length) {
+        const paths = changes.slice(0, 12).map(item => item.path).join("\n• ");
+        const confirmed = window.confirm(`Refresh will replace ${changes.length} current imported or locally edited field${changes.length === 1 ? "" : "s"}:\n• ${paths}${changes.length > 12 ? `\n• …and ${changes.length - 12} more` : ""}\n\nContinue? A recovery snapshot is saved first.\n\n刷新将替换 ${changes.length} 个已导入或本地修改的字段。是否继续？系统会先保存恢复快照。`);
+        if (!confirmed) { setMlsStatus("Refresh cancelled; current data was preserved. / 已取消刷新，当前资料保持不变。"); return; }
+      }
+      if (!(await prepareAction(refresh ? "before-mls-refresh" : "before-mls-import", {requireSaved: true}))) {
+        setMlsStatus("Import cancelled because the recovery snapshot was not saved. / 因恢复快照未保存，导入已取消。", "error"); return;
+      }
+      const projectId = refresh ? state.projectId : Recovery.newProjectId("project"); const previousRefreshCount = Number(source && source.refreshCount || 0);
+      rollbackState = Core.clone(state); const mappingSource = refresh ? state : {...state, modules: {...state.modules, spotlights: []}};
+      state = Mls.mapEnvelopeToProject(envelope, mappingSource, Core); state.projectId = projectId; state.mlsImport.refreshCount = refresh ? previousRefreshCount + 1 : 0;
+      hideRecoveryPanel(); autosaveEnabled = true; await hydrateImages(); syncControls(); render({mlsChanges: changes});
+      const importedSnapshot = await saveRecoverySnapshot(refresh ? "after-mls-refresh" : "after-mls-import", {force: true});
+      const action = refresh ? "refreshed" : "generated"; const recoveryWarning = importedSnapshot ? "" : " Recovery is unavailable; download the portable project now. / 恢复保存不可用，请立即下载便携项目。";
+      setMlsStatus(`Editable project ${action} from ${envelope.provider.name}. Human review is required before export. / 已从 ${envelope.provider.name} 生成可编辑项目，导出前必须人工核对。${recoveryWarning}`, importedSnapshot ? "success" : "error");
+      setStatus(`MLS ${number} ${action}; source provenance and image rights were retained.`);
+    } catch (error) {
+      if (rollbackState) { state = rollbackState; await hydrateImages(); syncControls(); render({autosave: false}); }
+      setMlsStatus(Mls.providerMessage(error), "error"); setStatus("MLS import failed; the current editor data was preserved. / MLS 导入失败，当前资料未被替换。");
+    } finally { generateFromMlsButton.disabled = false; }
+  }
+  mlsProviderSelect.addEventListener("change", () => {
+    mlsConnectorRow.hidden = mlsProviderSelect.value !== "connector";
+    if (mlsProviderSelect.value === "demo") { mlsNumberInput.value = "DEMO1234"; setMlsStatus("Demo mode uses a bundled fictional listing and makes no network request. / 演示模式使用本地虚构房源，不发送网络请求。"); }
+    else { if (mlsNumberInput.value === "DEMO1234") mlsNumberInput.value = ""; setMlsStatus("The connector must already be authenticated; no API key is accepted or stored here. / 连接器必须已完成授权；本页面不接收或保存 API 密钥。"); }
+  });
+  generateFromMlsButton.addEventListener("click", generateFromMls);
+  mlsNumberInput.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); generateFromMls(); } });
+  mlsReviewCheckbox.addEventListener("change", () => {
+    Mls.reviewImport(state, mlsReviewCheckbox.checked); renderMlsSummary(); render();
+    setMlsStatus(mlsReviewCheckbox.checked ? "Human review recorded for this imported revision. / 已记录此导入版本的人工核对。" : "Human review cleared; export is blocked. / 已取消人工核对，导出被阻止。", mlsReviewCheckbox.checked ? "success" : "error");
+  });
   function drawCover(ctx, image, x, y, width, height, focal = [.5, .5]) {
     if (!image) {
       const gradient = ctx.createLinearGradient(x, y, x + width, y + height);
@@ -625,7 +728,7 @@
       `Agent contact: ${state.contact.name}, ${state.contact.phone}, ${state.contact.email}.`,
     ].filter(Boolean).join(" ");
   }
-  function render(options = {}) { drawPoster(canvas); updateArtworkDescription(); updateValidation(); updateChangeSummary(); if (options.autosave !== false) scheduleAutosave(); }
+  function render(options = {}) { drawPoster(canvas); updateArtworkDescription(); updateValidation(); updateChangeSummary(); renderMlsSummary(options.mlsChanges || []); if (options.autosave !== false) scheduleAutosave(); }
   function mediaDescriptors() {
     const output = [];
     if (state.media.heroDataUrl || state.media.heroName) output.push({kind: "hero", name: state.media.heroName || "Hero photo", dataUrl: state.media.heroDataUrl});
@@ -794,7 +897,7 @@
     document.getElementById("preset-select").value = state.preset;
     document.getElementById("portrait-focus-x").value = Math.round((state.media.portraitFocal || [.5, .5])[0] * 100);
     document.getElementById("portrait-focus-y").value = Math.round((state.media.portraitFocal || [.5, .5])[1] * 100);
-    updateFocalUI(); applyLocks(); renderMediaList(); renderModuleEditors();
+    updateFocalUI(); applyLocks(); renderMediaList(); renderModuleEditors(); syncMlsControls();
     document.documentElement.style.setProperty("--accent", state.theme.accent); document.documentElement.style.setProperty("--ink", state.theme.ink); document.documentElement.style.setProperty("--paper", state.theme.paper);
   }
   function applyLocks() {
@@ -806,7 +909,8 @@
     if (result.errors.length) container.innerHTML = `<strong>Export blocked · ${result.errors.length} issue${result.errors.length === 1 ? "" : "s"}</strong><ul>${result.errors.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>${result.warnings.length ? `<strong>Warnings</strong><ul>${result.warnings.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}`;
     else if (result.warnings.length) container.innerHTML = `<strong>Ready with ${result.warnings.length} warning${result.warnings.length === 1 ? "" : "s"}</strong><ul>${result.warnings.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
     else container.innerHTML = "<strong>Preflight passed</strong>Configured required fields and media are ready for export.";
-    document.getElementById("active-profile").textContent = `Compliance: ${result.profile.name} ${result.profile.version} · Template: ${state.template.name} ${state.template.version} · Language: ${state.language.mode}`;
+    const source = state.mlsImport ? ` · Source: ${state.mlsImport.provider.name} / ${state.mlsImport.provider.board} / ${state.mlsImport.listingNumber}` : " · Source: manual input";
+    document.getElementById("active-profile").textContent = `Compliance: ${result.profile.name} ${result.profile.version} · Template: ${state.template.name} ${state.template.version} · Language: ${state.language.mode}${source}`;
     return result;
   }
   function exportGuard() {
@@ -833,22 +937,25 @@
   }
   async function setNamedMedia(kind, file) {
     const dataUrl = await readFile(file); state.media[`${kind}DataUrl`] = dataUrl; state.media[`${kind}Name`] = file.name; state.media[`${kind}Type`] = file.type; images[kind] = await loadImage(dataUrl);
+    if (kind === "hero") markMlsMediaOverride("replace-hero");
     updateFocalUI(); renderMediaList(); render(); setStatus(`${file.name} loaded locally.`);
   }
   async function addGallery(files) {
     const available = Math.max(0, 4 - state.media.gallery.length); const selected = [...files].slice(0, available);
     for (const file of selected) { const dataUrl = await readFile(file); state.media.gallery.push({name: file.name, type: file.type, dataUrl}); images.gallery.push(await loadImage(dataUrl)); }
+    if (selected.length) markMlsMediaOverride("add-gallery");
     if (files.length > available) setStatus("Only four interior photos are supported; additional files were skipped."); else setStatus(`${selected.length} interior photo${selected.length === 1 ? "" : "s"} loaded locally.`);
     renderMediaList(); render();
   }
   async function replaceGallery(index) {
     const input = document.createElement("input"); input.type = "file"; input.accept = "image/jpeg,image/png,image/webp";
-    input.addEventListener("change", async () => { const file = input.files[0]; if (!file) return; const dataUrl = await readFile(file); state.media.gallery[index] = {name: file.name, type: file.type, dataUrl}; images.gallery[index] = await loadImage(dataUrl); renderMediaList(); render(); setStatus("Interior photo replaced locally."); });
+    input.addEventListener("change", async () => { const file = input.files[0]; if (!file) return; const dataUrl = await readFile(file); state.media.gallery[index] = {name: file.name, type: file.type, dataUrl}; images.gallery[index] = await loadImage(dataUrl); markMlsMediaOverride(`replace-gallery-${index}`); renderMediaList(); render(); setStatus("Interior photo replaced locally."); });
     input.click();
   }
   function removeMedia(kind, index) {
     if (kind === "gallery") { state.media.gallery.splice(index, 1); images.gallery.splice(index, 1); }
     else { state.media[`${kind}DataUrl`] = ""; state.media[`${kind}Name`] = ""; state.media[`${kind}Type`] = ""; images[kind] = null; }
+    if (kind === "hero" || kind === "gallery") markMlsMediaOverride(`remove-${kind}${kind === "gallery" ? `-${index}` : ""}`);
     renderMediaList(); updateFocalUI(); render(); setStatus("Media removed from this project.");
   }
   function collectionFor(name) { return name === "floorplans" ? state.media.floorplans : state.modules[name]; }
@@ -864,6 +971,8 @@
     } else if (input.type === "checkbox") item[input.dataset.field] = input.checked;
     else if (input.type === "number") item[input.dataset.field] = Number(input.value);
     else item[input.dataset.field] = input.value;
+    if (collectionName === "floorplans") markMlsMediaOverride(`edit-floorplan-${input.dataset.index}`);
+    else Mls.recordOverride(state, `modules.${collectionName}.${input.dataset.index}.${input.dataset.field}`, item[input.dataset.field]);
     render();
   });
   document.addEventListener("click", async event => {
@@ -878,12 +987,15 @@
       else if (action === "up" && index > 0) { [collection[index - 1], collection[index]] = [collection[index], collection[index - 1]]; if (imageCollection) [imageCollection[index - 1], imageCollection[index]] = [imageCollection[index], imageCollection[index - 1]]; }
       else if (action === "down" && index < collection.length - 1) { [collection[index + 1], collection[index]] = [collection[index], collection[index + 1]]; if (imageCollection) [imageCollection[index + 1], imageCollection[index]] = [imageCollection[index], imageCollection[index + 1]]; }
     }
+    if (button.dataset.collection === "floorplans" || action === "add-plan") markMlsMediaOverride("change-floorplans");
+    else if (button.dataset.collection) Mls.recordOverride(state, `modules.${button.dataset.collection}`, collectionFor(button.dataset.collection));
     renderModuleEditors(); render(); setStatus("Module order and visibility updated locally.");
   });
   document.addEventListener("change", async event => {
     const input = event.target; const collectionName = input.dataset.moduleFile; if (!collectionName || !input.files || !input.files[0]) return;
     const file = input.files[0]; const index = Number(input.dataset.index); const collection = collectionFor(collectionName); if (!collection || !collection[index]) return;
     const dataUrl = await readFile(file); const image = await loadImage(dataUrl); Object.assign(collection[index], {name: file.name, type: file.type, dataUrl, pixelWidth: image.naturalWidth, pixelHeight: image.naturalHeight});
+    markMlsMediaOverride(`replace-${collectionName}-${index}`);
     moduleImageCollection(collectionName)[index] = image; renderModuleEditors(); render(); setStatus(`${file.name} loaded locally with its pixel dimensions.`);
   });
   document.getElementById("add-custom-fact").addEventListener("click", () => {
@@ -896,28 +1008,30 @@
   });
   document.getElementById("add-lease-detail").addEventListener("click", () => {
     if (state.modules.leaseDetails.length >= Core.MODULE_LIMITS.leaseDetails) return;
-    state.modules.leaseDetails.push({id: `custom-${Date.now()}`, labelEn: "Custom condition", labelZh: "自定义条款", valueEn: "", valueZh: "", state: "active"}); renderModuleEditors(); render();
+    state.modules.leaseDetails.push({id: `custom-${Date.now()}`, labelEn: "Custom condition", labelZh: "自定义条款", valueEn: "", valueZh: "", state: "active"}); Mls.recordOverride(state, "modules.leaseDetails", state.modules.leaseDetails); renderModuleEditors(); render();
   });
   document.getElementById("add-included-cost").addEventListener("click", () => {
     if (state.modules.includedCosts.length >= Core.MODULE_LIMITS.includedCosts) return;
-    state.modules.includedCosts.push({id: `custom-${Date.now()}`, icon: "receipt", labelEn: "Custom inclusion", labelZh: "自定义包含项目", state: "included"}); renderModuleEditors(); render();
+    state.modules.includedCosts.push({id: `custom-${Date.now()}`, icon: "receipt", labelEn: "Custom inclusion", labelZh: "自定义包含项目", state: "included"}); Mls.recordOverride(state, "modules.includedCosts", state.modules.includedCosts); renderModuleEditors(); render();
   });
   document.getElementById("add-tenant-cost").addEventListener("click", () => {
     if (state.modules.tenantPaidCosts.length >= Core.MODULE_LIMITS.tenantPaidCosts) return;
-    state.modules.tenantPaidCosts.push({id: `custom-tenant-${Date.now()}`, icon: "receipt", labelEn: "Custom tenant cost", labelZh: "自定义租客费用", state: "tenant-paid"}); renderModuleEditors(); render();
+    state.modules.tenantPaidCosts.push({id: `custom-tenant-${Date.now()}`, icon: "receipt", labelEn: "Custom tenant cost", labelZh: "自定义租客费用", state: "tenant-paid"}); Mls.recordOverride(state, "modules.tenantPaidCosts", state.modules.tenantPaidCosts); renderModuleEditors(); render();
   });
   document.getElementById("add-amenity").addEventListener("click", () => {
     if (state.modules.amenities.length >= Core.MODULE_LIMITS.amenities) return;
-    state.modules.amenities.push({id: `custom-amenity-${Date.now()}`, icon: "building-community", labelEn: "Custom amenity", labelZh: "自定义设施", state: "active"}); renderModuleEditors(); render();
+    state.modules.amenities.push({id: `custom-amenity-${Date.now()}`, icon: "building-community", labelEn: "Custom amenity", labelZh: "自定义设施", state: "active"}); Mls.recordOverride(state, "modules.amenities", state.modules.amenities); renderModuleEditors(); render();
   });
   document.getElementById("add-requirement").addEventListener("click", () => {
     if (state.modules.applicationRequirements.length >= Core.MODULE_LIMITS.applicationRequirements) return;
-    state.modules.applicationRequirements.push({id: `custom-requirement-${Date.now()}`, icon: "circle-check", labelEn: "Custom requirement", labelZh: "自定义申请要求", state: "required"}); renderModuleEditors(); render();
+    state.modules.applicationRequirements.push({id: `custom-requirement-${Date.now()}`, icon: "circle-check", labelEn: "Custom requirement", labelZh: "自定义申请要求", state: "required"}); Mls.recordOverride(state, "modules.applicationRequirements", state.modules.applicationRequirements); renderModuleEditors(); render();
   });
 
   document.querySelectorAll("[data-path]").forEach(input => input.addEventListener("input", () => {
     if (state.template.lockedFields.includes(input.dataset.path)) { syncControls(); return; }
     Core.setPath(state, input.dataset.path, input.type === "checkbox" ? input.checked : input.value);
+    Mls.recordOverride(state, input.dataset.path, input.type === "checkbox" ? input.checked : input.value);
+    if (state.mlsImport && input.dataset.path.startsWith("compliance.")) state.mlsImport.humanReviewedAt = "";
     if (state.modules.propertyFacts.some(fact => fact.source === input.dataset.path)) renderFactsEditor();
     if (input.dataset.path === "listing.status" && !state.compliance.profile) {
       const id = Core.profileForStatus(input.value); state.compliance.profileId = id; state.compliance.disclaimer = Core.COMPLIANCE_PROFILES[id].disclaimer; syncControls();
@@ -941,19 +1055,19 @@
     const button = event.target.closest("button[data-action]"); if (!button) return; const row = button.closest("[data-kind]"); const kind = row.dataset.kind; const index = Number(row.dataset.index);
     if (button.dataset.action === "remove") removeMedia(kind, index);
     else if (button.dataset.action === "replace") replaceGallery(index);
-    else if (button.dataset.action === "up" && index > 0) { [state.media.gallery[index - 1], state.media.gallery[index]] = [state.media.gallery[index], state.media.gallery[index - 1]]; [images.gallery[index - 1], images.gallery[index]] = [images.gallery[index], images.gallery[index - 1]]; renderMediaList(); render(); }
-    else if (button.dataset.action === "down" && index < state.media.gallery.length - 1) { [state.media.gallery[index + 1], state.media.gallery[index]] = [state.media.gallery[index], state.media.gallery[index + 1]]; [images.gallery[index + 1], images.gallery[index]] = [images.gallery[index], images.gallery[index + 1]]; renderMediaList(); render(); }
+    else if (button.dataset.action === "up" && index > 0) { [state.media.gallery[index - 1], state.media.gallery[index]] = [state.media.gallery[index], state.media.gallery[index - 1]]; [images.gallery[index - 1], images.gallery[index]] = [images.gallery[index], images.gallery[index - 1]]; markMlsMediaOverride(`reorder-gallery-${index}-up`); renderMediaList(); render(); }
+    else if (button.dataset.action === "down" && index < state.media.gallery.length - 1) { [state.media.gallery[index + 1], state.media.gallery[index]] = [state.media.gallery[index], state.media.gallery[index + 1]]; [images.gallery[index + 1], images.gallery[index]] = [images.gallery[index], images.gallery[index + 1]]; markMlsMediaOverride(`reorder-gallery-${index}-down`); renderMediaList(); render(); }
   });
   function setFocalFromEvent(event) {
-    const rect = focalPad.getBoundingClientRect(); state.focal = [Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)), Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height))]; updateFocalUI(); render();
+    const rect = focalPad.getBoundingClientRect(); state.focal = [Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)), Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height))]; markMlsMediaOverride("edit-hero-focal"); updateFocalUI(); render();
   }
   focalPad.addEventListener("click", setFocalFromEvent);
   focalPad.addEventListener("keydown", event => {
     const delta = event.shiftKey ? .05 : .01; let [x, y] = state.focal;
     if (event.key === "ArrowLeft") x -= delta; else if (event.key === "ArrowRight") x += delta; else if (event.key === "ArrowUp") y -= delta; else if (event.key === "ArrowDown") y += delta; else return;
-    event.preventDefault(); state.focal = [Math.min(1, Math.max(0, x)), Math.min(1, Math.max(0, y))]; updateFocalUI(); render();
+    event.preventDefault(); state.focal = [Math.min(1, Math.max(0, x)), Math.min(1, Math.max(0, y))]; markMlsMediaOverride("edit-hero-focal"); updateFocalUI(); render();
   });
-  [focusX, focusY].forEach(input => input.addEventListener("input", () => { state.focal = [Number(focusX.value) / 100, Number(focusY.value) / 100]; updateFocalUI(); render(); }));
+  [focusX, focusY].forEach(input => input.addEventListener("input", () => { state.focal = [Number(focusX.value) / 100, Number(focusY.value) / 100]; markMlsMediaOverride("edit-hero-focal"); updateFocalUI(); render(); }));
 
   function projectPayload() { Recovery.ensureProjectId(state); const payload = Core.clone(state); payload.schemaVersion = Core.PROJECT_SCHEMA_VERSION; payload.appVersion = Core.APP_VERSION; return payload; }
   restoreDraftButton.addEventListener("click", async () => { if (pendingSnapshot) await restoreRecoverySnapshot(pendingSnapshot); });
@@ -1029,13 +1143,14 @@
     try {
       const payload = JSON.parse(await readFile(file, "text")); if (payload.kind !== "realtor-poster-compliance" || !payload.profile) throw new Error("Not a Realtor Poster compliance profile");
       state.compliance.profile = payload.profile; state.compliance.profileId = payload.profile.id || "custom"; state.compliance.disclaimer = payload.profile.disclaimer || "";
+      if (state.mlsImport) state.mlsImport.humanReviewedAt = "";
       const select = document.getElementById("compliance-profile"); if (![...select.options].some(option => option.value === state.compliance.profileId)) select.add(new Option(payload.profile.name || "Custom profile", state.compliance.profileId));
       syncControls(); render(); setStatus("Compliance profile imported.");
     } catch (error) { setStatus(`Could not import compliance profile: ${error.message}`); }
     event.target.value = "";
   });
   document.getElementById("compliance-profile").addEventListener("change", event => {
-    const profile = Core.COMPLIANCE_PROFILES[event.target.value]; if (!profile) return; state.compliance.profile = null; state.compliance.profileId = profile.id; state.compliance.disclaimer = profile.disclaimer; syncControls(); render();
+    const profile = Core.COMPLIANCE_PROFILES[event.target.value]; if (!profile) return; state.compliance.profile = null; state.compliance.profileId = profile.id; state.compliance.disclaimer = profile.disclaimer; if (state.mlsImport) state.mlsImport.humanReviewedAt = ""; syncControls(); render();
   });
   document.getElementById("open-baseline").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
@@ -1082,7 +1197,8 @@
     const tenantHtml = Core.activeTenantPaidCosts(state).map(item => `<li>${escapeHtml(item.labelEn)} / ${escapeHtml(item.labelZh)}${item.state === "unknown" ? " · VERIFY" : ""}</li>`).join("");
     const amenitiesHtml = Core.activeAmenities(state).map(item => `<li>${escapeHtml(item.labelEn)} / ${escapeHtml(item.labelZh)}</li>`).join("");
     const requirementsHtml = Core.activeApplicationRequirements(state).map(item => `<li>${escapeHtml(item.labelEn)} / ${escapeHtml(item.labelZh)} · ${escapeHtml(item.state)}</li>`).join("");
-    return `<!doctype html><meta charset="utf-8"><title>${escapeHtml(state.listing.address)} campaign proof</title><style>body{font:15px/1.45 Arial,sans-serif;margin:36px;color:#102c2b}h1,h2{font-family:Georgia,serif}header,section{margin-bottom:28px}dl{display:grid;grid-template-columns:160px 1fr;max-width:800px}dt{font-weight:700}figure{display:inline-block;width:30%;min-width:240px;vertical-align:top;margin:1%}img{max-width:100%;max-height:520px;object-fit:contain;box-shadow:0 5px 24px #0002}figcaption{font-size:12px;margin-top:6px}.module-grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:18px}.module-grid h3{margin-bottom:4px}.module-grid ul{margin-top:4px}@media print{figure,.module-grid>div{break-inside:avoid}}</style><header><h1>${escapeHtml(state.listing.address)} · Campaign proof</h1><p>Generated locally by Realtor Poster Studio ${Core.APP_VERSION} · Daniel Xu</p></header><section><h2>Listing facts</h2><dl><dt>Status</dt><dd>${escapeHtml(state.listing.status)}</dd><dt>Price</dt><dd>${escapeHtml(priceCopy())}</dd><dt>MLS®</dt><dd>${escapeHtml(state.listing.mls)}</dd><dt>Agent</dt><dd>${escapeHtml(state.contact.name)}</dd><dt>Brokerage</dt><dd>${escapeHtml(state.brand.name)}</dd><dt>Compliance</dt><dd>${escapeHtml(Core.activeComplianceProfile(state).name)}</dd><dt>Review</dt><dd>${escapeHtml(state.review.status)} · ${escapeHtml(state.review.reviewer || "Unassigned")} · ${escapeHtml(state.review.reviewedAt || "No date")}</dd></dl></section><section><h2>Structured campaign modules</h2><div class="module-grid"><div><h3>Property facts</h3><ul>${factsHtml || "<li>None</li>"}</ul></div><div><h3>Floor plans</h3><ul>${plansHtml || "<li>None</li>"}</ul></div><div><h3>Feature spotlights</h3><ul>${spotsHtml || "<li>None</li>"}</ul></div><div><h3>Lease details</h3><ul>${leaseHtml || "<li>None</li>"}</ul></div><div><h3>Rent inclusions</h3><ul>${costsHtml || "<li>None</li>"}</ul></div><div><h3>Tenant pays</h3><ul>${tenantHtml || "<li>None</li>"}</ul></div><div><h3>Amenities</h3><ul>${amenitiesHtml || "<li>None</li>"}</ul></div><div><h3>Application requirements</h3><ul>${requirementsHtml || "<li>None</li>"}</ul><p>${escapeHtml(state.compliance.applicationDisclaimer || "")}</p></div><div><h3>Agent CTA</h3><p>${escapeHtml(state.contact.name)} · ${escapeHtml(state.contact.phone)} · ${escapeHtml(state.contact.email)} · ${escapeHtml(state.contact.website || state.brand.website || "")}</p><p>${escapeHtml(state.contact.ctaTitleEn || "")} / ${escapeHtml(state.contact.ctaTitleZh || "")}</p></div></div></section><section><h2>Change summary</h2>${changesHtml}</section><section><h2>Artwork</h2>${imagesHtml}</section><section><h2>Reviewer notes</h2><p>${escapeHtml(state.review.notes || "No notes.")}</p><p><strong>Internal review only.</strong> This record is not an electronic signature or legal, regulatory, MLS®, or brokerage approval.</p></section>`;
+    const sourceCopy = state.mlsImport ? `${state.mlsImport.provider.name} / ${state.mlsImport.provider.board} / ${state.mlsImport.listingNumber}` : "Manual user input";
+    return `<!doctype html><meta charset="utf-8"><title>${escapeHtml(state.listing.address)} campaign proof</title><style>body{font:15px/1.45 Arial,sans-serif;margin:36px;color:#102c2b}h1,h2{font-family:Georgia,serif}header,section{margin-bottom:28px}dl{display:grid;grid-template-columns:160px 1fr;max-width:800px}dt{font-weight:700}figure{display:inline-block;width:30%;min-width:240px;vertical-align:top;margin:1%}img{max-width:100%;max-height:520px;object-fit:contain;box-shadow:0 5px 24px #0002}figcaption{font-size:12px;margin-top:6px}.module-grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:18px}.module-grid h3{margin-bottom:4px}.module-grid ul{margin-top:4px}@media print{figure,.module-grid>div{break-inside:avoid}}</style><header><h1>${escapeHtml(state.listing.address)} · Campaign proof</h1><p>Generated locally by Realtor Poster Studio ${Core.APP_VERSION} · Daniel Xu</p></header><section><h2>Listing facts</h2><dl><dt>Status</dt><dd>${escapeHtml(state.listing.status)}</dd><dt>Price</dt><dd>${escapeHtml(priceCopy())}</dd><dt>MLS®</dt><dd>${escapeHtml(state.listing.mls)}</dd><dt>Source</dt><dd>${escapeHtml(sourceCopy)}</dd><dt>Agent</dt><dd>${escapeHtml(state.contact.name)}</dd><dt>Brokerage</dt><dd>${escapeHtml(state.brand.name)}</dd><dt>Compliance</dt><dd>${escapeHtml(Core.activeComplianceProfile(state).name)}</dd><dt>Review</dt><dd>${escapeHtml(state.review.status)} · ${escapeHtml(state.review.reviewer || "Unassigned")} · ${escapeHtml(state.review.reviewedAt || "No date")}</dd></dl></section><section><h2>Structured campaign modules</h2><div class="module-grid"><div><h3>Property facts</h3><ul>${factsHtml || "<li>None</li>"}</ul></div><div><h3>Floor plans</h3><ul>${plansHtml || "<li>None</li>"}</ul></div><div><h3>Feature spotlights</h3><ul>${spotsHtml || "<li>None</li>"}</ul></div><div><h3>Lease details</h3><ul>${leaseHtml || "<li>None</li>"}</ul></div><div><h3>Rent inclusions</h3><ul>${costsHtml || "<li>None</li>"}</ul></div><div><h3>Tenant pays</h3><ul>${tenantHtml || "<li>None</li>"}</ul></div><div><h3>Amenities</h3><ul>${amenitiesHtml || "<li>None</li>"}</ul></div><div><h3>Application requirements</h3><ul>${requirementsHtml || "<li>None</li>"}</ul><p>${escapeHtml(state.compliance.applicationDisclaimer || "")}</p></div><div><h3>Agent CTA</h3><p>${escapeHtml(state.contact.name)} · ${escapeHtml(state.contact.phone)} · ${escapeHtml(state.contact.email)} · ${escapeHtml(state.contact.website || state.brand.website || "")}</p><p>${escapeHtml(state.contact.ctaTitleEn || "")} / ${escapeHtml(state.contact.ctaTitleZh || "")}</p></div></div></section><section><h2>Change summary</h2>${changesHtml}</section><section><h2>Artwork</h2>${imagesHtml}</section><section><h2>Reviewer notes</h2><p>${escapeHtml(state.review.notes || "No notes.")}</p><p><strong>Internal review only.</strong> This record is not an electronic signature or legal, regulatory, MLS®, or brokerage approval.</p></section>`;
   }
   document.getElementById("download-approval").addEventListener("click", async () => {
     if (!exportGuard()) return; await prepareAction("before-approval-export"); setStatus("Building review package and integrity records…"); const files = [];

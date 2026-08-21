@@ -2,6 +2,24 @@
 
 All notable changes to Realtor Poster Generator are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] - v2.0 authorized MLS candidate
+
+See the bilingual [candidate release notes](RELEASE_NOTES_v2.0.0-candidate.md) and Issue [#22](https://github.com/xudaniel/realtor-poster-generator/issues/22).
+
+### Added
+
+- Opt-in generation of a complete editable project from one exact MLS number through a separately authorized connector
+- Bundled fictional `DEMO1234` provider for offline evaluation without credentials or real listing data
+- Deterministic mapping for v1.4 listing facts, lease details, included and tenant-paid costs, amenities, application requirements, permitted images, and paired floor plans
+- Per-field source records, media-rights metadata, refresh differences, local-override tracking, and manifest/approval-proof provenance
+- Blocking human-review gates for imported facts, current status, disclosures, application requirements, and image rights
+- Bilingual connector protocol documentation and mock-only automated tests
+
+### Security
+
+- Production URLs require HTTPS except explicit loopback development; credentials stay outside the static application
+- The browser accepts no API key or bearer token and makes no background lookup or scraping request
+
 ## [1.4.0] - 2026-08-20
 
 See the bilingual [v1.4.0 release notes](RELEASE_NOTES_v1.4.0.md).

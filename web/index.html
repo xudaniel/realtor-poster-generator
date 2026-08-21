@@ -3,17 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A private, bilingual, browser-local real-estate campaign editor by Daniel Xu.">
+  <meta name="description" content="A bilingual real-estate campaign editor with browser-local manual editing and an opt-in authorized MLS connector by Daniel Xu.">
   <title>Realtor Poster Studio</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23102c2b'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-family='Arial' font-size='25' font-weight='700' fill='%23d6a25e'%3EDX%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="site-header">
     <a class="brand" href="#top" aria-label="Realtor Poster Studio home">
       <span class="brand-mark" aria-hidden="true">DX</span>
-      <span><strong>Realtor Poster Studio</strong><small>by Daniel Xu · v1.4.0</small></span>
+      <span><strong>Realtor Poster Studio</strong><small>by Daniel Xu · v1.4.0 + v2 MLS candidate</small></span>
     </a>
-    <div class="privacy-badge"><span aria-hidden="true">●</span> Private by design — no uploads or analytics</div>
+    <div class="privacy-badge"><span aria-hidden="true">●</span> Manual editor stays local · MLS connector is opt-in</div>
   </header>
 
   <main id="top" class="app-shell">
@@ -25,7 +26,7 @@
         </div>
         <button id="reset-button" class="button button-quiet" type="button">Reset</button>
       </div>
-      <p class="intro">Create complete English, Chinese, or bilingual print and social artwork. Listing files and photos stay in local browser storage on this device.</p>
+      <p class="intro">Create complete English, Chinese, or bilingual print and social artwork. Manual listing files and photos stay in local browser storage; the authorized MLS connector sends one request only when you explicitly generate from an MLS number.</p>
 
       <section id="recovery-panel" class="recovery-panel" aria-live="assertive" hidden>
         <div>
@@ -42,6 +43,36 @@
         <span id="autosave-state" role="status">Checking local recovery… / 正在检查本地恢复记录…</span>
         <button id="clear-drafts" class="text-button" type="button">Clear saved drafts / 清除草稿</button>
       </div>
+
+      <section class="mls-import" aria-labelledby="mls-import-title">
+        <div class="mls-import-heading">
+          <div>
+            <p class="eyebrow">V2 CANDIDATE · AUTHORIZED SOURCE</p>
+            <h2 id="mls-import-title">Generate from an MLS number / 通过 MLS 号码生成</h2>
+          </div>
+          <span class="beta-badge">Candidate</span>
+        </div>
+        <p class="field-note">Use the fictional demo offline, or explicitly choose an authorized provider connector. No scraping, API key entry, or background lookup occurs.</p>
+        <div class="form-grid mls-grid">
+          <label>Provider / 数据源
+            <select id="mls-provider">
+              <option value="demo">Fictional demo · no network</option>
+              <option value="connector">Authorized connector</option>
+            </select>
+          </label>
+          <label id="mls-connector-row" class="span-2" hidden>Authorized connector URL
+            <input id="mls-connector-url" type="url" inputmode="url" placeholder="https://connector.example.com" autocomplete="off">
+          </label>
+          <label>MLS number / MLS 号码
+            <input id="mls-number" value="DEMO1234" autocomplete="off" autocapitalize="characters">
+          </label>
+          <div class="mls-generate-cell"><button id="generate-from-mls" class="button button-primary" type="button">Generate / 生成</button></div>
+        </div>
+        <p id="mls-status" class="status" role="status">Demo ready: enter DEMO1234. / 演示已就绪：请输入 DEMO1234。</p>
+        <div id="mls-summary" class="mls-summary" aria-live="polite" hidden></div>
+        <label id="mls-review-row" class="module-toggle mls-review" hidden><input id="mls-review" type="checkbox" disabled> I reviewed the imported facts, current status, disclosures, and image rights / 我已核对导入资料、当前状态、披露及图片使用权</label>
+        <p class="field-note">Import is a drafting aid, not factual, legal, regulatory, MLS®, brokerage, or image-rights approval. Review remains required before export.</p>
+      </section>
 
       <details open>
         <summary><span>01</span> Listing and language</summary>
@@ -278,10 +309,11 @@ Dining and shopping</textarea></label>
 
   <footer>
     <span>Realtor Poster Studio · Daniel Xu</span>
-    <span>Browser-local · English / 中文 · MIT License</span>
+    <span>Manual mode local · MLS connector opt-in · English / 中文 · MIT License</span>
   </footer>
   <script src="core.js"></script>
   <script src="recovery.js"></script>
+  <script src="mls.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
