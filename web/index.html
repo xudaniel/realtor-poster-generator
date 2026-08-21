@@ -80,11 +80,6 @@ Amenities for work and wellness</textarea></label>
 灵活书房与充裕储物空间
 步行可达公共交通与湖滨
 工作与休闲配套齐全</textarea></label>
-          <label>English amenities<textarea data-path="content.amenitiesEn" rows="3">24-hour concierge
-Fitness studio
-Rooftop terrace</textarea></label>
-          <label>English utilities<textarea data-path="content.utilitiesEn" rows="3">Water included
-Hydro paid by tenant</textarea></label>
           <label class="span-2">English location highlights<textarea data-path="content.locationEn" rows="3">Waterfront
 Union Station
 Dining and shopping</textarea></label>
@@ -122,11 +117,37 @@ Dining and shopping</textarea></label>
         <p class="field-note">Entered dates, amounts, and conditions stay literal. This tool does not infer lease terms or provide legal advice.</p>
       </details>
 
+      <details open>
+        <summary><span>07</span> Tenant-paid costs</summary>
+        <p class="field-note">Keep tenant responsibilities separate from rent inclusions. A duplicated cost blocks export until one side is corrected.</p>
+        <div id="tenant-costs-editor" class="module-editor" aria-live="polite"></div>
+        <button id="add-tenant-cost" class="button button-quiet" type="button">Add tenant-paid cost</button>
+      </details>
+
       <details>
-        <summary><span>07</span> Hero, interiors, logos, and crop</summary>
+        <summary><span>08</span> Building amenities</summary>
+        <p class="field-note">Add up to twelve ordered amenities with user-reviewed English and Chinese labels.</p>
+        <div id="amenities-editor" class="module-editor" aria-live="polite"></div>
+        <button id="add-amenity" class="button button-quiet" type="button">Add amenity</button>
+      </details>
+
+      <details open>
+        <summary><span>09</span> Application requirements</summary>
+        <p class="field-note">This checklist is informational. It does not collect documents, screen applicants, promise acceptance, or determine what is legally permitted.</p>
+        <div id="requirements-editor" class="module-editor" aria-live="polite"></div>
+        <button id="add-requirement" class="button button-quiet" type="button">Add requirement</button>
+        <div class="form-grid module-confirmation">
+          <label class="span-2 module-toggle"><input data-path="compliance.applicationRequirementsConfirmed" type="checkbox"> I confirmed these requirements against the selected compliance and brokerage process / 已核对申请要求</label>
+          <label class="span-2">Informational disclaimer<textarea data-path="compliance.applicationDisclaimer" rows="3">Application requirements are informational only and do not promise acceptance or replace brokerage and legal review.</textarea></label>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>10</span> Hero, interiors, portrait, logos, and crop</summary>
         <div class="upload-grid">
           <label class="upload-card"><strong>Hero photo</strong><small>JPG, PNG or WebP</small><input id="hero-upload" type="file" accept="image/jpeg,image/png,image/webp"></label>
           <label class="upload-card"><strong>Interior photos</strong><small>Choose up to four</small><input id="gallery-upload" type="file" multiple accept="image/jpeg,image/png,image/webp"></label>
+          <label class="upload-card"><strong>Agent portrait / avatar</strong><small>Photo or supplied illustration</small><input id="portrait-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label class="upload-card"><strong>Light logo</strong><small>For dark backgrounds</small><input id="logo-light-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label class="upload-card"><strong>Dark logo</strong><small>For light backgrounds</small><input id="logo-dark-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
         </div>
@@ -142,7 +163,7 @@ Dining and shopping</textarea></label>
       </details>
 
       <details>
-        <summary><span>08</span> Agent, brand, and template</summary>
+        <summary><span>11</span> Agent, call to action, brand, and template</summary>
         <div class="form-grid">
           <label>Agent<input data-path="contact.name" value="Daniel Xu"></label>
           <label>Title<input data-path="contact.title" value="Sales Representative"></label>
@@ -151,13 +172,23 @@ Dining and shopping</textarea></label>
           <label>Brand tagline<input data-path="brand.tagline" value="Move beautifully."></label>
           <label>Phone<input data-path="contact.phone" inputmode="tel" value="416-555-0198"></label>
           <label>Email<input data-path="contact.email" inputmode="email" value="hello@example.com"></label>
-          <label class="span-2">Website<input data-path="brand.website" value="example.com"></label>
+          <label>Agent website<input data-path="contact.website" value="example.com"></label>
+          <label>Portrait state<select data-path="contact.portraitMode"><option value="photo">Photo</option><option value="illustrated">Supplied illustrated avatar</option><option value="initials">Initials</option><option value="none">No portrait</option></select></label>
+          <label>Portrait horizontal focus<input id="portrait-focus-x" type="range" min="0" max="100" value="50"></label>
+          <label>Portrait vertical focus<input id="portrait-focus-y" type="range" min="0" max="100" value="50"></label>
+          <label>English personal tagline<input data-path="contact.taglineEn" value="Your dedicated leasing expert"></label>
+          <label>中文个人标语<input lang="zh-Hans" data-path="contact.taglineZh" value="您的专属租赁顾问"></label>
+          <label>English CTA heading<input data-path="contact.ctaTitleEn" value="Find your next home"></label>
+          <label>中文行动标题<input lang="zh-Hans" data-path="contact.ctaTitleZh" value="找到理想新居"></label>
+          <label>English CTA body<input data-path="contact.ctaBodyEn" value="Professional, responsive, local."></label>
+          <label>中文行动说明<input lang="zh-Hans" data-path="contact.ctaBodyZh" value="专业、及时、熟悉本地。"></label>
+          <label class="span-2">Brokerage website<input data-path="brand.website" value="example.com"></label>
           <label>Accent<input data-path="theme.accent" data-color="accent" type="color" value="#d6a25e"></label>
           <label>Ink<input data-path="theme.ink" data-color="ink" type="color" value="#102c2b"></label>
           <label>Paper<input data-path="theme.paper" data-color="paper" type="color" value="#fffdf8"></label>
           <label>Typography<select data-path="typography.style"><option value="editorial">Editorial</option><option value="modern">Modern</option><option value="classic">Classic</option></select></label>
-          <label>Template name<input data-path="template.name" value="Harbour Editorial"></label>
-          <label>Template version<input data-path="template.version" value="1.0.0"></label>
+          <label>Template name<input data-path="template.name" value="Harbour Editorial Modular"></label>
+          <label>Template version<input data-path="template.version" value="2.0.0"></label>
         </div>
         <fieldset class="lock-grid">
           <legend>Lock selected template fields</legend>
@@ -178,7 +209,7 @@ Dining and shopping</textarea></label>
       </details>
 
       <details id="compliance-section" open>
-        <summary><span>09</span> Compliance preflight</summary>
+        <summary><span>12</span> Compliance preflight</summary>
         <div class="form-grid">
           <label>Profile<select id="compliance-profile" data-path="compliance.profileId"><option value="lease">Residential lease</option><option value="sale">Residential sale</option><option value="open_house">Open house</option><option value="just_listed">Just listed</option></select></label>
           <label class="span-2">Required disclaimer<textarea data-path="compliance.disclaimer" rows="4"></textarea></label>
@@ -192,7 +223,7 @@ Dining and shopping</textarea></label>
       </details>
 
       <details>
-        <summary><span>10</span> Review and approval record</summary>
+        <summary><span>13</span> Review and approval record</summary>
         <div class="form-grid">
           <label>Status<select data-path="review.status"><option>Draft</option><option>Changes Requested</option><option>Approved</option></select></label>
           <label>Reviewer<input data-path="review.reviewer" placeholder="Reviewer name"></label>

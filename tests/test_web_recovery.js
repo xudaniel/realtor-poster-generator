@@ -7,7 +7,7 @@ const Recovery = require("../web/recovery.js");
 
 function project(overrides = {}) {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     appVersion: "1.4.0-dev",
     projectId: "project-listing-a",
     listing: {address: "88 Harbour Street", unit: "2608", price: "$3,850"},
@@ -33,7 +33,7 @@ function project(overrides = {}) {
     scrollY: 480,
     tabId: "tab-test",
   });
-  assert.deepEqual(Recovery.validateSnapshot(snapshot, {maxProjectSchemaVersion: 3}), {ok: true, error: ""});
+  assert.deepEqual(Recovery.validateSnapshot(snapshot, {maxProjectSchemaVersion: 4}), {ok: true, error: ""});
   assert.equal(snapshot.projectId, "project-listing-a");
   assert.equal(snapshot.projectName, "88 Harbour Street · Unit 2608");
   assert.equal(snapshot.reason, "before-png-export");
@@ -57,7 +57,7 @@ function project(overrides = {}) {
 
   assert.equal(Recovery.validateSnapshot({...snapshot, kind: "other"}).ok, false);
   assert.equal(Recovery.validateSnapshot({...snapshot, recoverySchemaVersion: 99}).ok, false);
-  assert.equal(Recovery.validateSnapshot({...snapshot, projectSchemaVersion: 4}, {maxProjectSchemaVersion: 3}).ok, false);
+  assert.equal(Recovery.validateSnapshot({...snapshot, projectSchemaVersion: 5}, {maxProjectSchemaVersion: 4}).ok, false);
   assert.equal(Recovery.validateSnapshot({...snapshot, project: null}).ok, false);
   assert.equal(Recovery.validateSnapshot({...snapshot, projectId: "project-mismatch"}).ok, false);
 

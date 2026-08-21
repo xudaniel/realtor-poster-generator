@@ -6,7 +6,7 @@
 
 - Product: Realtor Poster Generator
 - Current stable version: 1.3.0
-- Current development scope: v1.4.0 phase one (Stories 1–5) plus cross-cutting recovery issue #20
+- Current development scope: complete v1.4.0 candidate (Stories 1–10) plus cross-cutting recovery issue #20
 - Language: English
 - Product forms: browser-local visual editor, local Python command-line tools, and a self-contained offline HTML preview
 - Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON/YAML, template and compliance profiles, approval ZIP, provenance manifest JSON, batch summary JSON, and focal-preview HTML
@@ -22,7 +22,7 @@ Real-estate agents creating rental or sale artwork repeatedly assemble addresses
 - Artwork made by different team members may not follow one brand system.
 - Output packages may lack traceable input and asset checksums.
 
-The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; v1.4 phase one adds a complete property-facts ribbon, paired plans, feature spotlights, structured lease details, and rent inclusions, while cross-cutting issue #20 makes the generate-review-correct loop recoverable.
+The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; the complete v1.4 candidate adds the full ten-story reference-informed module set, while cross-cutting issue #20 makes the generate-review-correct loop recoverable.
 
 ## 3. Product goals
 
@@ -289,6 +289,12 @@ The system must:
 - Render English, Chinese, and bilingual content in all five formats, measuring and wrapping bilingual headlines and features independently.
 - Compare with an approved project, record reviewer/date/notes, and export a complete approval ZIP.
 - Build a local manifest covering language, profile, template, assets, outputs, and SHA-256 hashes.
+- Preserve three to eight ordered property facts, paired plan media, up to three image-led spotlights, structured lease rows, and ordered rent-included costs.
+- Preserve ordered tenant-paid costs and block export when the same cost is also marked as rent-included.
+- Preserve up to twelve bilingual amenity items with reusable local icons and up to ten bilingual application requirements.
+- Require explicit confirmation and a visible informational disclaimer before exporting artwork with active application requirements.
+- Support photo, illustrated, initials, and no-portrait agent-profile modes with portrait focal controls, bilingual taglines, bilingual calls to action, and contact details.
+- Render one original modular print hierarchy and priority-aware social summaries without copying the supplied reference artwork.
 - Autosave the complete schema-driven project, including local images, to IndexedDB after a short debounce and immediately before export, reset, or project replacement.
 - Offer the newest compatible draft with its project name and save time when the editor is reopened; restore its controls, local media, and scroll position only after the user chooses recovery.
 - Isolate drafts by project identifier, detect a newer same-project draft from another tab, and pause saving until the user resolves the conflict.
@@ -349,7 +355,7 @@ The system must provide:
 
 ## 9. Acceptance criteria
 
-Version 1.3.0 is acceptable when:
+The stable 1.3 baseline and the v1.4 development candidate are acceptable when:
 
 1. The sample YAML validates.
 2. It produces an 1800 × 2400 RGB PNG.
@@ -384,12 +390,17 @@ Version 1.3.0 is acceptable when:
 31. Furnished 3D and technical 2D plans can be added, replaced, removed, reordered, contained, fit to width, or cropped independently; low resolution produces a warning and the manifest records source pixels and SHA-256 hashes.
 32. Up to three spotlights preserve a local image, separate English/Chinese title and detail, circle/rounded-square/rectangle mask, and focal point; empty items consume no poster space.
 33. Lease details cover term, availability, deposit, payment, insurance, keys, pets, smoking, parking, and custom rows with reorder, hidden, and not-applicable states; sale campaigns collapse the module.
-34. Rent inclusions support standard and custom costs, ordering, removal, and an unknown/verify state; duplicates with tenant-paid costs produce warnings and all content reaches projects, comparisons, manifests, and approval packages.
-35. Generating PNG/PDF/social ZIP/manifest/approval ZIP never clears the editable project, and every export begins after a local recovery snapshot request.
-36. Reopening the editor offers the newest compatible IndexedDB draft and can restore every schema field, embedded hero/interior/floor-plan/logo/spotlight image, project identifier, and scroll position.
-37. Reset and project/template/compliance imports require confirmation and a pre-action recovery snapshot; users can also download a portable project and explicitly clear local drafts.
-38. Storage quota, restricted browser mode, corrupt/incompatible recovery data, and cross-tab conflicts produce visible bilingual warnings rather than silent data loss.
-39. Automated recovery tests cover full image-bearing snapshots, project isolation, newest-record selection, schema compatibility, and generation/export/reset recovery hooks.
+34. Rent inclusions support standard and custom costs, ordering, removal, and an unknown/verify state; all content reaches projects, comparisons, manifests, and approval packages.
+35. Tenant-paid costs support standard and custom categories, ordering, visibility, and bilingual labels; a duplicate active rent-included cost is a blocking preflight error, and sale campaigns collapse both cost modules.
+36. Up to twelve bilingual amenities can be added, reordered, hidden, and rendered with reusable local icons; the print module preserves visible order and collapses without empty gaps when no items remain.
+37. Up to ten application requirements can be added, reordered, or hidden; active requirements require an explicit user confirmation and visible informational disclaimer before export, and sale campaigns collapse the module.
+38. The agent footer supports photo, illustrated, initials, and no-portrait modes, safe fallback when an image is absent, portrait focal controls, bilingual tagline/CTA copy, credentials, brokerage, telephone, email, website, and logo.
+39. The 1800 × 2400 print poster composes Stories 1–9 as one original modular hierarchy with no overlap; square, portrait, story, and landscape formats preserve the essential listing identity and compact priority summaries.
+40. Generating PNG/PDF/social ZIP/manifest/approval ZIP never clears the editable project, and every export begins after a local recovery snapshot request.
+41. Reopening the editor offers the newest compatible IndexedDB draft and can restore every schema field, embedded hero/interior/floor-plan/logo/spotlight/portrait image, project identifier, and scroll position.
+42. Reset and project/template/compliance imports require confirmation and a pre-action recovery snapshot; users can also download a portable project and explicitly clear local drafts.
+43. Storage quota, restricted browser mode, corrupt/incompatible recovery data, and cross-tab conflicts produce visible bilingual warnings rather than silent data loss.
+44. Automated recovery tests cover full image-bearing snapshots, project isolation, newest-record selection, schema compatibility, and generation/export/reset recovery hooks.
 
 ## 10. Risks and mitigations
 
@@ -428,13 +439,18 @@ Version 1.3.0 is acceptable when:
 - English, Chinese, and bilingual artwork in five formats
 - Baseline comparison, review records, and checksummed approval packages
 
-### v1.4 phase one in development (Stories 1–5)
+### Complete v1.4 development candidate (Stories 1–10)
 
 - Complete reorderable property-facts ribbon with social priorities
 - Paired furnished 3D and technical 2D floor-plan presentation
 - Up to three local image-led feature spotlights
 - Structured bilingual lease details
 - Rent inclusions with locally bundled MIT icons
+- Tenant-paid costs with blocking included/paid conflict detection
+- Ordered reusable-icon amenity list with clean empty-state collapse
+- Application-requirements checklist with confirmation and disclaimer gates
+- Branded agent profile and bilingual CTA footer with four portrait modes
+- Original modular print and adaptive social layouts integrating all ten stories
 - Cross-cutting issue #20: schema-driven on-device autosave and recovery for all v1.4 modules without renumbering Stories 1–10
 
 ### 2.0 candidates

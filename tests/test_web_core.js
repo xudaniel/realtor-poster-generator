@@ -5,7 +5,7 @@ const Core = require("../web/core.js");
 
 function project() {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     appVersion: Core.APP_VERSION,
     listing: {
       address: "88 Harbour Street", unit: "2608", status: "FOR LEASE", city: "Toronto, ON", postalCode: "M5J 2N8",
@@ -13,14 +13,14 @@ function project() {
       floor: "26th", exposure: "South-East", balcony: "Open balcony", parking: "1 Space", availability: "Immediately",
       headlineEn: "Lake views", headlineZh: "湖景生活",
     },
-    contact: {name: "Daniel Xu", title: "Sales Representative", license: "", phone: "416-555-0198", email: "hello@example.com"},
+    contact: {name: "Daniel Xu", title: "Sales Representative", license: "", phone: "416-555-0198", email: "hello@example.com", website: "example.com", portraitMode: "initials", ctaTitleEn: "Find your next home", ctaTitleZh: "找到理想新居"},
     brand: {name: "Harbour Realty Group", tagline: "Move beautifully.", website: "example.com"},
     content: {featuresEn: "Windows\nTransit", featuresZh: "落地窗\n公共交通", amenitiesEn: "Gym", utilitiesEn: "Water", locationEn: "Waterfront"},
     language: {mode: "bilingual"}, typography: {style: "editorial"}, theme: {accent: "#d6a25e", ink: "#102c2b", paper: "#fffdf8"}, focal: [.5, .5], preset: "poster",
     media: {
       heroDataUrl: "data:image/png;base64,AA==", heroName: "hero.png", heroType: "image/png", gallery: [],
       floorplanDataUrl: "", floorplanName: "", floorplanType: "", logoLightDataUrl: "", logoLightName: "", logoLightType: "",
-      logoDarkDataUrl: "", logoDarkName: "", logoDarkType: "", floorplans: [],
+      logoDarkDataUrl: "", logoDarkName: "", logoDarkType: "", portraitDataUrl: "", portraitName: "", portraitType: "", portraitFocal: [.5, .5], floorplans: [],
     },
     modules: {
       propertyFacts: [
@@ -37,8 +37,13 @@ function project() {
       ],
       includedCosts: [{id: "water", icon: "droplet", labelEn: "Water", labelZh: "水费", state: "included"}],
       tenantPaidCosts: [{id: "hydro", icon: "bolt", labelEn: "Hydro", labelZh: "电费", state: "tenant-paid"}],
+      amenities: [{id: "gym", icon: "tool", labelEn: "Fitness centre", labelZh: "健身中心", state: "active"}],
+      applicationRequirements: [
+        {id: "credit", icon: "receipt", labelEn: "Credit report", labelZh: "信用报告", state: "required"},
+        {id: "references", icon: "circle-check", labelEn: "References", labelZh: "推荐人资料", state: "conditional"},
+      ],
     },
-    compliance: {profileId: "lease", profile: null, disclaimer: Core.COMPLIANCE_PROFILES.lease.disclaimer},
+    compliance: {profileId: "lease", profile: null, disclaimer: Core.COMPLIANCE_PROFILES.lease.disclaimer, applicationRequirementsConfirmed: true, applicationDisclaimer: "Informational only."},
     template: {name: "Harbour Editorial", version: "1.0.0", lockedFields: ["brand.name"]},
     review: {status: "Draft", reviewer: "", reviewedAt: "", notes: "", baseline: null},
   };
@@ -46,7 +51,7 @@ function project() {
 
 (async () => {
   assert.equal(Core.APP_VERSION, "1.4.0-dev");
-  assert.equal(Core.PROJECT_SCHEMA_VERSION, 3);
+  assert.equal(Core.PROJECT_SCHEMA_VERSION, 4);
 
   const valid = Core.validateProject(project());
   assert.deepEqual(valid.errors, []);
@@ -116,6 +121,7 @@ function project() {
   assert.equal(template.kind, "realtor-poster-template");
   assert.equal(template.typography.style, "modern");
   assert.equal(template.layout.defaultPreset, "story");
+  assert.ok(template.layout.moduleOrder.includes("applicationRequirements"));
   const templateTarget = project(); templateTarget.listing.price = "$4,100";
   const applied = Core.applyTemplate(templateTarget, template);
   assert.equal(applied.brand.name, "Daniel Xu Realty");
@@ -173,12 +179,40 @@ function project() {
 
   const saleTerms = project(); saleTerms.listing.status = "FOR SALE"; saleTerms.compliance.profileId = "sale"; saleTerms.compliance.disclaimer = Core.COMPLIANCE_PROFILES.sale.disclaimer;
   assert.deepEqual(Core.activeLeaseDetails(saleTerms), []);
+  assert.deepEqual(Core.activeIncludedCosts(saleTerms), []);
+  assert.deepEqual(Core.activeTenantPaidCosts(saleTerms), []);
+  assert.deepEqual(Core.activeApplicationRequirements(saleTerms), []);
   const missingLeaseTerm = project(); missingLeaseTerm.modules.leaseDetails.find(item => item.id === "term").state = "hidden";
   assert.match(Core.validateProject(missingLeaseTerm).warnings.join("\n"), /completed term detail/);
 
   const conflictProject = project(); conflictProject.modules.tenantPaidCosts.push({id: "water", labelEn: "Water", labelZh: "水费", state: "tenant-paid"});
   assert.deepEqual(Core.costConflicts(conflictProject), ["Water"]);
-  assert.match(Core.validateProject(conflictProject).warnings.join("\n"), /both included and tenant-paid/);
+  assert.match(Core.validateProject(conflictProject).errors.join("\n"), /both included and tenant-paid/);
+
+  assert.equal(Core.activeTenantPaidCosts(project()).length, 1);
+  assert.equal(Core.activeAmenities(project()).length, 1);
+  assert.equal(Core.activeApplicationRequirements(project()).length, 2);
+  const unconfirmedRequirements = project(); unconfirmedRequirements.compliance.applicationRequirementsConfirmed = false;
+  assert.match(Core.validateProject(unconfirmedRequirements).errors.join("\n"), /require compliance-profile confirmation/);
+  const tooManyAmenities = project(); tooManyAmenities.modules.amenities = Array.from({length: 13}, (_, index) => ({id: `amenity-${index}`, labelEn: "Amenity", labelZh: "设施", state: "active"}));
+  assert.match(Core.validateProject(tooManyAmenities).errors.join("\n"), /at most 12 items/);
+  const tooManyRequirements = project(); tooManyRequirements.modules.applicationRequirements = Array.from({length: 11}, (_, index) => ({id: `requirement-${index}`, labelEn: "Requirement", labelZh: "要求", state: "required"}));
+  assert.match(Core.validateProject(tooManyRequirements).errors.join("\n"), /at most 10 items/);
+  const portraitProject = project(); portraitProject.contact.portraitMode = "photo"; portraitProject.media.portraitName = "agent.png";
+  assert.match(Core.validateProject(portraitProject).warnings.join("\n"), /Photo mode needs a local portrait/);
+  for (const portraitMode of ["photo", "illustrated", "initials", "none"]) {
+    const portraitState = project(); portraitState.contact.portraitMode = portraitMode;
+    if (portraitMode === "photo" || portraitMode === "illustrated") portraitState.media.portraitDataUrl = "data:image/png;base64,BA==";
+    assert.doesNotMatch(Core.validateProject(portraitState).errors.join("\n"), /portraitMode/);
+  }
+  const invalidPortrait = project(); invalidPortrait.contact.portraitMode = "generated";
+  assert.match(Core.validateProject(invalidPortrait).errors.join("\n"), /Unsupported contact\.portraitMode/);
+  const hiddenModules = project(); hiddenModules.modules.tenantPaidCosts[0].state = "hidden"; hiddenModules.modules.amenities[0].state = "hidden"; hiddenModules.modules.applicationRequirements.forEach(item => { item.state = "hidden"; });
+  assert.equal(Core.activeTenantPaidCosts(hiddenModules).length, 0);
+  assert.equal(Core.activeAmenities(hiddenModules).length, 0);
+  assert.equal(Core.activeApplicationRequirements(hiddenModules).length, 0);
+  const verifyCost = project(); verifyCost.modules.tenantPaidCosts[0].state = "unknown";
+  assert.equal(Core.activeTenantPaidCosts(verifyCost)[0].state, "unknown");
 
   const current = project(); const previous = project(); current.listing.price = "$3,950"; current.media.heroName = "new-hero.png";
   const changes = Core.diffProjects(previous, current).map(change => change.path);
@@ -200,6 +234,7 @@ function project() {
 
   const output = {name: "poster.png", data: new Uint8Array([1, 2, 3, 4])};
   planProject.modules.spotlights = spotlightProject.modules.spotlights;
+  planProject.contact.portraitMode = "photo"; planProject.media.portraitName = "agent.png"; planProject.media.portraitDataUrl = "data:image/png;base64,BA==";
   const manifest = await Core.buildManifest(planProject, [output]);
   assert.equal(manifest.generator, "realtor-poster-studio 1.4.0-dev");
   assert.equal(manifest.outputs[0].filename, "poster.png");
@@ -213,8 +248,15 @@ function project() {
   assert.equal(manifest.modules.spotlights.length, 1);
   assert.equal(manifest.modules.leaseDetails.length, 2);
   assert.equal(manifest.modules.includedCosts.length, 1);
+  assert.equal(manifest.modules.tenantPaidCosts.length, 1);
+  assert.equal(manifest.modules.amenities.length, 1);
+  assert.equal(manifest.modules.applicationRequirements.length, 2);
+  assert.equal(manifest.modules.agentProfile.name, "Daniel Xu");
+  assert.ok(manifest.template.moduleOrder.includes("agentProfile"));
+  assert.match(manifest.template.layoutPolicy.story, /two included and two tenant-paid costs/);
   assert.equal(manifest.assets.filter(asset => asset.role.startsWith("floorplan_")).length, 2);
   assert.equal(manifest.assets.filter(asset => asset.role.startsWith("spotlight_")).length, 1);
+  assert.equal(manifest.assets.filter(asset => asset.role === "portrait").length, 1);
 
   console.log("Browser core tests passed.");
 })().catch(error => { console.error(error); process.exit(1); });

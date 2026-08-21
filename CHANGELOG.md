@@ -2,7 +2,7 @@
 
 All notable changes to Realtor Poster Generator are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] - v1.4.0 phase one
+## [Unreleased] - v1.4.0 development candidate
 
 See the bilingual [v1.4.0 development release notes](RELEASE_NOTES_v1.4.0.md).
 
@@ -13,15 +13,21 @@ See the bilingual [v1.4.0 development release notes](RELEASE_NOTES_v1.4.0.md).
 - Up to three image-led bilingual feature spotlights with circle, rounded-square, and rectangle masks
 - Structured bilingual lease-detail rows with active, not-applicable, and hidden states plus sale-campaign collapse
 - Reorderable rent-included costs with locally bundled MIT-licensed Tabler icons, unknown/verify states, and conflict warnings
-- Browser project schema version 3 and `1.4.0-dev` browser generator metadata
+- Reorderable tenant-paid costs with blocking duplicate detection against rent inclusions
+- Up to twelve ordered bilingual amenities with reusable locally bundled icons and clean empty-state collapse
+- Up to ten bilingual application requirements with explicit confirmation and disclaimer export gates
+- Branded agent profile and CTA footer with photo, illustrated, initials, and no-portrait modes plus focal controls and bilingual contact copy
+- Complete original modular print layout plus compact social summaries for the new cost modules
+- Browser project schema version 4 and `1.4.0-dev` browser generator metadata
 - Cross-cutting v1.4 recovery for complete editor projects and local images using IndexedDB, with debounced autosave, pre-export/reset/import snapshots, bilingual restore controls, per-project isolation, scroll restoration, storage warnings, and cross-tab conflict detection ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20))
 - Browser recovery tests for snapshot completeness, version compatibility, project identity, newest-draft selection, and action hooks
+- Deterministic v1.4 layout-contract golden fixtures for minimum, typical, maximum, and bilingual social-reduction projects
 
 ### Changed
 
 - Print artwork now uses an original high-information modular hierarchy inspired by the supplied reference without copying its assets, wording, icons, colours, or geometry
-- Project files, listing interchange, comparisons, manifests, and approval packages now preserve the five phase-one modules and their local image hashes
-- Browser documentation and product requirements now describe v1.4 Stories 1–5 in English and Chinese
+- Project files, listing interchange, comparisons, manifests, and approval packages now preserve all ten v1.4 story modules and their local image hashes
+- Browser documentation and product requirements now describe v1.4 Stories 1–10 in English and Chinese
 
 ## [1.3.0] - 2026-08-20
 

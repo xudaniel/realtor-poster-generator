@@ -7,8 +7,20 @@
   "use strict";
 
   const APP_VERSION = "1.4.0-dev";
-  const PROJECT_SCHEMA_VERSION = 3;
-  const MODULE_LIMITS = {propertyFacts: 8, floorPlans: 2, spotlights: 3, includedCosts: 12};
+  const PROJECT_SCHEMA_VERSION = 4;
+  const OUTPUT_DIMENSIONS = Object.freeze({
+    poster: [1800, 2400], square: [1080, 1080], portrait: [1080, 1350], story: [1080, 1920], landscape: [1200, 630],
+  });
+  const MODULE_ORDER = Object.freeze(["propertyFacts", "floorPlans", "spotlights", "leaseDetails", "includedCosts", "tenantPaidCosts", "amenities", "applicationRequirements", "agentProfile"]);
+  const MODULE_LIMITS = {
+    propertyFacts: 8,
+    floorPlans: 2,
+    spotlights: 3,
+    includedCosts: 12,
+    tenantPaidCosts: 12,
+    amenities: 12,
+    applicationRequirements: 10,
+  };
   const PLAN_FITS = new Set(["contain", "fit-width", "crop"]);
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const PHONE_RE = /^[+()\-. xX\d]+$/;
@@ -117,14 +129,47 @@
     return moduleItems(project, "leaseDetails").filter(item => item.state === "active" && (populated(item.valueEn) || populated(item.valueZh)));
   }
   function activeIncludedCosts(project) {
+    if (profileForStatus(getPath(project, "listing.status")) !== "lease") return [];
     return moduleItems(project, "includedCosts").filter(item => item.state !== "hidden" && (populated(item.labelEn) || populated(item.labelZh))).slice(0, MODULE_LIMITS.includedCosts);
+  }
+  function activeTenantPaidCosts(project) {
+    if (profileForStatus(getPath(project, "listing.status")) !== "lease") return [];
+    return moduleItems(project, "tenantPaidCosts").filter(item => item.state !== "hidden" && (populated(item.labelEn) || populated(item.labelZh))).slice(0, MODULE_LIMITS.tenantPaidCosts);
+  }
+  function activeAmenities(project) {
+    return moduleItems(project, "amenities").filter(item => item.state !== "hidden" && (populated(item.labelEn) || populated(item.labelZh))).slice(0, MODULE_LIMITS.amenities);
+  }
+  function activeApplicationRequirements(project) {
+    if (profileForStatus(getPath(project, "listing.status")) !== "lease") return [];
+    return moduleItems(project, "applicationRequirements").filter(item => item.state !== "hidden" && (populated(item.labelEn) || populated(item.labelZh))).slice(0, MODULE_LIMITS.applicationRequirements);
+  }
+  function layoutSnapshot(project, requestedPreset) {
+    const preset = OUTPUT_DIMENSIONS[requestedPreset] ? requestedPreset : (OUTPUT_DIMENSIONS[project.preset] ? project.preset : "poster");
+    const [width, height] = OUTPUT_DIMENSIONS[preset];
+    const isPoster = preset === "poster"; const showsResponsibilities = preset === "portrait" || preset === "story";
+    const counts = {
+      propertyFacts: resolvedPropertyFacts(project, preset).length,
+      floorPlans: isPoster ? activeFloorPlans(project).length : 0,
+      spotlights: isPoster ? activeSpotlights(project).length : 0,
+      leaseDetails: isPoster ? activeLeaseDetails(project).length : 0,
+      includedCosts: isPoster ? activeIncludedCosts(project).length : (showsResponsibilities ? activeIncludedCosts(project).slice(0, 2).length : 0),
+      tenantPaidCosts: isPoster ? activeTenantPaidCosts(project).length : (showsResponsibilities ? activeTenantPaidCosts(project).slice(0, 2).length : 0),
+      amenities: isPoster ? activeAmenities(project).length : 0,
+      applicationRequirements: isPoster ? activeApplicationRequirements(project).length : 0,
+      agentProfile: 1,
+    };
+    return {
+      preset, width, height, language: getPath(project, "language.mode") || "english",
+      portraitMode: getPath(project, "contact.portraitMode") || "none",
+      moduleOrder: MODULE_ORDER.filter(name => counts[name] > 0), counts,
+    };
   }
   function normalizedCostId(item) {
     return String(item.id || item.labelEn || item.labelZh || "").toLowerCase().replace(/[^a-z0-9\u3400-\u9fff]+/g, "");
   }
   function costConflicts(project) {
     const included = new Map(activeIncludedCosts(project).map(item => [normalizedCostId(item), item]));
-    return moduleItems(project, "tenantPaidCosts").filter(item => item.state !== "hidden" && included.has(normalizedCostId(item)))
+    return activeTenantPaidCosts(project).filter(item => included.has(normalizedCostId(item)))
       .map(item => item.labelEn || item.labelZh || item.id);
   }
   function normalizedStatus(status) {
@@ -159,7 +204,10 @@
       contact: clone(project.contact),
       theme: clone(project.theme),
       typography: activeTypography(project),
-      layout: {defaultPreset: project.preset},
+      layout: {
+        defaultPreset: project.preset,
+        moduleOrder: [...MODULE_ORDER],
+      },
       lockedFields: clone(project.template.lockedFields || []),
       logoLightDataUrl: getPath(project, "media.logoLightDataUrl") || "",
       logoLightName: getPath(project, "media.logoLightName") || "",
@@ -314,7 +362,41 @@
       if (!populated(item.labelEn)) warnings.push(`Included cost ${index + 1} is missing an English label`);
       if ((getPath(project, "language.mode") === "chinese" || getPath(project, "language.mode") === "bilingual") && !populated(item.labelZh)) warnings.push(`Included cost ${index + 1} is missing a Chinese label`);
     });
-    costConflicts(project).forEach(label => warnings.push(`${label} appears in both included and tenant-paid costs`));
+    const tenantPaidCosts = moduleItems(project, "tenantPaidCosts");
+    if (tenantPaidCosts.length > MODULE_LIMITS.tenantPaidCosts) errors.push(`modules.tenantPaidCosts supports at most ${MODULE_LIMITS.tenantPaidCosts} items`);
+    activeTenantPaidCosts(project).forEach((item, index) => {
+      if (!populated(item.labelEn)) warnings.push(`Tenant-paid cost ${index + 1} is missing an English label`);
+      if ((getPath(project, "language.mode") === "chinese" || getPath(project, "language.mode") === "bilingual") && !populated(item.labelZh)) warnings.push(`Tenant-paid cost ${index + 1} is missing a Chinese label`);
+    });
+    costConflicts(project).forEach(label => errors.push(`${label} appears in both included and tenant-paid costs`));
+
+    const amenities = moduleItems(project, "amenities");
+    if (amenities.length > MODULE_LIMITS.amenities) errors.push(`modules.amenities supports at most ${MODULE_LIMITS.amenities} items`);
+    activeAmenities(project).forEach((item, index) => {
+      if (!populated(item.labelEn)) warnings.push(`Amenity ${index + 1} is missing an English label`);
+      if ((getPath(project, "language.mode") === "chinese" || getPath(project, "language.mode") === "bilingual") && !populated(item.labelZh)) warnings.push(`Amenity ${index + 1} is missing a Chinese label`);
+    });
+
+    const applicationRequirements = moduleItems(project, "applicationRequirements");
+    if (applicationRequirements.length > MODULE_LIMITS.applicationRequirements) errors.push(`modules.applicationRequirements supports at most ${MODULE_LIMITS.applicationRequirements} items`);
+    activeApplicationRequirements(project).forEach((item, index) => {
+      if (!populated(item.labelEn)) warnings.push(`Application requirement ${index + 1} is missing English wording`);
+      if ((getPath(project, "language.mode") === "chinese" || getPath(project, "language.mode") === "bilingual") && !populated(item.labelZh)) warnings.push(`Application requirement ${index + 1} is missing Chinese wording`);
+    });
+    if (activeApplicationRequirements(project).length) {
+      if (!getPath(project, "compliance.applicationRequirementsConfirmed")) errors.push("Application requirements require compliance-profile confirmation before export");
+      if (!populated(getPath(project, "compliance.applicationDisclaimer"))) errors.push("Application requirements require an informational disclaimer");
+    }
+
+    const portraitMode = String(getPath(project, "contact.portraitMode") || "none");
+    if (!["photo", "illustrated", "initials", "none"].includes(portraitMode)) errors.push(`Unsupported contact.portraitMode: ${portraitMode}`);
+    if ((portraitMode === "photo" || portraitMode === "illustrated") && !populated(getPath(project, "media.portraitDataUrl"))) {
+      warnings.push(`${portraitMode === "photo" ? "Photo" : "Illustrated avatar"} mode needs a local portrait before it can appear in artwork`);
+    }
+    if (getPath(project, "media.portraitName") && !getPath(project, "media.portraitDataUrl")) warnings.push(`${getPath(project, "media.portraitName")} must be reselected before the agent portrait can be exported`);
+    if ((getPath(project, "language.mode") === "chinese" || getPath(project, "language.mode") === "bilingual") && populated(getPath(project, "contact.ctaTitleEn")) && !populated(getPath(project, "contact.ctaTitleZh"))) {
+      warnings.push("Agent call-to-action is missing a Chinese title");
+    }
 
     const profile = activeComplianceProfile(project);
     const expectedProfileId = profileForStatus(getPath(project, "listing.status"));
@@ -436,8 +518,11 @@
         floorplans: activeFloorPlans(project).map(plan => ({name: plan.name, role: plan.role, fit: plan.fit, focal: clone(plan.focal), caption_en: plan.captionEn, caption_zh: plan.captionZh, note_en: plan.noteEn, note_zh: plan.noteZh, pixel_width: plan.pixelWidth, pixel_height: plan.pixelHeight})),
       },
       content: {
-        features: list(project.content.featuresEn), amenities: list(project.content.amenitiesEn),
-        utilities: list(project.content.utilitiesEn), location_highlights: list(project.content.locationEn),
+        features: list(project.content.featuresEn), amenities: activeAmenities(project).map(item => item.labelEn || item.labelZh),
+        utilities: [
+          ...activeIncludedCosts(project).map(item => `${item.labelEn || item.labelZh} included`),
+          ...activeTenantPaidCosts(project).map(item => `${item.labelEn || item.labelZh} paid by tenant`),
+        ], location_highlights: list(project.content.locationEn),
         translations: {headline_zh: project.listing.headlineZh, features_zh: list(project.content.featuresZh)},
       },
       theme: clone(project.theme), canvas: {width: 1800, height: 2400, dpi: 150},
@@ -461,6 +546,9 @@
     Object.assign(project.brand, raw.brand || {}); Object.assign(project.contact, raw.contact || {}); Object.assign(project.theme, raw.theme || {});
     project.content.featuresEn = list(content.features).join("\n"); project.content.featuresZh = list(getPath(content, "translations.features_zh")).join("\n");
     project.content.amenitiesEn = list(content.amenities).join("\n"); project.content.utilitiesEn = list(content.utilities).join("\n"); project.content.locationEn = list(content.location_highlights).join("\n");
+    if (!raw.studio || !raw.studio.modules || !Array.isArray(raw.studio.modules.amenities)) {
+      project.modules.amenities = list(content.amenities).slice(0, MODULE_LIMITS.amenities).map((label, index) => ({id: `imported-amenity-${index + 1}`, icon: "building-community", labelEn: label, labelZh: "", state: "active"}));
+    }
     project.focal = Array.isArray(photos.hero_focal) ? photos.hero_focal.map(Number) : [.5, .5];
     project.media.heroName = photos.hero || ""; project.media.logoLightName = getPath(raw, "brand.logo") || "";
     project.media.floorplanName = photos.floorplan || ""; project.media.gallery = list(photos.gallery).map(name => ({name, dataUrl: "", type: ""}));
@@ -496,9 +584,16 @@
       const slot = migrated.media.floorplans.findIndex(plan => plan.role === "technical2d");
       if (slot >= 0) migrated.media.floorplans[slot] = deepMerge(migrated.media.floorplans[slot], legacy); else migrated.media.floorplans.push(legacy);
     }
-    ["propertyFacts", "spotlights", "leaseDetails", "includedCosts", "tenantPaidCosts"].forEach(name => {
+    ["propertyFacts", "spotlights", "leaseDetails", "includedCosts", "tenantPaidCosts", "amenities", "applicationRequirements"].forEach(name => {
       if (!Array.isArray(getPath(migrated, `modules.${name}`))) setPath(migrated, `modules.${name}`, []);
     });
+    const savedHasAmenities = Boolean(saved && saved.modules && Object.prototype.hasOwnProperty.call(saved.modules, "amenities"));
+    if (!savedHasAmenities && list(getPath(saved || {}, "content.amenitiesEn")).length) {
+      migrated.modules.amenities = list(getPath(saved, "content.amenitiesEn")).slice(0, MODULE_LIMITS.amenities).map((label, index) => ({id: `legacy-amenity-${index + 1}`, icon: "building-community", labelEn: label, labelZh: "", state: "active"}));
+    }
+    if (!Array.isArray(migrated.media.portraitFocal) || migrated.media.portraitFocal.length !== 2) migrated.media.portraitFocal = [.5, .5];
+    if (!migrated.contact.portraitMode) migrated.contact.portraitMode = "none";
+    if (typeof migrated.compliance.applicationRequirementsConfirmed !== "boolean") migrated.compliance.applicationRequirementsConfirmed = false;
     if (!migrated.compliance.disclaimer) migrated.compliance.disclaimer = activeComplianceProfile(migrated).disclaimer;
     return migrated;
   }
@@ -512,7 +607,7 @@
   function comparableProject(project) {
     const copy = clone(project); delete copy.review.baseline; delete copy.review.notes; delete copy.review.reviewer; delete copy.review.reviewedAt; delete copy.review.status;
     const media = copy.media || {};
-    ["heroDataUrl", "logoLightDataUrl", "logoDarkDataUrl", "floorplanDataUrl"].forEach(key => { if (media[key]) media[key] = embeddedSignature(media[key]); });
+    ["heroDataUrl", "portraitDataUrl", "logoLightDataUrl", "logoDarkDataUrl", "floorplanDataUrl"].forEach(key => { if (media[key]) media[key] = embeddedSignature(media[key]); });
     media.gallery = (media.gallery || []).map(item => ({name: item.name, type: item.type, embedded: Boolean(item.dataUrl), signature: item.dataUrl ? embeddedSignature(item.dataUrl) : ""}));
     media.floorplans = (media.floorplans || []).map(item => ({...item, dataUrl: item.dataUrl ? embeddedSignature(item.dataUrl) : ""}));
     if (copy.modules) copy.modules.spotlights = (copy.modules.spotlights || []).map(item => ({...item, dataUrl: item.dataUrl ? embeddedSignature(item.dataUrl) : ""}));
@@ -578,7 +673,7 @@
     const projectCopy = clone(project); delete projectCopy.review.baseline;
     const typography = activeTypography(project);
     const assets = [
-      ["hero", project.media.heroName, project.media.heroDataUrl], ["logo_light", project.media.logoLightName, project.media.logoLightDataUrl],
+      ["hero", project.media.heroName, project.media.heroDataUrl], ["portrait", project.media.portraitName, project.media.portraitDataUrl], ["logo_light", project.media.logoLightName, project.media.logoLightDataUrl],
       ["logo_dark", project.media.logoDarkName, project.media.logoDarkDataUrl], ["floorplan", project.media.floorplanName, project.media.floorplanDataUrl],
       ...project.media.gallery.map((item, index) => [`gallery_${index + 1}`, item.name, item.dataUrl]),
       ...(project.media.floorplans || []).map((item, index) => [`floorplan_${item.role || index + 1}`, item.name, item.dataUrl]),
@@ -593,13 +688,45 @@
         fonts: project.language.mode === "english" ? [typography.latin, typography.serif] : [typography.cjk, typography.latin, typography.serif],
       },
       compliance: {profile: activeComplianceProfile(project).name, version: activeComplianceProfile(project).version, disclaimer: project.compliance.disclaimer},
-      template: {name: project.template.name, version: project.template.version, defaultPreset: project.preset},
+      template: {
+        name: project.template.name,
+        version: project.template.version,
+        defaultPreset: project.preset,
+        moduleOrder: [...MODULE_ORDER],
+        layoutPolicy: {
+          poster: "all populated modules in configured order",
+          portrait: "four priority facts plus two included and two tenant-paid costs",
+          story: "four priority facts plus two included and two tenant-paid costs",
+          square: "four priority facts plus listing identity and agent contact",
+          landscape: "four priority facts plus listing identity and agent contact",
+        },
+      },
       modules: {
         propertyFacts: resolvedPropertyFacts(project, "poster").map(({id, icon, value, labelEn, labelZh, visible, priority, order}) => ({id, icon, value, labelEn, labelZh, visible, priority, order})),
         floorPlans: activeFloorPlans(project).map(({role, name, fit, focal, captionEn, captionZh, noteEn, noteZh, pixelWidth, pixelHeight}) => ({role, name, fit, focal, captionEn, captionZh, noteEn, noteZh, pixelWidth, pixelHeight})),
         spotlights: activeSpotlights(project).map(({id, name, mask, focal, titleEn, titleZh, detailEn, detailZh}) => ({id, name, mask, focal, titleEn, titleZh, detailEn, detailZh})),
         leaseDetails: activeLeaseDetails(project).map(({id, labelEn, labelZh, valueEn, valueZh, state}) => ({id, labelEn, labelZh, valueEn, valueZh, state})),
         includedCosts: activeIncludedCosts(project).map(({id, icon, labelEn, labelZh, state}) => ({id, icon, labelEn, labelZh, state})),
+        tenantPaidCosts: activeTenantPaidCosts(project).map(({id, icon, labelEn, labelZh, state}) => ({id, icon, labelEn, labelZh, state})),
+        amenities: activeAmenities(project).map(({id, icon, labelEn, labelZh, state}) => ({id, icon, labelEn, labelZh, state})),
+        applicationRequirements: activeApplicationRequirements(project).map(({id, icon, labelEn, labelZh, state}) => ({id, icon, labelEn, labelZh, state})),
+        agentProfile: {
+          portraitMode: getPath(project, "contact.portraitMode") || "none",
+          portraitFocal: clone(getPath(project, "media.portraitFocal") || [.5, .5]),
+          name: getPath(project, "contact.name") || "",
+          title: getPath(project, "contact.title") || "",
+          license: getPath(project, "contact.license") || "",
+          phone: getPath(project, "contact.phone") || "",
+          email: getPath(project, "contact.email") || "",
+          website: getPath(project, "contact.website") || getPath(project, "brand.website") || "",
+          brokerage: getPath(project, "brand.name") || "",
+          taglineEn: getPath(project, "contact.taglineEn") || "",
+          taglineZh: getPath(project, "contact.taglineZh") || "",
+          ctaTitleEn: getPath(project, "contact.ctaTitleEn") || "",
+          ctaTitleZh: getPath(project, "contact.ctaTitleZh") || "",
+          ctaBodyEn: getPath(project, "contact.ctaBodyEn") || "",
+          ctaBodyZh: getPath(project, "contact.ctaBodyZh") || "",
+        },
       },
       assets: await Promise.all(assets.map(async ([role, name, dataUrl]) => ({role, filename: name, sha256: await sha256Bytes(dataUrlToBytes(dataUrl))}))),
       outputs: await Promise.all((outputFiles || []).map(async file => ({filename: file.name, bytes: file.data.length, sha256: await sha256Bytes(file.data)}))),
@@ -608,9 +735,10 @@
   }
 
   return {
-    APP_VERSION, PROJECT_SCHEMA_VERSION, MODULE_LIMITS, COMPLIANCE_PROFILES, TYPOGRAPHY_PRESETS, clone, getPath, setPath, deepMerge, list,
+    APP_VERSION, PROJECT_SCHEMA_VERSION, OUTPUT_DIMENSIONS, MODULE_LIMITS, MODULE_ORDER, COMPLIANCE_PROFILES, TYPOGRAPHY_PRESETS, clone, getPath, setPath, deepMerge, list,
     profileForStatus, activeComplianceProfile, activeTypography, buildTemplate, applyTemplate, duplicateTemplate,
-    resolvedPropertyFacts, activeFloorPlans, activeSpotlights, activeLeaseDetails, activeIncludedCosts, costConflicts,
+    resolvedPropertyFacts, activeFloorPlans, activeSpotlights, activeLeaseDetails, activeIncludedCosts, activeTenantPaidCosts,
+    activeAmenities, activeApplicationRequirements, costConflicts, layoutSnapshot,
     campaignCopy, buildApprovalRecord, validateProject, parseSimpleYaml, toSimpleYaml, toListingData,
     projectFromListingData, normalizeProject, canonicalStringify, diffProjects, dataUrlToBytes, crc32, makeZip,
     sha256Bytes, sha256Text, buildManifest,

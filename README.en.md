@@ -8,7 +8,7 @@ Created and maintained by **Daniel Xu**. 由 **Daniel Xu** 创建并维护。
 
 [中文 README](README.md) · [Bilingual v1.4.0 development notes](RELEASE_NOTES_v1.4.0.md) · [v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-Current stable version: **1.3.0** · v1.4 phase-one development identifier: **1.4.0-dev**
+Current stable version: **1.3.0** · complete v1.4 development-candidate identifier: **1.4.0-dev**
 
 Realtor Poster Generator is a reusable, structured-data-driven toolkit for real-estate sale and rental artwork. Its information hierarchy includes a prominent listing status, address and price, property facts, interior photography, an optional floor plan, detail sections, neighbourhood highlights, and agent contact information. The composition, typography, colours, shapes, and layout are original rather than a pixel-for-pixel copy of any reference design.
 
@@ -57,18 +57,24 @@ The v1.4 editor also autosaves the complete editable project—including browser
 - Lease, sale, open-house, and just-listed compliance profiles with agent title/licence data and blocking export preflight
 - Versioned brand templates carrying typography and a default layout, selective field locks, and independently composed English/Chinese artwork
 - Approved-baseline comparison, review status, and a checksummed approval package
-- v1.4 phase one adds a reorderable 3–8 item property-facts ribbon with a four-fact priority subset for social formats
-- v1.4 phase one adds independently replaceable, reorderable, aspect-preserving furnished 3D and technical 2D floor plans
-- v1.4 phase one adds up to three bilingual, image-led feature spotlights with circle, rounded-square, or rectangle masks
-- v1.4 phase one adds bilingual lease rows that can be reordered, hidden, or marked not applicable
-- v1.4 phase one adds reorderable rent inclusions with locally bundled MIT-licensed Tabler icons and an unknown/verify state
+- v1.4 adds a reorderable 3–8 item property-facts ribbon with a four-fact priority subset for social formats
+- v1.4 adds independently replaceable, reorderable, aspect-preserving furnished 3D and technical 2D floor plans
+- v1.4 adds up to three bilingual, image-led feature spotlights with circle, rounded-square, or rectangle masks
+- v1.4 adds bilingual lease rows that can be reordered, hidden, or marked not applicable
+- v1.4 adds reorderable rent inclusions with locally bundled MIT-licensed Tabler icons and an unknown/verify state
+- v1.4 adds tenant-paid cost categories and makes duplicates with rent inclusions blocking export errors
+- v1.4 adds up to twelve bilingual amenities, up to ten application requirements, and a confirmation/disclaimer export gate
+- v1.4 adds photo, illustrated, initials, and no-portrait agent profiles with bilingual calls to action
+- v1.4 unifies print and social artwork under an original dark-green/gold modular layout with priority-aware responsive reduction
 - v1.4 cross-cutting recovery ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20)) preserves editable fields and local images after generation, export, reload, reset, or project replacement without changing Stories 1–10 numbering
 
-## v1.4 phase one: Stories 1–5
+## Complete v1.4 development candidate: Stories 1–10
 
-The development branch moves browser projects to schema version 3. Property facts, paired floor plans, feature spotlights, lease details, and rent inclusions are preserved in project files, comparisons, provenance manifests, and approval packages. Every value and phrase remains user-supplied; the editor does not translate, infer, or rewrite dates, amounts, measurements, or lease conditions.
+The development branch moves browser projects to schema version 4. Property facts, paired floor plans, feature spotlights, lease details, rent inclusions, tenant-paid costs, amenities, application requirements, and the agent-profile footer are preserved in project files, comparisons, provenance manifests, and approval packages. Every value and phrase remains user-supplied; the editor does not translate, infer, or rewrite dates, amounts, measurements, or lease conditions.
 
-Floor plans and spotlight images remain in browser-local storage on the current device. Each plan records its original pixel dimensions and produces a warning when it may be too small for the selected output; manifests include SHA-256 hashes for embedded plan and spotlight assets. Tabler icons are bundled locally and used under their MIT licence.
+Floor plans, spotlight images, and agent portraits remain in browser-local storage on the current device. Each plan records its original pixel dimensions and produces a warning when it may be too small for the selected output; manifests include SHA-256 hashes for embedded assets. Tabler icons are bundled locally and used under their MIT licence.
+
+Application requirements are informational, not automated eligibility screening. Whenever requirements are active, export requires an explicit user confirmation and a visible disclaimer. If an agent portrait is absent or unavailable, the layout falls back to initials rather than displaying a broken image.
 
 Issue #20 is a cross-cutting v1.4 foundation rather than Story 11. It stores the schema-driven project as one recovery snapshot, so fields and assets introduced by the numbered v1.4 modules inherit the same autosave and recovery path instead of creating competing persistence systems.
 

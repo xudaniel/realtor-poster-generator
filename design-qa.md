@@ -1,85 +1,91 @@
-# Design QA — v1.4 Stories 1–5
+# Design QA — complete v1.4 Stories 1–10
 
-## Evidence
+## Scope
 
-- Source visual truth: `/var/folders/b7/57f0jdc92vxfxymp3y3mpz7c0000gn/T/codex-clipboard-4af1ec7d-503c-4fc8-9f64-cda5f0abbaf5.png`
-- Initial browser capture: `design-qa-implementation.png`
-- Final browser capture: `design-qa-implementation-final.png`
-- Final focused poster capture: `design-qa-poster-final.png`
-- Final side-by-side comparison: `design-qa-poster-comparison-final.png`
-- Browser viewport: 1800 × 1400 CSS px
-- Rendered poster canvas: 1800 × 2400 internal pixels, displayed at approximately 776 × 1035 CSS px
-- Source pixels: 1002 × 1080
-- Initial and final browser-capture pixels: 1800 × 1310
-- Focused implementation pixels: 776 × 1035
-- Density normalization: the 776 × 1035 focused implementation was proportionally resized to 810 × 1080 beside the unchanged 1002 × 1080 source; no stretching was used
-- State: print-poster preview with hero, two ordered interior images, furnished-plan sample, technical-plan sample, one circular spotlight, nine lease rows, and five rent inclusions
+- Reference: `/var/folders/b7/57f0jdc92vxfxymp3y3mpz7c0000gn/T/codex-clipboard-4af1ec7d-503c-4fc8-9f64-cda5f0abbaf5.png` (1002 × 1080)
+- Implementation: local browser editor at `http://127.0.0.1:8765/`
+- Browser identifier: `1.4.0-dev`
+- Project schema: 4
+- Print artwork: 1800 × 2400 canvas, displayed at 776 × 1035 during the final desktop pass
+- Final evidence:
+  - `design-qa-v1.4-implementation-final.png`
+  - `design-qa-v1.4-poster-final.png`
+  - `design-qa-v1.4-comparison-final.png`
 
-The source is a photographed partial poster rather than a straight-on complete artboard. The comparison therefore evaluates information hierarchy, module balance, masks, readability, and reflow—not pixel geometry, exact branding, or the source's portrait, illustration, icons, colours, and copy.
+## Product-design interpretation
 
-## Full-view comparison
+The reference is used as an information-hierarchy target, not as an asset or geometry template. The implementation preserves the useful hierarchy—facts, paired plans, feature callout, lease/cost modules, amenities, application requirements, and agent CTA—while retaining the project's original dark-green, warm-paper, and gold system. No source illustration, icon, logo, wording, or photographic asset was copied.
 
-The final implementation preserves the useful hierarchy visible in the source: a complete icon-led facts ribbon, paired plan region, image-led spotlight, structured lease list, and an icon-led rent-inclusions panel. The implementation uses the project's original dark green, warm gold, editorial type, rounded modules, and user-supplied sample assets. No source portrait, plan, logo, icon drawing, colour system, wording, or geometry was copied.
+## Implemented story coverage
 
-The final browser view shows clear parent-child grouping, consistent dark section headers, aligned plan cards, stable margins, and no overlap with the agent footer. Empty modules are omitted by the renderer.
+1. Three to eight ordered property facts with accessible labels and social priorities.
+2. Independent furnished 3D and technical 2D plan slots with crop/focal metadata.
+3. Up to three image-led feature spotlights and three mask styles.
+4. Structured lease-detail rows with active, not-applicable, hidden, and sale-collapse states.
+5. Ordered rent inclusions using locally bundled MIT-licensed Tabler icons.
+6. Ordered tenant-paid costs with blocking included/paid conflict detection.
+7. Up to twelve ordered bilingual amenities with reusable local icons.
+8. Up to ten ordered bilingual application requirements with confirmation and disclaimer gates.
+9. Agent profile and bilingual CTA footer with photo, illustrated, initials, and no-portrait modes.
+10. One original modular print composition plus adaptive social summaries.
 
-## Focused-region comparison
+Cross-cutting issue #20 also preserves the complete schema-driven project and local media in IndexedDB.
 
-The final side-by-side file focuses on the actual poster rather than the surrounding editor. It confirms:
+## Mandatory comparison pass
 
-- seven fact cells align on one ribbon without clipping;
-- 3D and 2D plan images remain aspect-correct and visually balanced;
-- the spotlight image uses the selected circular mask and leaves no layout gap;
-- nine literal lease rows remain within their panel;
-- five inclusion icons and labels remain grouped and aligned;
-- the footer begins below all modules with a consistent safe gap.
+### Typography
 
-## Required fidelity surfaces
+- The reference uses dense all-caps labels and compressed utility sections. The implementation uses the existing serif display face for the listing identity and a compact sans-serif system for modules, maintaining a clearer original brand distinction.
+- Initial QA found the lower module copy too small at the editor preview scale. Checklist copy was increased to a fitted 13 px source size and the full poster was recaptured.
+- Final pass: headings, values, captions, and footer contacts remain legible with no truncation or overlap.
 
-### Fonts and typography
+### Spacing and layout
 
-The implementation intentionally preserves the product's Georgia editorial display and Arial/PingFang-compatible body stack instead of copying the source. The final iteration increases plan captions to 16 px, spotlight title/detail to 17/13 px, lease rows to 14 px, and inclusion labels to 13 px on the 1800 × 2400 canvas. Headline, module headers, facts, and footer maintain a clear hierarchy with deterministic wrapping.
+- The reference's top facts, central plan zone, bottom information grid, and agent footer are all represented in the same reading order without copying its column dimensions.
+- Two floor plans retain their aspect ratios and remain independently framed. Empty spotlights collapse instead of leaving placeholder cards.
+- Lease details, rent inclusions, and tenant-paid costs share one row; amenities and application requirements share the next. The footer remains inside the canvas and does not collide with the disclosure line.
 
-### Spacing and layout rhythm
+### Colours and surfaces
 
-The facts ribbon, section headers, paired plans, spotlight, details grid, and footer share aligned outer margins. Plan and detail regions were enlarged after the first comparison. The final layout has no visible collision, cropped module, empty plan cell, or footer overlap.
+- The original dark-green/gold/warm-paper tokens provide strong hierarchy and avoid the reference's beige/charcoal replication.
+- Module bars, gold rules, circular icon wells, and the CTA panel use consistent contrast. No decorative gradients, generic card shadows, or unrelated rounded surfaces were added.
 
-### Colours and visual tokens
+### Image and icon fidelity
 
-The poster consistently uses the existing configurable ink, paper, and accent tokens. Contrast remains strong for the hero overlay, facts ribbon, section bars, body panels, and footer. The colour system is intentionally original.
+- The reference's floor-plan intent is represented with real local raster assets supplied by the repository, not CSS drawings or fake SVG illustrations.
+- Tabler SVG icons are bundled locally under MIT terms and share consistent stroke weight and optical sizing.
+- Hero, two plan images, two gallery images, and one spotlight were uploaded through visible file controls during QA. Recovery after reload restored every tested media slot.
 
-### Image quality and asset fidelity
+### Copy and state behaviour
 
-All listing images are local project samples and keep their aspect ratio. Plan rendering supports contain, fit-width, and crop; the tested state uses contain for both plans. Icons are local Tabler assets under the MIT licence, not handcrafted approximations. No source portrait, floor plan, or logo was reused.
+- The accessible artwork description reported seven property facts, two plans, one spotlight, two tenant-paid costs, seven amenities, four application requirements, and Daniel Xu's agent contact.
+- Application confirmation was required before the final zero-error preflight. Active included/tenant-paid duplicates are blocking errors.
+- Photo upload and focal controls are present; missing-photo validation falls back safely to initials or asks for reselection rather than rendering broken artwork.
 
-### Copy and content
+### Responsive resilience
 
-Address, price, MLS®, fact values, plan captions, lease conditions, rent inclusions, and contact details come directly from structured project data. English and Chinese fields remain separate. The system does not translate or infer claims.
+- Desktop: 1800 × 1400 viewport, two-column editor/preview layout, 776 × 1035 displayed poster.
+- Tablet: 900 × 1000 viewport, one 860 px editor column, 540 px displayed poster, no horizontal overflow.
+- Mobile: 420 × 900 viewport, one 398 px editor column, 332 px displayed poster, no horizontal overflow.
+- Portrait preset rendered at 1080 × 1350; story preset rendered at 1080 × 1920; print was restored to 1800 × 2400 after the check.
 
-## Interaction and runtime verification
+### Accessibility
 
-- Tested hero upload, two independent floor-plan uploads, one spotlight upload, and multiple interior-image upload.
-- Verified plan and spotlight pixel dimensions are recorded after selection.
-- Verified the complete preflight passes after required media is present.
-- Verified accessible canvas description lists all seven facts, both plans, and the spotlight.
-- Verified the browser console contains no errors or warnings in the final state.
-- Automated verification: 12 Python tests and the expanded browser-core test suite pass.
+- Controls use native labels, buttons, checkboxes, selects, and file inputs; application confirmation has an explicit label.
+- The canvas has an accessible description containing structured listing and agent information.
+- Keyboard-visible controls, semantic status text, high-contrast module headings, and mobile-width tap targets were retained.
 
-## Comparison history
+## Recovery verification
 
-### Iteration 1
+- Reload exposed the bilingual recovery panel and paused autosave until the user chose an action.
+- Restore recovered the hero, two gallery images, two plans, the spotlight, project fields, and the checked application confirmation.
+- Browser-local recovery remained isolated from cloud upload and analytics.
 
-- Finding: P2 — plan captions, spotlight copy, lease rows, and rent-inclusion labels were too small in the phone-sized preview relative to the source's dense information panels.
-- Fix: reduced the hero region from 760 to 650 canvas pixels; moved the information modules upward; increased the plan region from 300 to 360 pixels, spotlight region from 150 to 170 pixels, and details region from 255 to 310 pixels; increased module text sizes.
-- Post-fix evidence: `design-qa-implementation-final.png` and `design-qa-poster-comparison-final.png` show larger plans and materially more readable detail modules with no new overlap.
+## Final result
 
-### Final pass
+- Preflight: 0 errors, 0 warnings.
+- Console: 0 error/warn entries after the final interaction sequence.
+- Automated checks: browser core tests, browser recovery tests, minimum/typical/maximum/bilingual layout-contract goldens, Python unit tests, JavaScript syntax checks, and whitespace validation all pass.
+- Remaining P0/P1/P2 design findings: none.
 
-No actionable P0, P1, or P2 findings remain for Stories 1–5. Differences involving tenant-paid costs, amenities, application requirements, and the portrait/CTA footer are expected because they belong to v1.4 Stories 6–10 and are explicitly outside this phase.
-
-## Follow-up polish
-
-- P3: add reviewed bilingual spotlight detail copy in the default demonstration project so the callout shows a richer second line during demos.
-- P3: complete Stories 6–10 before declaring the full v1.4.0 modular template finished.
-
-final result: passed
+The complete Stories 1–10 implementation is ready for branch review. Formal merge, GitHub Pages deployment, and final v1.4.0 release publication remain separate decisions.
