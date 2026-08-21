@@ -8,9 +8,6 @@
     poster: [1800, 2400], square: [1080, 1080], portrait: [1080, 1350], story: [1080, 1920], landscape: [1200, 630],
   };
   const SOCIAL_PRESETS = ["square", "portrait", "story", "landscape"];
-  const CJK_FONT = '"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif';
-  const LATIN_FONT = "Arial,sans-serif";
-  const SERIF_FONT = 'Georgia,"Times New Roman",serif';
   const STATUS_ZH = {"FOR LEASE": "出租", "FOR SALE": "出售", "JUST LISTED": "全新上市", "OPEN HOUSE": "开放参观"};
 
   const DEFAULT_PROJECT = {
@@ -21,7 +18,7 @@
       floor: "26th", exposure: "South-East", parking: "1 Space", availability: "Immediately",
       headlineEn: "Lake views. Downtown energy. A home above it all.", headlineZh: "湖景之上，都市生活触手可及",
     },
-    contact: {name: "Daniel Xu", title: "Sales Representative", phone: "416-555-0198", email: "hello@example.com"},
+    contact: {name: "Daniel Xu", title: "Sales Representative", license: "", phone: "416-555-0198", email: "hello@example.com"},
     brand: {name: "Harbour Realty Group", tagline: "Move beautifully.", website: "example.com"},
     content: {
       featuresEn: "Floor-to-ceiling windows\nFlexible den and generous storage\nSteps to transit and waterfront\nAmenities for work and wellness",
@@ -30,7 +27,7 @@
       utilitiesEn: "Water included\nHydro paid by tenant",
       locationEn: "Waterfront\nUnion Station\nDining and shopping",
     },
-    language: {mode: "english"}, theme: {accent: "#d6a25e", ink: "#102c2b", paper: "#fffdf8"},
+    language: {mode: "english"}, typography: {style: "editorial"}, theme: {accent: "#d6a25e", ink: "#102c2b", paper: "#fffdf8"},
     focal: [.5, .5], preset: "poster",
     media: {
       heroDataUrl: "", heroName: "", heroType: "", gallery: [], floorplanDataUrl: "", floorplanName: "", floorplanType: "",
@@ -81,7 +78,9 @@
   function roundRect(ctx, x, y, width, height, radius, fill) {
     ctx.beginPath(); ctx.roundRect(x, y, width, height, radius); ctx.fillStyle = fill; ctx.fill();
   }
-  function fontFamily() { return state.language.mode === "english" ? LATIN_FONT : CJK_FONT; }
+  function typography() { return Core.activeTypography(state); }
+  function fontFamily(language = state.language.mode) { return language === "english" ? typography().latin : typography().cjk; }
+  function serifFamily() { return typography().serif; }
   function fitText(ctx, text, maxWidth, startSize, minSize, weight = 700, family = fontFamily()) {
     let size = startSize;
     do { ctx.font = `${weight} ${size}px ${family}`; if (ctx.measureText(String(text)).width <= maxWidth) return size; size -= 2; } while (size >= minSize);
@@ -137,6 +136,35 @@
   }
   function factLabel(english, chinese) { return localized(english, chinese); }
   function priceCopy() { return [state.listing.price, state.listing.rentPeriod].filter(Boolean).join(" "); }
+  function drawHeadlineBlock(ctx, x, y, maxWidth, S) {
+    const copy = Core.campaignCopy(state);
+    if (state.language.mode !== "bilingual") {
+      ctx.font = `700 ${48 * S}px ${fontFamily()}`;
+      wrapText(ctx, headlineCopy(), maxWidth, 2).forEach((line, index) => ctx.fillText(line, x, y + index * 58 * S));
+      return;
+    }
+    ctx.font = `750 ${40 * S}px ${fontFamily("english")}`;
+    const english = wrapText(ctx, copy.english.headline, maxWidth, 2);
+    english.forEach((line, index) => ctx.fillText(line, x, y + index * 48 * S));
+    const chineseY = y + Math.max(1, english.length) * 48 * S + 14 * S;
+    ctx.font = `650 ${34 * S}px ${fontFamily("chinese")}`;
+    ctx.fillStyle = rgba(state.theme.ink, .82);
+    wrapText(ctx, copy.chinese.headline || copy.english.headline, maxWidth, 2).forEach((line, index) => ctx.fillText(line, x, chineseY + index * 42 * S));
+  }
+  function drawFeatureBlock(ctx, x, y, maxWidth, S, index) {
+    const copy = Core.campaignCopy(state);
+    if (state.language.mode === "bilingual") {
+      const english = copy.english.features[index] || ""; const chinese = copy.chinese.features[index] || "";
+      ctx.font = `700 ${18 * S}px ${fontFamily("english")}`; ctx.fillStyle = state.theme.ink;
+      wrapText(ctx, english, maxWidth, 2).forEach((line, lineIndex) => ctx.fillText(line, x, y + lineIndex * 23 * S));
+      ctx.font = `600 ${18 * S}px ${fontFamily("chinese")}`; ctx.fillStyle = rgba(state.theme.ink, .76);
+      wrapText(ctx, chinese || english, maxWidth, 2).forEach((line, lineIndex) => ctx.fillText(line, x, y + (52 + lineIndex * 23) * S));
+      return;
+    }
+    const features = featureCopies(); const feature = features[index] || "";
+    ctx.font = `700 ${22 * S}px ${fontFamily()}`; ctx.fillStyle = state.theme.ink;
+    wrapText(ctx, feature, maxWidth, 2).forEach((line, lineIndex) => ctx.fillText(line, x, y + lineIndex * 28 * S));
+  }
 
   function drawStatus(ctx, text, x, y, scale, theme) {
     fitText(ctx, text, 360 * scale, 24 * scale, 16 * scale, 800); const width = Math.min(400 * scale, ctx.measureText(text).width + 42 * scale);
@@ -150,7 +178,7 @@
     if (preset === "poster") drawPrintPoster(ctx, width, height, S, theme);
     else if (preset === "landscape") drawLandscape(ctx, width, height, S, theme);
     else drawSocial(ctx, width, height, S, theme);
-    ctx.fillStyle = rgba(theme.ink, .23); ctx.font = `${Math.round(12 * S)}px ${LATIN_FONT}`; ctx.textAlign = "right";
+    ctx.fillStyle = rgba(theme.ink, .23); ctx.font = `${Math.round(12 * S)}px ${fontFamily("english")}`; ctx.textAlign = "right";
     ctx.fillText(`Generated locally · ${state.template.name} ${state.template.version}`, width - 62 * S, height - 14 * S);
   }
   function drawPrintPoster(ctx, width, height, S, theme) {
@@ -158,10 +186,10 @@
     drawCover(ctx, images.hero, 0, 0, width, heroH, state.focal);
     const overlay = ctx.createLinearGradient(0, 0, 0, heroH); overlay.addColorStop(0, rgba(theme.ink, .08)); overlay.addColorStop(.55, rgba(theme.ink, .2)); overlay.addColorStop(1, rgba(theme.ink, .95));
     ctx.fillStyle = overlay; ctx.fillRect(0, 0, width, heroH); drawStatus(ctx, statusCopy(), margin, 62 * S, S, theme); drawLogo(ctx, width - 350 * S, 54 * S, 270 * S, 84 * S, "dark");
-    ctx.fillStyle = theme.paper; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; fitText(ctx, l.address, width - 2 * margin, 84 * S, 44 * S, 800, SERIF_FONT);
+    ctx.fillStyle = theme.paper; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; fitText(ctx, l.address, width - 2 * margin, 84 * S, 44 * S, 800, serifFamily());
     ctx.fillText(l.address, margin, 615 * S); ctx.font = `700 ${38 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent;
     ctx.fillText(localized(`UNIT ${l.unit}`, `${l.unit} 室`), margin, 682 * S); fitText(ctx, priceCopy(), width - 2 * margin, 68 * S, 38 * S, 800);
-    ctx.fillStyle = theme.paper; ctx.fillText(priceCopy(), margin, 780 * S); ctx.textAlign = "right"; ctx.font = `700 ${22 * S}px ${LATIN_FONT}`; ctx.fillText(`MLS® ${l.mls}`, width - margin, 778 * S);
+    ctx.fillStyle = theme.paper; ctx.fillText(priceCopy(), margin, 780 * S); ctx.textAlign = "right"; ctx.font = `700 ${22 * S}px ${fontFamily("english")}`; ctx.fillText(`MLS® ${l.mls}`, width - margin, 778 * S);
 
     const factsTop = heroH; const factsH = 176 * S; ctx.fillStyle = theme.ink; ctx.fillRect(0, factsTop, width, factsH);
     const facts = [[l.beds, factLabel("BEDS", "卧室")], [l.baths, factLabel("BATHS", "卫浴")], [l.sqft, factLabel("SQ FT", "平方英尺")], [l.parking, factLabel("PARKING", "车位")]];
@@ -174,13 +202,13 @@
 
     const contentTop = factsTop + factsH; ctx.fillStyle = theme.paper; ctx.fillRect(0, contentTop, width, height - contentTop); ctx.textAlign = "left";
     ctx.fillStyle = theme.ink; ctx.font = `700 ${21 * S}px ${fontFamily()}`; ctx.fillText(localized("A REMARKABLE PLACE TO LIVE", "值得珍藏的理想居所"), margin, contentTop + 72 * S);
-    ctx.font = `700 ${48 * S}px ${fontFamily()}`; const headlineLines = wrapText(ctx, headlineCopy(), width - 2 * margin, state.language.mode === "bilingual" ? 3 : 2);
-    headlineLines.forEach((line, index) => ctx.fillText(line, margin, contentTop + (142 + index * 58) * S));
-    const dividerY = contentTop + 330 * S; ctx.fillStyle = theme.accent; ctx.fillRect(margin, dividerY, width - 2 * margin, 3 * S);
-    const features = featureCopies().slice(0, 4); const featureY = dividerY + 62 * S;
-    features.forEach((copy, index) => {
+    drawHeadlineBlock(ctx, margin, contentTop + 142 * S, width - 2 * margin, S);
+    const dividerY = contentTop + 350 * S; ctx.fillStyle = theme.accent; ctx.fillRect(margin, dividerY, width - 2 * margin, 3 * S);
+    const copy = Core.campaignCopy(state); const featureCount = Math.min(4, state.language.mode === "chinese" ? (copy.chinese.features.length || copy.english.features.length) : copy.english.features.length);
+    const featureY = dividerY + 56 * S;
+    Array.from({length: featureCount}).forEach((_, index) => {
       const col = index % 2; const row = Math.floor(index / 2); const colW = width / 2 - 1.5 * margin; const x = margin + col * (width / 2); const y = featureY + row * 102 * S;
-      ctx.font = `700 ${22 * S}px ${fontFamily()}`; ctx.fillStyle = theme.ink; const rows = wrapText(ctx, copy, colW, 2); rows.forEach((line, lineIndex) => ctx.fillText(line, x, y + lineIndex * 28 * S));
+      drawFeatureBlock(ctx, x, y, colW, S, index);
     });
 
     const photoItems = [...images.gallery.slice(0, 3), images.floorplan].filter(Boolean); const stripY = height - 690 * S; const stripH = 255 * S;
@@ -194,8 +222,9 @@
 
     const cardY = height - 385 * S; roundRect(ctx, margin, cardY, width - 2 * margin, 270 * S, 22 * S, theme.ink); ctx.textAlign = "left";
     ctx.fillStyle = theme.paper; ctx.font = `800 ${38 * S}px ${fontFamily()}`; ctx.fillText(state.contact.name, margin + 40 * S, cardY + 62 * S);
-    ctx.font = `700 ${16 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent; ctx.fillText(`${state.contact.title} · ${state.brand.name}`, margin + 40 * S, cardY + 98 * S);
-    ctx.font = `500 ${19 * S}px ${LATIN_FONT}`; ctx.fillStyle = theme.paper; ctx.fillText(`${state.contact.phone}   •   ${state.contact.email}`, margin + 40 * S, cardY + 142 * S);
+    const professionalLine = [state.contact.title, state.contact.license, state.brand.name].filter(Boolean).join(" · ");
+    fitText(ctx, professionalLine, width - 2 * margin - 390 * S, 16 * S, 12 * S, 700, fontFamily()); ctx.fillStyle = theme.accent; ctx.fillText(professionalLine, margin + 40 * S, cardY + 98 * S);
+    ctx.font = `500 ${19 * S}px ${fontFamily("english")}`; ctx.fillStyle = theme.paper; ctx.fillText(`${state.contact.phone}   •   ${state.contact.email}`, margin + 40 * S, cardY + 142 * S);
     ctx.font = `500 ${13 * S}px ${fontFamily()}`; ctx.fillStyle = rgba(theme.paper, .75); const disclaimer = state.compliance.disclaimer || Core.activeComplianceProfile(state).disclaimer;
     wrapText(ctx, disclaimer, width - 2 * margin - 380 * S, 2).forEach((line, index) => ctx.fillText(line, margin + 40 * S, cardY + (191 + index * 18) * S));
     drawLogo(ctx, width - margin - 305 * S, cardY + 58 * S, 250 * S, 110 * S, "dark");
@@ -204,7 +233,7 @@
     const l = state.listing; drawCover(ctx, images.hero, 0, 0, width, height, state.focal);
     const overlay = ctx.createLinearGradient(0, height * .1, 0, height); overlay.addColorStop(0, rgba(theme.ink, .04)); overlay.addColorStop(.42, rgba(theme.ink, .24)); overlay.addColorStop(1, rgba(theme.ink, .97));
     ctx.fillStyle = overlay; ctx.fillRect(0, 0, width, height); const margin = 60 * S; drawStatus(ctx, statusCopy(), margin, 54 * S, S, theme); drawLogo(ctx, width - 305 * S, 45 * S, 245 * S, 72 * S, "dark");
-    const bottom = height - 198 * S; ctx.textAlign = "left"; ctx.fillStyle = theme.paper; fitText(ctx, l.address, width - 2 * margin, 60 * S, 34 * S, 800, SERIF_FONT);
+    const bottom = height - 198 * S; ctx.textAlign = "left"; ctx.fillStyle = theme.paper; fitText(ctx, l.address, width - 2 * margin, 60 * S, 34 * S, 800, serifFamily());
     const addressLines = wrapText(ctx, l.address, width - 2 * margin, 2); const lineH = 66 * S;
     addressLines.forEach((line, index) => ctx.fillText(line, margin, bottom - (addressLines.length - index) * lineH - 108 * S));
     ctx.font = `800 ${34 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent; ctx.fillText(localized(`UNIT ${l.unit}`, `${l.unit} 室`), margin, bottom - 82 * S);
@@ -212,13 +241,13 @@
     ctx.font = `700 ${16 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent;
     ctx.fillText(`${l.beds} ${factLabel("BED", "卧室")}  •  ${l.baths} ${factLabel("BATH", "卫浴")}  •  ${l.sqft} ${factLabel("SQ FT", "平方英尺")}`, margin, bottom + 52 * S);
     ctx.fillStyle = theme.ink; ctx.fillRect(0, height - 116 * S, width, 116 * S); ctx.font = `800 ${22 * S}px ${fontFamily()}`; ctx.fillStyle = theme.paper; ctx.fillText(state.contact.name, margin, height - 63 * S);
-    ctx.textAlign = "right"; fitText(ctx, state.contact.phone, width * .42, 20 * S, 14 * S, 600, LATIN_FONT); ctx.fillText(state.contact.phone, width - margin, height - 63 * S);
+    ctx.textAlign = "right"; fitText(ctx, state.contact.phone, width * .42, 20 * S, 14 * S, 600, fontFamily("english")); ctx.fillText(state.contact.phone, width - margin, height - 63 * S);
   }
   function drawLandscape(ctx, width, height, S, theme) {
     const l = state.listing; drawCover(ctx, images.hero, 0, 0, width, height, state.focal); ctx.fillStyle = rgba(theme.ink, .95);
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(width * .69, 0); ctx.lineTo(width * .57, height); ctx.lineTo(0, height); ctx.closePath(); ctx.fill();
     const margin = 60 * S; drawStatus(ctx, statusCopy(), margin, 36 * S, S, theme); ctx.textAlign = "left"; ctx.fillStyle = theme.paper;
-    fitText(ctx, l.address, 570 * S, 50 * S, 30 * S, 800, SERIF_FONT); wrapText(ctx, l.address, 570 * S, 2).forEach((line, index) => ctx.fillText(line, margin, (175 + index * 56) * S));
+    fitText(ctx, l.address, 570 * S, 50 * S, 30 * S, 800, serifFamily()); wrapText(ctx, l.address, 570 * S, 2).forEach((line, index) => ctx.fillText(line, margin, (175 + index * 56) * S));
     ctx.font = `800 ${32 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent; ctx.fillText(localized(`UNIT ${l.unit}`, `${l.unit} 室`), margin, 302 * S);
     fitText(ctx, priceCopy(), 570 * S, 52 * S, 31 * S, 800); ctx.fillStyle = theme.paper; ctx.fillText(priceCopy(), margin, 390 * S);
     ctx.font = `700 ${16 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent; ctx.fillText(`${l.beds} ${factLabel("BED", "卧室")}  •  ${l.baths} ${factLabel("BATH", "卫浴")}  •  ${l.sqft} ${factLabel("SQ FT", "平方英尺")}`, margin, 448 * S);
@@ -372,16 +401,16 @@
   document.getElementById("export-json").addEventListener("click", () => { downloadBlob(new Blob([JSON.stringify(Core.toListingData(state), null, 2)], {type: "application/json"}), `${slug()}.listing.json`); setStatus("Python-compatible listing JSON downloaded."); });
 
   document.getElementById("save-template").addEventListener("click", () => {
-    const template = {kind: "realtor-poster-template", schemaVersion: 1, name: state.template.name, version: state.template.version, brand: state.brand, theme: state.theme, lockedFields: state.template.lockedFields, logoLightDataUrl: state.media.logoLightDataUrl, logoLightName: state.media.logoLightName, logoDarkDataUrl: state.media.logoDarkDataUrl, logoDarkName: state.media.logoDarkName};
+    const template = Core.buildTemplate(state);
     downloadBlob(new Blob([JSON.stringify(template, null, 2)], {type: "application/json"}), `${slug()}.brand-template.json`); setStatus("Versioned brand template downloaded.");
+  });
+  document.getElementById("duplicate-template").addEventListener("click", () => {
+    state = Core.duplicateTemplate(state); syncControls(); render(); setStatus("Template duplicated. Rename or change its version before export.");
   });
   document.getElementById("open-template").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
     try {
-      const template = JSON.parse(await readFile(file, "text")); if (template.kind !== "realtor-poster-template") throw new Error("Not a Realtor Poster template");
-      state.brand = Core.deepMerge(state.brand, template.brand || {}); state.theme = Core.deepMerge(state.theme, template.theme || {});
-      state.template = {name: template.name || "Imported template", version: template.version || "1.0.0", lockedFields: Array.isArray(template.lockedFields) ? template.lockedFields : []};
-      state.media.logoLightDataUrl = template.logoLightDataUrl || ""; state.media.logoLightName = template.logoLightName || ""; state.media.logoDarkDataUrl = template.logoDarkDataUrl || ""; state.media.logoDarkName = template.logoDarkName || "";
+      const template = JSON.parse(await readFile(file, "text")); state = Core.applyTemplate(state, template);
       images.logoLight = await loadImage(state.media.logoLightDataUrl); images.logoDark = await loadImage(state.media.logoDarkDataUrl); syncControls(); render(); setStatus("Brand template applied without changing saved projects.");
     } catch (error) { setStatus(`Could not import template: ${error.message}`); }
   });
@@ -442,7 +471,7 @@
     for (const preset of Object.keys(PRESETS)) files.push(await presetFile(preset));
     const changes = state.review.baseline ? Core.diffProjects(state.review.baseline, state) : [];
     files.push(jsonFile(`${slug()}.listing.json`, Core.toListingData(state))); files.push(jsonFile(`${slug()}.project.json`, projectPayload()));
-    files.push(jsonFile(`${slug()}.approval.json`, {status: state.review.status, reviewer: state.review.reviewer, reviewedAt: state.review.reviewedAt, notes: state.review.notes, changes, statement: "Internal workflow record only; not an electronic signature or legal approval."}));
+    files.push(jsonFile(`${slug()}.approval.json`, Core.buildApprovalRecord(state, changes)));
     files.push({name: `${slug()}.proof.html`, data: encoder.encode(proofHtml(files, changes))}); const packaged = await packageWithManifest(files);
     const checksums = await Promise.all(packaged.map(async file => `${await Core.sha256Bytes(file.data)}  ${file.name}`)); packaged.push({name: "SHA256SUMS.txt", data: encoder.encode(`${checksums.join("\n")}\n`)});
     downloadBlob(new Blob([Core.makeZip(packaged)], {type: "application/zip"}), `${slug()}.approval-package.zip`); setStatus("Review package downloaded with proof, source data, manifest, approval record, and SHA-256 catalog.");

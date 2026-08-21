@@ -17,9 +17,9 @@ Version 1.3.0 turns the browser editor into a complete, browser-local campaign w
 ### Five critical enhancements
 
 1. **Complete campaign projects** — Versioned JSON and YAML projects now preserve the full listing, four ordered interior photos, an optional floor plan, light and dark logos, crop settings, templates, compliance settings, and review records.
-2. **Compliance profiles and export gates** — Built-in profiles for lease, sale, open house, and just listed campaigns apply required-field checks. Blocking errors must be resolved before publication exports can be created.
-3. **Reusable, controlled brand templates** — Versioned templates can carry colours, typography, contact details, and both logo variants. Selected brand fields can be locked while listing-specific fields remain editable.
-4. **English, Chinese, and bilingual artwork** — All three language modes are available across print, square, portrait, story, and landscape formats, with CJK-aware font fallback.
+2. **Compliance profiles and export gates** — Built-in profiles for lease, sale, open house, and just listed campaigns apply required-field checks, including agent title and configurable licence/registration data. Blocking errors must be resolved before publication exports can be created.
+3. **Reusable, controlled brand templates** — Versioned templates carry colours, typography, a default layout, contact details, and both logo variants. They can be duplicated, renamed, and selectively locked while listing-specific fields remain editable.
+4. **English, Chinese, and bilingual artwork** — All three language modes are available across print, square, portrait, story, and landscape formats, with CJK-aware font fallback and independently measured English/Chinese headline and feature blocks.
 5. **Review and approval packages** — Teams can compare a project with an approved baseline, record Draft, Changes Requested, or Approved status, and export a ZIP containing five proofs, source and project data, the review record, provenance details, and SHA-256 checksums.
 
 ### Privacy and compliance boundaries
@@ -51,9 +51,9 @@ See the full [changelog](CHANGELOG.md), [English README](README.en.md), and [Eng
 ### 五项关键增强
 
 1. **完整广告项目** — 版本化 JSON 和 YAML 项目现在可以保留完整房源资料、四张有序室内照片、可选户型图、明暗两套标志、裁切设置、模板、合规设置及审核记录。
-2. **合规配置与导出门禁** — 内置租赁、出售、开放日和刚刚上市配置，并执行必填项检查；阻止性错误清除前不能生成发布用导出文件。
-3. **可复用、可控制的品牌模板** — 版本化模板可保存颜色、字体、联系资料和两套标志；指定品牌字段可锁定，同时保留房源专属字段的编辑能力。
-4. **英文、中文与双语版式** — 三种语言模式均支持打印、方形、竖版、故事和横版五种尺寸，并提供适合中日韩文字的字体回退。
+2. **合规配置与导出门禁** — 内置租赁、出售、开放日和刚刚上市配置，并执行包括经纪人职衔及可配置执照/注册资料在内的必填项检查；阻止性错误清除前不能生成发布用导出文件。
+3. **可复用、可控制的品牌模板** — 版本化模板可保存颜色、字体、默认版式、联系资料和两套标志；模板支持复制、重命名和指定字段锁定，同时保留房源专属字段的编辑能力。
+4. **英文、中文与双语版式** — 三种语言模式均支持打印、方形、竖版、故事和横版五种尺寸，并提供适合中日韩文字的字体回退；双语标题和特色会分别测量与换行。
 5. **审核与审批包** — 团队可将项目与已批准基准比较，记录草稿、要求修改或已批准状态，并导出包含五张校样、源数据、项目数据、审核记录、来源信息和 SHA-256 校验值的 ZIP。
 
 ### 隐私与合规边界

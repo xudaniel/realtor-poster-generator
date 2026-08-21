@@ -16,6 +16,7 @@ See the complete [bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md).
 - Local comparison against an approved project plus Draft, Changes Requested, and Approved review records
 - Approval ZIP containing five proofs, source data, project data, approval record, provenance manifest, and SHA-256 catalog
 - Testable browser core and Node-based coverage for validation, YAML round-trips, manifests, approval requirements, and project comparisons
+- Configurable licence/registration data, portable typography and default layout settings, template duplication, and independently composed bilingual copy
 
 ### Changed
 

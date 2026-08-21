@@ -52,8 +52,8 @@ Then open `http://127.0.0.1:8765`. Browser projects can be saved as JSON or YAML
 - Offline hero-focal and full-poster preview page
 - Pixel-determinism tests, quantitative visual-difference metrics, and optional diff images
 - Complete browser fields, interior photos, floor plans, dual logos, and YAML/JSON interchange
-- Lease, sale, open-house, and just-listed compliance profiles with blocking export preflight
-- Versioned brand templates, selective field locks, and English, Chinese, or bilingual artwork
+- Lease, sale, open-house, and just-listed compliance profiles with agent title/licence data and blocking export preflight
+- Versioned brand templates carrying typography and a default layout, selective field locks, and independently composed English/Chinese artwork
 - Approved-baseline comparison, review status, and a checksummed approval package
 
 ## Quick start

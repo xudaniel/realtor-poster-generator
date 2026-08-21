@@ -99,6 +99,7 @@ Dining and shopping</textarea></label>
         <div class="form-grid">
           <label>Agent<input data-path="contact.name" value="Daniel Xu"></label>
           <label>Title<input data-path="contact.title" value="Sales Representative"></label>
+          <label>Licence / registration<input data-path="contact.license" placeholder="Optional unless required by profile"></label>
           <label>Brokerage<input data-path="brand.name" value="Harbour Realty Group"></label>
           <label>Brand tagline<input data-path="brand.tagline" value="Move beautifully."></label>
           <label>Phone<input data-path="contact.phone" inputmode="tel" value="416-555-0198"></label>
@@ -107,6 +108,7 @@ Dining and shopping</textarea></label>
           <label>Accent<input data-path="theme.accent" data-color="accent" type="color" value="#d6a25e"></label>
           <label>Ink<input data-path="theme.ink" data-color="ink" type="color" value="#102c2b"></label>
           <label>Paper<input data-path="theme.paper" data-color="paper" type="color" value="#fffdf8"></label>
+          <label>Typography<select data-path="typography.style"><option value="editorial">Editorial</option><option value="modern">Modern</option><option value="classic">Classic</option></select></label>
           <label>Template name<input data-path="template.name" value="Harbour Editorial"></label>
           <label>Template version<input data-path="template.version" value="1.0.0"></label>
         </div>
@@ -118,9 +120,12 @@ Dining and shopping</textarea></label>
           <label><input type="checkbox" data-lock="theme.accent"> Accent</label>
           <label><input type="checkbox" data-lock="theme.ink"> Ink</label>
           <label><input type="checkbox" data-lock="theme.paper"> Paper</label>
+          <label><input type="checkbox" data-lock="typography.style"> Typography</label>
         </fieldset>
+        <p class="field-note">Exported templates include the current preview format as their default layout.</p>
         <div class="project-actions">
           <button id="save-template" class="button button-quiet" type="button">Export template</button>
+          <button id="duplicate-template" class="button button-quiet" type="button">Duplicate template</button>
           <label class="button button-quiet file-button">Import template<input id="open-template" type="file" accept="application/json"></label>
         </div>
       </details>

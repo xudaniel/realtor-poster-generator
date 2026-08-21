@@ -17,29 +17,53 @@
       id: "lease",
       name: "Residential lease",
       version: "1.0.0",
-      required: ["listing.address", "listing.unit", "listing.price", "listing.mls", "listing.availability", "contact.name", "contact.phone", "contact.email", "brand.name"],
+      required: ["listing.address", "listing.unit", "listing.price", "listing.mls", "listing.availability", "contact.name", "contact.title", "contact.phone", "contact.email", "brand.name"],
       disclaimer: "Information is deemed reliable but is not guaranteed. Verify listing facts, availability, brokerage disclosures, and local advertising requirements before publication.",
     },
     sale: {
       id: "sale",
       name: "Residential sale",
       version: "1.0.0",
-      required: ["listing.address", "listing.price", "listing.mls", "contact.name", "contact.phone", "contact.email", "brand.name"],
+      required: ["listing.address", "listing.price", "listing.mls", "contact.name", "contact.title", "contact.phone", "contact.email", "brand.name"],
       disclaimer: "Information is deemed reliable but is not guaranteed. Verify price, MLS® data, brokerage disclosures, and local advertising requirements before publication.",
     },
     open_house: {
       id: "open_house",
       name: "Open house",
       version: "1.0.0",
-      required: ["listing.address", "listing.price", "listing.mls", "listing.availability", "contact.name", "contact.phone", "brand.name"],
+      required: ["listing.address", "listing.price", "listing.mls", "listing.availability", "contact.name", "contact.title", "contact.phone", "brand.name"],
       disclaimer: "Open-house details may change. Verify the date, time, access instructions, brokerage disclosures, and listing status before publication.",
     },
     just_listed: {
       id: "just_listed",
       name: "Just listed",
       version: "1.0.0",
-      required: ["listing.address", "listing.price", "listing.mls", "contact.name", "contact.phone", "contact.email", "brand.name"],
+      required: ["listing.address", "listing.price", "listing.mls", "contact.name", "contact.title", "contact.phone", "contact.email", "brand.name"],
       disclaimer: "Information is deemed reliable but is not guaranteed. Verify listing status, price, MLS® data, and required brokerage disclosures before publication.",
+    },
+  };
+
+  const TYPOGRAPHY_PRESETS = {
+    editorial: {
+      style: "editorial",
+      name: "Editorial",
+      latin: "Arial, sans-serif",
+      cjk: '"PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif',
+      serif: 'Georgia, "Times New Roman", serif',
+    },
+    modern: {
+      style: "modern",
+      name: "Modern",
+      latin: 'Inter, "Helvetica Neue", Arial, sans-serif',
+      cjk: '"PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif',
+      serif: 'Inter, "Helvetica Neue", Arial, sans-serif',
+    },
+    classic: {
+      style: "classic",
+      name: "Classic",
+      latin: '"Helvetica Neue", Arial, sans-serif',
+      cjk: '"Songti SC", SimSun, "Noto Serif CJK SC", serif',
+      serif: 'Baskerville, Georgia, "Times New Roman", serif',
     },
   };
 
@@ -80,6 +104,85 @@
     if (custom && custom.id && Array.isArray(custom.required)) return custom;
     const id = project.compliance && project.compliance.profileId || profileForStatus(getPath(project, "listing.status"));
     return clone(COMPLIANCE_PROFILES[id] || COMPLIANCE_PROFILES.lease);
+  }
+  function activeTypography(project) {
+    const selected = getPath(project, "typography.style") || "editorial";
+    const base = TYPOGRAPHY_PRESETS[selected] || TYPOGRAPHY_PRESETS.editorial;
+    return deepMerge(base, project.typography || {});
+  }
+
+  function buildTemplate(project) {
+    return {
+      kind: "realtor-poster-template",
+      schemaVersion: 1,
+      name: project.template.name,
+      version: project.template.version,
+      brand: clone(project.brand),
+      contact: clone(project.contact),
+      theme: clone(project.theme),
+      typography: activeTypography(project),
+      layout: {defaultPreset: project.preset},
+      lockedFields: clone(project.template.lockedFields || []),
+      logoLightDataUrl: getPath(project, "media.logoLightDataUrl") || "",
+      logoLightName: getPath(project, "media.logoLightName") || "",
+      logoLightType: getPath(project, "media.logoLightType") || "",
+      logoDarkDataUrl: getPath(project, "media.logoDarkDataUrl") || "",
+      logoDarkName: getPath(project, "media.logoDarkName") || "",
+      logoDarkType: getPath(project, "media.logoDarkType") || "",
+    };
+  }
+  function applyTemplate(project, template) {
+    if (!template || template.kind !== "realtor-poster-template") throw new Error("Not a Realtor Poster template");
+    if (Number(template.schemaVersion || 1) !== 1) throw new Error(`Unsupported template schema version: ${template.schemaVersion}`);
+    const output = clone(project);
+    output.brand = deepMerge(output.brand || {}, template.brand || {});
+    output.contact = deepMerge(output.contact || {}, template.contact || {});
+    output.theme = deepMerge(output.theme || {}, template.theme || {});
+    output.typography = deepMerge(activeTypography(output), template.typography || {});
+    if (template.layout && template.layout.defaultPreset) output.preset = template.layout.defaultPreset;
+    output.template = {
+      name: template.name || "Imported template",
+      version: template.version || "1.0.0",
+      lockedFields: Array.isArray(template.lockedFields) ? clone(template.lockedFields) : [],
+    };
+    output.media.logoLightDataUrl = template.logoLightDataUrl || "";
+    output.media.logoLightName = template.logoLightName || "";
+    output.media.logoLightType = template.logoLightType || "";
+    output.media.logoDarkDataUrl = template.logoDarkDataUrl || "";
+    output.media.logoDarkName = template.logoDarkName || "";
+    output.media.logoDarkType = template.logoDarkType || "";
+    return output;
+  }
+  function duplicateTemplate(project) {
+    const output = clone(project);
+    output.template.name = `${String(output.template.name || "Template").trim()} Copy`;
+    return output;
+  }
+  function campaignCopy(project) {
+    return {
+      shared: {
+        address: project.listing.address,
+        price: project.listing.price,
+        rentPeriod: project.listing.rentPeriod,
+        mls: project.listing.mls,
+        beds: project.listing.beds,
+        baths: project.listing.baths,
+        sqft: project.listing.sqft,
+        contact: clone(project.contact),
+      },
+      english: {headline: project.listing.headlineEn, features: list(project.content.featuresEn)},
+      chinese: {headline: project.listing.headlineZh, features: list(project.content.featuresZh)},
+    };
+  }
+  function buildApprovalRecord(project, changes) {
+    return {
+      status: project.review.status,
+      reviewer: project.review.reviewer,
+      reviewedAt: project.review.reviewedAt,
+      notes: project.review.notes,
+      changes: clone(changes || []),
+      statement: "Internal workflow record only; not an electronic signature or legal, regulatory, MLS, or brokerage approval.",
+    };
   }
 
   function validateProject(project) {
@@ -134,6 +237,8 @@
     if (!String(getPath(project, "compliance.disclaimer") || "").trim()) {
       errors.push(`${profile.name} requires disclaimer text`);
     }
+    const typographyStyle = String(getPath(project, "typography.style") || "editorial");
+    if (!TYPOGRAPHY_PRESETS[typographyStyle]) errors.push(`Unsupported typography.style: ${typographyStyle}`);
 
     const mode = getPath(project, "language.mode") || "english";
     if ((mode === "chinese" || mode === "bilingual") && !String(getPath(project, "listing.headlineZh") || "").trim()) {
@@ -355,6 +460,7 @@
   async function sha256Text(text) { return sha256Bytes(new TextEncoder().encode(String(text))); }
   async function buildManifest(project, outputFiles) {
     const projectCopy = clone(project); delete projectCopy.review.baseline;
+    const typography = activeTypography(project);
     const assets = [
       ["hero", project.media.heroName, project.media.heroDataUrl], ["logo_light", project.media.logoLightName, project.media.logoLightDataUrl],
       ["logo_dark", project.media.logoDarkName, project.media.logoDarkDataUrl], ["floorplan", project.media.floorplanName, project.media.floorplanDataUrl],
@@ -363,9 +469,13 @@
     return {
       generator: `realtor-poster-studio ${APP_VERSION}`, schemaVersion: PROJECT_SCHEMA_VERSION,
       createdAt: new Date().toISOString(), projectSha256: await sha256Text(canonicalStringify(projectCopy)),
-      language: {mode: project.language.mode, fonts: project.language.mode === "english" ? ["Arial", "Georgia"] : ["PingFang SC", "Microsoft YaHei", "Arial", "Georgia"]},
+      language: {
+        mode: project.language.mode,
+        typographyStyle: typography.style,
+        fonts: project.language.mode === "english" ? [typography.latin, typography.serif] : [typography.cjk, typography.latin, typography.serif],
+      },
       compliance: {profile: activeComplianceProfile(project).name, version: activeComplianceProfile(project).version, disclaimer: project.compliance.disclaimer},
-      template: {name: project.template.name, version: project.template.version},
+      template: {name: project.template.name, version: project.template.version, defaultPreset: project.preset},
       assets: await Promise.all(assets.map(async ([role, name, dataUrl]) => ({role, filename: name, sha256: await sha256Bytes(dataUrlToBytes(dataUrl))}))),
       outputs: await Promise.all((outputFiles || []).map(async file => ({filename: file.name, bytes: file.data.length, sha256: await sha256Bytes(file.data)}))),
       provenance: "Listing text comes from validated user input. Images are cropped locally and are never generated or uploaded by this tool.",
@@ -373,8 +483,9 @@
   }
 
   return {
-    APP_VERSION, PROJECT_SCHEMA_VERSION, COMPLIANCE_PROFILES, clone, getPath, setPath, deepMerge, list,
-    profileForStatus, activeComplianceProfile, validateProject, parseSimpleYaml, toSimpleYaml, toListingData,
+    APP_VERSION, PROJECT_SCHEMA_VERSION, COMPLIANCE_PROFILES, TYPOGRAPHY_PRESETS, clone, getPath, setPath, deepMerge, list,
+    profileForStatus, activeComplianceProfile, activeTypography, buildTemplate, applyTemplate, duplicateTemplate,
+    campaignCopy, buildApprovalRecord, validateProject, parseSimpleYaml, toSimpleYaml, toListingData,
     projectFromListingData, normalizeProject, canonicalStringify, diffProjects, dataUrlToBytes, crc32, makeZip,
     sha256Bytes, sha256Text, buildManifest,
   };

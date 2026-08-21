@@ -278,9 +278,9 @@ The system must:
 - Download PNG, use browser printing for PDF, and export four social images in a ZIP.
 - Save and reopen project JSON containing the form, theme, focal point, and selected images.
 - Round-trip project JSON/YAML; reorder, replace, and remove interior photos; and preserve a floor plan and light/dark logos.
-- Apply lease, sale, open-house, and just-listed compliance profiles and block export while required errors remain.
-- Import and export versioned brand templates with selective field locks.
-- Render English, Chinese, and bilingual content in all five formats.
+- Apply lease, sale, open-house, and just-listed compliance profiles, require agent title and licence/registration data when configured, and block export while required errors remain.
+- Import, export, duplicate, and rename versioned brand templates carrying colours, typography, dual logos, a default layout, and selective field locks.
+- Render English, Chinese, and bilingual content in all five formats, measuring and wrapping bilingual headlines and features independently.
 - Compare with an approved project, record reviewer/date/notes, and export a complete approval ZIP.
 - Build a local manifest covering language, profile, template, assets, outputs, and SHA-256 hashes.
 - Run from GitHub Pages or locally through `scripts/serve_web.py`.
@@ -365,9 +365,9 @@ Version 1.3.0 is acceptable when:
 23. Project JSON preserves and reopens form, theme, focal, and selected images.
 24. English and Chinese README and PRD files have direct language links and equivalent feature coverage.
 25. Browser JSON/YAML projects preserve every listing field, interior order, floor plan, and dual logos.
-26. Compliance-profile errors block every publication export and the UI states that the tool does not grant legal approval.
-27. Versioned brand templates lock selected fields while unlocked project overrides remain editable.
-28. English, Chinese, and bilingual content each render in all five formats with suitable CJK font fallback.
+26. Compliance profiles can require brokerage, agent title, licence/registration data, and contact details; errors block every publication export and the UI states that the tool does not grant legal approval.
+27. Versioned brand templates carry colours, typography, dual logos, and a default layout; they support duplication, renaming, and selected-field locks while unlocked project overrides remain editable.
+28. English, Chinese, and bilingual content each render in all five formats with suitable CJK font fallback and independently measured and wrapped bilingual headlines and features.
 29. Approved status requires a reviewer and date; the approval package contains five proofs, source data, the review record, manifest, and SHA-256 catalog.
 
 ## 10. Risks and mitigations
