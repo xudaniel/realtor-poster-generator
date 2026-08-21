@@ -6,13 +6,13 @@
 
 Created and maintained by **Daniel Xu**. 由 **Daniel Xu** 创建并维护。
 
-[中文 README](README.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+[中文 README](README.md) · [Bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-Current version: **1.2.1**
+Current version: **1.3.0**
 
 Realtor Poster Generator is a reusable, structured-data-driven toolkit for real-estate sale and rental artwork. Its information hierarchy includes a prominent listing status, address and price, property facts, interior photography, an optional floor plan, detail sections, neighbourhood highlights, and agent contact information. The composition, typography, colours, shapes, and layout are original rather than a pixel-for-pixel copy of any reference design.
 
-Pillow renders every address, price, MLS® number, contact detail, and property description deterministically from validated YAML or JSON. No generative model draws or rewrites text, preventing AI-created spelling errors in addresses, telephone numbers, and prices.
+The Python workflow uses Pillow and the browser workflow uses Canvas. Both render every address, price, MLS® number, contact detail, and property description deterministically from validated YAML, JSON, or form data. No generative model rewrites listing text, preventing AI-created spelling errors in addresses, telephone numbers, and prices.
 
 <p align="center">
   <img src="outputs/sample-poster.png" width="420" alt="Fictional listing produced by Realtor Poster Generator">
@@ -22,10 +22,11 @@ Pillow renders every address, price, MLS® number, contact detail, and property 
 
 Open the [live editor](https://xudaniel.github.io/realtor-poster-generator/) for a no-install visual campaign workflow:
 
-1. Enter listing, agent, and brand details.
-2. Drop in a hero photo and logo, then click the important point in the photo to control the crop.
-3. Preview the print poster, square, portrait, story, and landscape layouts in real time.
-4. Download PNG artwork, print to PDF, save a portable project, or export a ZIP containing all four social formats.
+1. Enter complete listing, agent, brand, and English/Chinese campaign content.
+2. Add a hero, four ordered interior photos, a floor plan, and light/dark logo variants, then control the hero crop.
+3. Select a lease, sale, open-house, or just-listed compliance profile and clear its export preflight.
+4. Save versioned templates with selectively locked brand fields and switch among English, Chinese, and bilingual artwork.
+5. Preview five formats, download PNG, print to PDF, or export a social ZIP, SHA-256 manifest, and complete approval package.
 
 Photos, contact details, and project files remain in the current browser tab and are not uploaded to a server. The editor contains no analytics code. It can also run entirely on your computer:
 
@@ -33,7 +34,7 @@ Photos, contact details, and project files remain in the current browser tab and
 python3 scripts/serve_web.py
 ```
 
-Then open `http://127.0.0.1:8765`. A browser project file stores the form, theme, selected images, and focal point in a JSON file that can be reopened later.
+Then open `http://127.0.0.1:8765`. Browser projects can be saved as JSON or YAML and preserve the form, theme, focal point, images, template, compliance profile, and review record. Approval packages include five proofs, source data, the review record, a manifest, and checksums; they record workflow status but do not constitute legal or brokerage approval.
 
 ## Features
 
@@ -50,6 +51,10 @@ Then open `http://127.0.0.1:8765`. A browser project file stores the form, theme
 - Square, portrait, story, and landscape social-media layouts
 - Offline hero-focal and full-poster preview page
 - Pixel-determinism tests, quantitative visual-difference metrics, and optional diff images
+- Complete browser fields, interior photos, floor plans, dual logos, and YAML/JSON interchange
+- Lease, sale, open-house, and just-listed compliance profiles with agent title/licence data and blocking export preflight
+- Versioned brand templates carrying typography and a default layout, selective field locks, and independently composed English/Chinese artwork
+- Approved-baseline comparison, review status, and a checksummed approval package
 
 ## Quick start
 
@@ -265,7 +270,8 @@ realtor_poster/batch.py             Batch discovery, preflight, and summaries
 realtor_poster/social.py            Four responsive social-media layouts
 realtor_poster/preview.py           Offline hero-focal and layout preview
 realtor_poster/visual_regression.py Visual-difference metrics and diff images
-web/                                Browser-local editor with no uploads
+web/                                Complete browser-local campaign editor with no uploads
+web/core.js                         Project schema, validation, YAML, manifests, and comparison
 scripts/new_listing.py              Interactive agent questionnaire
 scripts/create_sample_assets.py     Fictional sample-asset generator
 scripts/serve_web.py                Local browser-editor server
@@ -274,7 +280,8 @@ scripts/visual_regression.py        Visual-regression entry point
 examples/sample_listing.yaml        Sample listing data
 examples/assets/                    Fictional sample images and logo
 input_template.yaml                 Copyable listing-data template
-tests/test_poster.py                Automated tests
+tests/test_poster.py                Python and static browser tests
+tests/test_web_core.js              Browser-core unit tests
 outputs/                            Generated artwork and manifests
 PRD.md                              中文产品需求文档
 PRD.en.md                           English product requirements document
@@ -286,6 +293,7 @@ PRD.en.md                           English product requirements document
 python scripts/create_sample_assets.py
 python -m unittest discover -s tests -v
 node --check web/app.js
+node tests/test_web_core.js
 ```
 
 Coverage includes:
@@ -299,6 +307,7 @@ Coverage includes:
 - Detection of meaningful visual changes
 - Multi-listing discovery, preflight validation, and batch output
 - Browser-editor privacy boundaries, export functions, and core assets
+- Browser YAML round-trips, compliance gates, template manifests, approval requirements, and project comparison
 - Multi-version Python CI, JavaScript syntax, sample rendering, and package builds
 
 ## Pre-publication checklist

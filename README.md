@@ -6,13 +6,13 @@
 
 由 **Daniel Xu** 创建并维护。Created and maintained by **Daniel Xu**.
 
-[English README](README.en.md) · [中文产品需求文档](PRD.md) · [English PRD](PRD.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
+[English README](README.en.md) · [v1.3.0 中英双语发布说明](RELEASE_NOTES_v1.3.0.md) · [中文产品需求文档](PRD.md) · [English PRD](PRD.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
 
-当前版本：**1.2.1**
+当前版本：**1.3.0**
 
 这是一个可重复使用、由结构化数据驱动的房地产租售海报生成工具。设计参考了用户提供样图的信息层级，例如醒目的租售状态、地址与价格、房屋数据栏、室内照片、户型图、详细信息分区、周边亮点和经纪人联系方式；整体构图、字体、配色、形状和排版均为重新设计，并非对参考图逐像素复制。
 
-所有地址、价格、MLS 编号、联系方式和房屋说明，都由 Pillow 根据经过验证的 YAML 或 JSON 数据确定性绘制，不使用生成式人工智能生成文字，因此不会出现 AI 拼错地址、电话号码或价格的问题。
+Python 流程使用 Pillow，浏览器流程使用 Canvas；两者都根据经过验证的 YAML、JSON 或表单数据确定性绘制地址、价格、MLS 编号、联系方式和房屋说明，不使用生成式人工智能改写文字，因此不会出现 AI 拼错地址、电话号码或价格的问题。
 
 <p align="center">
   <img src="outputs/sample-poster.png" width="420" alt="房地产海报生成器的虚构房源示例">
@@ -22,9 +22,11 @@
 
 打开[在线编辑器](https://xudaniel.github.io/realtor-poster-generator/)，即可在浏览器中完成无需安装的可视化广告流程：
 
-1. 填写房源、经纪人和品牌资料；
-2. 拖入主图与标志，直接点击照片重点位置调整裁切；
-3. 实时预览海报、方形、竖版、限时动态和横版，下载 PNG、打印为 PDF，或下载四种社交媒体图片的 ZIP。
+1. 填写完整房源、经纪人、品牌和中英文宣传资料；
+2. 拖入主图、四张室内照片、户型图和明暗两套标志，直接点击照片重点位置调整裁切；
+3. 选择租赁、出售、开放日或刚刚上市合规配置，并在导出前完成错误与警告检查；
+4. 保存可锁定品牌字段的版本化模板，切换英文、中文或双语版式；
+5. 实时预览五种尺寸，下载 PNG、打印为 PDF，或导出社交媒体 ZIP、SHA-256 清单和完整审批包。
 
 照片、联系资料和项目文件只在当前浏览器标签页中处理，不会上传到服务器。也可以完全离线运行：
 
@@ -32,7 +34,7 @@
 python3 scripts/serve_web.py
 ```
 
-然后打开 `http://127.0.0.1:8765`。浏览器项目文件会把表单、主题和已选择图片保存到一个可重新打开的 JSON 文件。
+然后打开 `http://127.0.0.1:8765`。浏览器项目可保存为 JSON 或 YAML，并保留表单、主题、焦点、图片、模板、合规配置及审核记录。审批包包含五张校样、源数据、审核记录、清单和校验值；它记录审批状态，但不代表法律或经纪公司批准。
 
 ## 主要功能
 
@@ -49,6 +51,10 @@ python3 scripts/serve_web.py
 - 1.2 支持方形、竖版、限时动态和横版四种社交媒体尺寸
 - 1.2 提供无需联网的主图焦点选择与完整海报预览页面
 - 1.2 提供像素确定性测试、差异指标和可选视觉差异图
+- 1.3 在浏览器中支持完整房源资料、室内照片、户型图、双标志和 YAML/JSON 往返
+- 1.3 提供租赁、出售、开放日和刚刚上市合规配置、经纪人职衔/执照资料及导出门禁
+- 1.3 提供可携带字体与默认版式的版本化品牌模板、选择性字段锁定，以及中英文独立排版的双语版式
+- 1.3 提供基准项目比较、审核状态和带 SHA-256 校验的审批包
 
 ## 快速开始
 
@@ -262,7 +268,8 @@ realtor_poster/batch.py            批量发现、预验证和输出摘要
 realtor_poster/social.py           四种自适应社交媒体版式
 realtor_poster/preview.py          离线主图焦点与版面预览页面
 realtor_poster/visual_regression.py 视觉差异指标和差异图
-web/                              无上传、浏览器本地运行的可视化编辑器
+web/                              无上传、浏览器本地运行的完整广告编辑器
+web/core.js                       项目结构、验证、YAML、清单与比较核心
 scripts/new_listing.py             经纪人交互式填写工具
 scripts/create_sample_assets.py    虚构示例素材生成脚本
 scripts/serve_web.py               本地可视化编辑器启动脚本
@@ -271,7 +278,8 @@ scripts/visual_regression.py       可直接运行的视觉回归入口
 examples/sample_listing.yaml       示例房源数据
 examples/assets/                   虚构示例图片与品牌标志
 input_template.yaml                可复制使用的数据模板
-tests/test_poster.py               自动化测试
+tests/test_poster.py               Python 与静态浏览器测试
+tests/test_web_core.js             浏览器核心单元测试
 outputs/                           生成的海报和清单
 PRD.md                             中文产品需求文档
 PRD.en.md                          English product requirements document
@@ -282,6 +290,7 @@ PRD.en.md                          English product requirements document
 ```bash
 python scripts/create_sample_assets.py
 python -m unittest discover -s tests -v
+node tests/test_web_core.js
 ```
 
 当前测试覆盖：
@@ -295,6 +304,7 @@ python -m unittest discover -s tests -v
 - 视觉回归对真实变化的识别
 - 多套房源的批量发现、预验证和输出
 - 浏览器编辑器的隐私边界、导出功能与核心静态资源
+- 浏览器 YAML 往返、合规门禁、模板清单、审批要求和项目比较
 - GitHub Actions 中的多版本 Python、JavaScript 语法、示例渲染和软件包构建
 
 ## 发布前检查
