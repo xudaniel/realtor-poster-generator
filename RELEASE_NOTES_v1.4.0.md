@@ -2,7 +2,7 @@
 
 [English](#english) · [中文](#中文)
 
-**Development phase:** Stories 1–5 · **Browser identifier:** `1.4.0-dev` · **Project schema:** 3
+**Development phase:** Stories 1–5 plus cross-cutting recovery · **Browser identifier:** `1.4.0-dev` · **Project schema:** 3
 
 Created and maintained by **Daniel Xu**. Released under the [MIT License](LICENSE). The bundled Tabler icon subset is also MIT-licensed; its notice is stored in `web/assets/icons/TABLER-LICENSE`.
 
@@ -22,16 +22,22 @@ The first v1.4 phase converts the browser poster from a general campaign layout 
 4. **Structured lease details ([#13](https://github.com/xudaniel/realtor-poster-generator/issues/13))** — Adds literal user-entered term, availability, deposit, payment, insurance, key, pet, smoking, parking, and custom rows with active, not-applicable, and hidden states. Sale campaigns collapse the module.
 5. **Rent inclusions ([#14](https://github.com/xudaniel/realtor-poster-generator/issues/14))** — Adds ordered standard/custom inclusions, original local composition with MIT-licensed Tabler icons, an unknown/verify state, and duplicate warnings against tenant-paid data.
 
+### Critical cross-cutting recovery
+
+**Preserve and recover editor input ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20))** is implemented as a v1.4 foundation without renumbering Stories 1–10. The editor now keeps the complete schema-driven project and local images in IndexedDB after edits and before exports, reset, or project replacement. Reopening the editor offers the newest local draft, restores its scroll position, isolates projects by identifier, warns about cross-tab conflicts and storage failures, confirms destructive actions, and lets the user download or clear recovery data.
+
 ### Data, privacy, and review
 
 - Project schema 3 preserves all five modules, plan/spotlight images, ordering, visibility, bilingual copy, crop settings, and source dimensions.
 - Listing JSON/YAML interchange, approved-baseline comparisons, provenance manifests, and approval ZIPs retain the same module data.
-- Plan and spotlight images never leave the browser tab. Asset SHA-256 hashes are calculated locally.
+- Plan and spotlight images never leave browser-local storage on the current device. Asset SHA-256 hashes are calculated locally.
+- Recovery snapshots never use cloud storage or analytics. IndexedDB is used so large local images are not placed in `localStorage`.
 - The editor does not infer property facts, translate claims, verify dimensions, or provide legal advice about lease conditions.
 
 ### Verification target
 
 - Browser core tests cover minimum/maximum facts, social priorities, one/two plans, low-resolution warnings, spotlight limits, bilingual completeness, lease collapse, cost conflicts, round-trips, and manifest assets.
+- Recovery tests cover complete image-bearing snapshots, project isolation, newest-draft selection, version rejection, export/reset hooks, and bilingual restore controls.
 - Visual QA compares the reference information hierarchy with the rendered original implementation at print-poster and editor-preview sizes.
 - A final v1.4.0 release requires completion and verification of Stories 6–10.
 
@@ -49,15 +55,21 @@ v1.4 第一阶段把浏览器海报从通用广告版式升级为信息密度更
 4. **结构化租约详情（[#13](https://github.com/xudaniel/realtor-poster-generator/issues/13)）** — 支持用户原样填写租期、入住日期、押金、付款、保险、钥匙、宠物、吸烟、停车和自定义条目，并可设为启用、不适用或隐藏；出售项目自动收起。
 5. **租金包含项目（[#14](https://github.com/xudaniel/realtor-poster-generator/issues/14)）** — 支持标准/自定义项目排序、MIT 许可 Tabler 本地图标、待确认状态，以及与租客承担费用重复时的警告。
 
+### 关键横向恢复能力
+
+**保留并恢复编辑器输入（[#20](https://github.com/xudaniel/realtor-poster-generator/issues/20)）** 作为 v1.4 的基础能力实现，不改变故事 1–10 的编号。编辑器会在修改后，以及导出、重置或替换项目前，把完整项目结构和本地图片保存到 IndexedDB。再次打开时可恢复最新草稿及滚动位置；不同项目按标识隔离；跨标签页冲突与存储失败会明确提示；破坏性操作需要确认；用户可下载或清除恢复数据。
+
 ### 数据、隐私与审核
 
 - 第 3 版项目结构保存五类模块、户型图/卖点图、顺序、显示状态、中英文文案、裁切设置和原始像素尺寸。
 - 房源 JSON/YAML 往返、已批准基准比较、来源清单和审批 ZIP 保留同一套模块数据。
-- 户型图与卖点图片不会离开浏览器标签页；资源 SHA-256 在本地计算。
+- 户型图与卖点图片不会离开当前设备的浏览器本地存储；资源 SHA-256 在本地计算。
+- 恢复快照不使用云端或分析服务；大体积本地图片保存在 IndexedDB，而不是 `localStorage`。
 - 编辑器不会推断房屋事实、自动翻译广告内容、核实户型尺寸，也不会就租赁条件提供法律意见。
 
 ### 验证目标
 
 - 浏览器核心测试覆盖最少/最多房屋数据、社交优先级、单/双户型图、低分辨率警告、卖点数量、中英文完整性、出售项目租约收起、费用冲突、项目往返及清单资源。
+- 恢复测试覆盖包含图片的完整快照、项目隔离、最新草稿选择、版本拒绝、导出/重置挂钩及双语恢复控件。
 - 视觉检查会在打印海报和编辑器预览尺寸对比参考图的信息层级与原创实现。
 - 正式发布 v1.4.0 前仍需完成并验证故事 6–10。

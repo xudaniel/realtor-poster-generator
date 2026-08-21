@@ -14,6 +14,8 @@ See the bilingual [v1.4.0 development release notes](RELEASE_NOTES_v1.4.0.md).
 - Structured bilingual lease-detail rows with active, not-applicable, and hidden states plus sale-campaign collapse
 - Reorderable rent-included costs with locally bundled MIT-licensed Tabler icons, unknown/verify states, and conflict warnings
 - Browser project schema version 3 and `1.4.0-dev` browser generator metadata
+- Cross-cutting v1.4 recovery for complete editor projects and local images using IndexedDB, with debounced autosave, pre-export/reset/import snapshots, bilingual restore controls, per-project isolation, scroll restoration, storage warnings, and cross-tab conflict detection ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20))
+- Browser recovery tests for snapshot completeness, version compatibility, project identity, newest-draft selection, and action hooks
 
 ### Changed
 

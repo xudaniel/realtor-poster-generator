@@ -6,7 +6,7 @@
 
 - Product: Realtor Poster Generator
 - Current stable version: 1.3.0
-- Current development scope: v1.4.0 phase one (Stories 1–5)
+- Current development scope: v1.4.0 phase one (Stories 1–5) plus cross-cutting recovery issue #20
 - Language: English
 - Product forms: browser-local visual editor, local Python command-line tools, and a self-contained offline HTML preview
 - Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON/YAML, template and compliance profiles, approval ZIP, provenance manifest JSON, batch summary JSON, and focal-preview HTML
@@ -22,7 +22,7 @@ Real-estate agents creating rental or sale artwork repeatedly assemble addresses
 - Artwork made by different team members may not follow one brand system.
 - Output packages may lack traceable input and asset checksums.
 
-The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; v1.4 phase one adds a complete property-facts ribbon, paired plans, feature spotlights, structured lease details, and rent inclusions.
+The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; v1.4 phase one adds a complete property-facts ribbon, paired plans, feature spotlights, structured lease details, and rent inclusions, while cross-cutting issue #20 makes the generate-review-correct loop recoverable.
 
 ## 3. Product goals
 
@@ -95,7 +95,11 @@ A developer or marketing owner compares candidate artwork with an approved basel
 
 ### Use case G: browser-local campaign creation
 
-An agent opens the hosted or locally served visual editor, enters complete listing, agent, brand, and bilingual content, manages the hero, interiors, floor plan, and dual logos, selects a compliance profile and focal point, and previews the complete poster plus four social layouts. All information remains in the current browser tab.
+An agent opens the hosted or locally served visual editor, enters complete listing, agent, brand, and bilingual content, manages the hero, interiors, floor plan, and dual logos, selects a compliance profile and focal point, and previews the complete poster plus four social layouts. All information remains in browser-local storage on the current device.
+
+### Use case H: correct a generated poster without re-entry
+
+An agent generates or exports a poster, notices an error, returns to the editor, restores the latest local draft when needed, corrects only the affected field, and regenerates the artwork without re-entering unaffected information or reselecting recoverable images.
 
 ## 6. User flow
 
@@ -107,9 +111,10 @@ An agent opens the hosted or locally served visual editor, enters complete listi
 6. Correct reported errors.
 7. Select or adjust the hero focal point when necessary.
 8. Generate the full PNG, optional PDF, social formats, and manifest.
-9. Run visual regression for important templates.
-10. Complete factual, compliance, and visual review.
-11. Publish or print the final artwork.
+9. If review finds an error, return to the saved editor state, correct it, and regenerate.
+10. Run visual regression for important templates.
+11. Complete factual, compliance, and visual review.
+12. Publish or print the final artwork.
 
 The browser editor provides a complete no-install path for entering all core details; managing the hero, interiors, floor plan, and dual logos; setting the focal point; running validation aligned with Python rules; using compliance profiles and brand templates; previewing five formats in three language modes; and exporting PNG, browser-printed PDF, project JSON/YAML, a social ZIP, a manifest, or an approval package. Folder batch processing and pixel-level visual regression remain Python command-line workflows.
 
@@ -272,7 +277,7 @@ The system must:
 The system must:
 
 - Require no account, server upload, or analytics code.
-- Process photographs, logo, contact details, and project files in the current browser tab.
+- Process photographs, logo, contact details, and project files in browser-local storage on the current device.
 - Support drag-and-drop or file selection for a hero photo and transparent logo.
 - Let users click the hero image and adjust horizontal and vertical focal coordinates.
 - Preview full, square, portrait, story, and landscape layouts in real time.
@@ -284,6 +289,11 @@ The system must:
 - Render English, Chinese, and bilingual content in all five formats, measuring and wrapping bilingual headlines and features independently.
 - Compare with an approved project, record reviewer/date/notes, and export a complete approval ZIP.
 - Build a local manifest covering language, profile, template, assets, outputs, and SHA-256 hashes.
+- Autosave the complete schema-driven project, including local images, to IndexedDB after a short debounce and immediately before export, reset, or project replacement.
+- Offer the newest compatible draft with its project name and save time when the editor is reopened; restore its controls, local media, and scroll position only after the user chooses recovery.
+- Isolate drafts by project identifier, detect a newer same-project draft from another tab, and pause saving until the user resolves the conflict.
+- Confirm destructive reset/import/clear actions, show quota/private-mode/corruption/version failures instead of silently claiming success, and allow incompatible recovery data to be downloaded before deletion.
+- Keep recovery data on-device with no upload, analytics, account, cloud synchronization, or cross-device promise; provide explicit portable-project download and local-draft clearing controls.
 - Run from GitHub Pages or locally through `scripts/serve_web.py`.
 
 ### 7.14 Bilingual documentation
@@ -375,6 +385,11 @@ Version 1.3.0 is acceptable when:
 32. Up to three spotlights preserve a local image, separate English/Chinese title and detail, circle/rounded-square/rectangle mask, and focal point; empty items consume no poster space.
 33. Lease details cover term, availability, deposit, payment, insurance, keys, pets, smoking, parking, and custom rows with reorder, hidden, and not-applicable states; sale campaigns collapse the module.
 34. Rent inclusions support standard and custom costs, ordering, removal, and an unknown/verify state; duplicates with tenant-paid costs produce warnings and all content reaches projects, comparisons, manifests, and approval packages.
+35. Generating PNG/PDF/social ZIP/manifest/approval ZIP never clears the editable project, and every export begins after a local recovery snapshot request.
+36. Reopening the editor offers the newest compatible IndexedDB draft and can restore every schema field, embedded hero/interior/floor-plan/logo/spotlight image, project identifier, and scroll position.
+37. Reset and project/template/compliance imports require confirmation and a pre-action recovery snapshot; users can also download a portable project and explicitly clear local drafts.
+38. Storage quota, restricted browser mode, corrupt/incompatible recovery data, and cross-tab conflicts produce visible bilingual warnings rather than silent data loss.
+39. Automated recovery tests cover full image-bearing snapshots, project isolation, newest-record selection, schema compatibility, and generation/export/reset recovery hooks.
 
 ## 10. Risks and mitigations
 
@@ -389,6 +404,9 @@ Version 1.3.0 is acceptable when:
 | Regulatory non-compliance | README requires final agent and brokerage review |
 | Fictional sample treated as a real listing | Sample artwork and data are clearly marked as fictional |
 | Sensitive listing data uploaded accidentally | Browser-local processing, no upload endpoints, and no analytics |
+| Editor input lost after generation, reload, or correction | Debounced IndexedDB autosave, pre-action snapshots, bilingual restore UI, and portable project download |
+| Newer work overwritten by another browser tab | Per-project identifiers, BroadcastChannel conflict detection, and paused autosave until user resolution |
+| Browser storage unavailable or full | Explicit bilingual warning and manual portable-project backup; never claim that a failed save succeeded |
 | English and Chinese documentation drifting | Same-release version updates, direct links, and scope checks |
 
 ## 11. Roadmap
@@ -417,6 +435,7 @@ Version 1.3.0 is acceptable when:
 - Up to three local image-led feature spotlights
 - Structured bilingual lease details
 - Rent inclusions with locally bundled MIT icons
+- Cross-cutting issue #20: schema-driven on-device autosave and recovery for all v1.4 modules without renumbering Stories 1–10
 
 ### 2.0 candidates
 

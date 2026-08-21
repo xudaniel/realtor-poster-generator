@@ -3,6 +3,8 @@
 
   const Core = window.RealtorPosterCore;
   if (!Core) throw new Error("RealtorPosterCore is required");
+  const Recovery = window.RealtorPosterRecovery;
+  if (!Recovery) throw new Error("RealtorPosterRecovery is required");
 
   const PRESETS = {
     poster: [1800, 2400], square: [1080, 1080], portrait: [1080, 1350], story: [1080, 1920], landscape: [1200, 630],
@@ -75,6 +77,7 @@
   };
 
   let state = Core.normalizeProject(DEFAULT_PROJECT, DEFAULT_PROJECT);
+  Recovery.ensureProjectId(state);
   const images = {hero: null, logoLight: null, logoDark: null, gallery: [], floorplans: [], spotlights: [], icons: {}};
   const canvas = document.getElementById("poster-canvas");
   const status = document.getElementById("status");
@@ -83,9 +86,33 @@
   const focalEmpty = document.getElementById("focal-empty");
   const focusX = document.getElementById("focus-x");
   const focusY = document.getElementById("focus-y");
+  const recoveryPanel = document.getElementById("recovery-panel");
+  const recoveryTitle = document.getElementById("recovery-title");
+  const recoveryMessage = document.getElementById("recovery-message");
+  const restoreDraftButton = document.getElementById("restore-draft");
+  const discardDraftButton = document.getElementById("discard-draft");
+  const downloadRecoveryButton = document.getElementById("download-recovery");
+  const autosaveBar = document.querySelector(".autosave-bar");
+  const autosaveState = document.getElementById("autosave-state");
   const encoder = new TextEncoder();
+  const tabId = Recovery.newProjectId("tab");
+  let draftStore = null;
+  let recoveryChannel = null;
+  let pendingSnapshot = null;
+  let pendingRecoveryMode = "";
+  let autosaveTimer = null;
+  let autosaveEnabled = false;
+  let dirtySinceSave = false;
+  let lastSavedFingerprint = "";
+  let stateRevision = 0;
+  let persistedRevision = 0;
 
   function setStatus(message) { status.textContent = message; }
+  function setAutosaveState(message, mode = "") {
+    autosaveState.textContent = message;
+    autosaveBar.classList.toggle("is-saved", mode === "saved");
+    autosaveBar.classList.toggle("is-warning", mode === "warning");
+  }
   function slug() {
     return (state.listing.address || "listing").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "listing";
   }
@@ -138,6 +165,88 @@
       lines[lines.length - 1] = `${last}…`;
     }
     return lines;
+  }
+  function formattedSavedTime(snapshot) {
+    const date = new Date(Number(snapshot && snapshot.savedAtMs || 0));
+    return Number.isNaN(date.getTime()) ? "unknown time / 未知时间" : date.toLocaleString();
+  }
+  function storageFailureMessage(error) {
+    const name = String(error && error.name || "");
+    if (name === "QuotaExceededError") return "Local recovery storage is full. Download the portable project now. / 本地恢复空间已满，请立即下载项目文件。";
+    if (name === "SecurityError" || name === "InvalidStateError") return "This browser mode blocks local recovery storage. Download the portable project before leaving. / 当前浏览模式禁止本地恢复，请在离开前下载项目文件。";
+    return `Local recovery is unavailable: ${error && error.message || "unknown storage error"} / 本地恢复不可用，请下载项目文件。`;
+  }
+  function hideRecoveryPanel() {
+    recoveryPanel.hidden = true; recoveryPanel.classList.remove("is-warning", "is-conflict"); pendingSnapshot = null; pendingRecoveryMode = "";
+  }
+  function showRecoveryPanel(snapshot, mode = "recovery", customMessage = "") {
+    pendingSnapshot = snapshot || null; pendingRecoveryMode = mode; recoveryPanel.hidden = false;
+    recoveryPanel.classList.toggle("is-warning", mode === "warning"); recoveryPanel.classList.toggle("is-conflict", mode === "conflict");
+    recoveryTitle.textContent = mode === "conflict" ? "Newer draft in another tab / 另一标签页有较新草稿" : mode === "warning" ? "Recovery needs attention / 恢复功能需要处理" : "Recover local draft / 恢复本地草稿";
+    recoveryMessage.textContent = customMessage || `${snapshot.projectName} · ${formattedSavedTime(snapshot)} · ${snapshot.reason}`;
+    const validation = snapshot ? Recovery.validateSnapshot(snapshot, {maxProjectSchemaVersion: Core.PROJECT_SCHEMA_VERSION}) : {ok: false};
+    restoreDraftButton.hidden = !validation.ok; discardDraftButton.hidden = !snapshot; downloadRecoveryButton.hidden = !snapshot;
+  }
+  async function saveRecoverySnapshot(reason = "autosave", options = {}) {
+    if (!draftStore || (!autosaveEnabled && !options.force)) return null;
+    clearTimeout(autosaveTimer); autosaveTimer = null; Recovery.ensureProjectId(state);
+    const snapshotRevision = stateRevision;
+    const snapshot = Recovery.createSnapshot(projectPayload(), {reason, scrollY: window.scrollY, tabId});
+    setAutosaveState("Saving locally… / 正在本地保存…");
+    try {
+      await draftStore.save(snapshot); persistedRevision = Math.max(persistedRevision, snapshotRevision); dirtySinceSave = stateRevision > persistedRevision; lastSavedFingerprint = Recovery.snapshotFingerprint(snapshot);
+      setAutosaveState(dirtySinceSave ? "Newer changes are waiting to save… / 较新的修改正在等待保存…" : `Saved locally ${formattedSavedTime(snapshot)} / 已保存到本机`, dirtySinceSave ? "" : "saved");
+      if (recoveryChannel) recoveryChannel.postMessage({type: "draft-saved", tabId, projectId: snapshot.projectId, savedAtMs: snapshot.savedAtMs});
+      return snapshot;
+    } catch (error) {
+      dirtySinceSave = true; const message = storageFailureMessage(error); setAutosaveState(message, "warning"); showRecoveryPanel(null, "warning", message); return null;
+    }
+  }
+  function scheduleAutosave() {
+    stateRevision += 1; dirtySinceSave = stateRevision > persistedRevision; clearTimeout(autosaveTimer);
+    if (!draftStore) return;
+    if (!autosaveEnabled) { setAutosaveState("Saving is paused until the recovery choice is resolved. / 选择如何处理恢复草稿前，自动保存已暂停。", "warning"); return; }
+    setAutosaveState("Unsaved changes… / 有尚未保存的修改…");
+    autosaveTimer = setTimeout(() => { saveRecoverySnapshot("autosave"); }, 650);
+  }
+  async function prepareAction(reason) {
+    let snapshot = await saveRecoverySnapshot(reason, {force: true});
+    if (dirtySinceSave) snapshot = await saveRecoverySnapshot(reason, {force: true});
+    return snapshot;
+  }
+  async function restoreRecoverySnapshot(snapshot) {
+    const validation = Recovery.validateSnapshot(snapshot, {maxProjectSchemaVersion: Core.PROJECT_SCHEMA_VERSION});
+    if (!validation.ok) { showRecoveryPanel(snapshot, "warning", `${validation.error} Download a copy for manual recovery. / 版本不兼容，请下载副本进行人工恢复。`); return; }
+    autosaveEnabled = false; state = Core.normalizeProject(snapshot.project, DEFAULT_PROJECT); Recovery.ensureProjectId(state);
+    await hydrateImages(); syncControls(); render({autosave: false}); stateRevision = 0; persistedRevision = 0; dirtySinceSave = false; lastSavedFingerprint = Recovery.snapshotFingerprint(snapshot);
+    hideRecoveryPanel(); autosaveEnabled = true; setAutosaveState(`Restored ${formattedSavedTime(snapshot)} / 已恢复该时间的草稿`, "saved"); setStatus("Local draft restored with its fields and recoverable media. / 本地草稿及可恢复图片已恢复。");
+    requestAnimationFrame(() => window.scrollTo({top: Number(snapshot.scrollY || 0), behavior: "auto"}));
+  }
+  async function initializeRecovery() {
+    try {
+      draftStore = new Recovery.IndexedDbDraftStore(window.indexedDB); await draftStore.open();
+      if (typeof BroadcastChannel === "function") {
+        recoveryChannel = new BroadcastChannel(Recovery.CHANNEL_NAME);
+        recoveryChannel.addEventListener("message", async event => {
+          const message = event.data || {}; if (message.type !== "draft-saved" || message.tabId === tabId || message.projectId !== state.projectId) return;
+          const snapshot = await draftStore.get(message.projectId); if (!snapshot || Recovery.snapshotFingerprint(snapshot) === lastSavedFingerprint) return;
+          autosaveEnabled = false; showRecoveryPanel(snapshot, "conflict", `${snapshot.projectName} was saved at ${formattedSavedTime(snapshot)} in another tab. Restore it before editing here. / 另一标签页已保存较新版本，请先恢复再继续编辑。`);
+          setAutosaveState("Paused to prevent a cross-tab overwrite. / 已暂停保存，避免覆盖另一标签页。", "warning");
+        });
+      }
+      const latest = await draftStore.latest();
+      if (latest) {
+        const validation = Recovery.validateSnapshot(latest, {maxProjectSchemaVersion: Core.PROJECT_SCHEMA_VERSION});
+        if (validation.ok) showRecoveryPanel(latest);
+        else showRecoveryPanel(latest, "warning", `${validation.error} Download a copy before discarding it. / 该草稿版本不兼容，请先下载副本。`);
+        setAutosaveState("Recovery choice required before editing. / 请先选择是否恢复草稿。", "warning");
+      } else {
+        autosaveEnabled = true; setAutosaveState("Autosave ready on this device. / 本机自动保存已就绪。", "saved");
+      }
+    } catch (error) {
+      draftStore = null; autosaveEnabled = false; const message = storageFailureMessage(error);
+      setAutosaveState(message, "warning"); showRecoveryPanel(null, "warning", message);
+    }
   }
   function drawCover(ctx, image, x, y, width, height, focal = [.5, .5]) {
     if (!image) {
@@ -387,7 +496,7 @@
       spots.length ? `Feature spotlights: ${spots.join("; ")}.` : "",
     ].filter(Boolean).join(" ");
   }
-  function render() { drawPoster(canvas); updateArtworkDescription(); updateValidation(); updateChangeSummary(); }
+  function render(options = {}) { drawPoster(canvas); updateArtworkDescription(); updateValidation(); updateChangeSummary(); if (options.autosave !== false) scheduleAutosave(); }
   function mediaDescriptors() {
     const output = [];
     if (state.media.heroDataUrl || state.media.heroName) output.push({kind: "hero", name: state.media.heroName || "Hero photo", dataUrl: state.media.heroDataUrl});
@@ -659,24 +768,52 @@
   });
   [focusX, focusY].forEach(input => input.addEventListener("input", () => { state.focal = [Number(focusX.value) / 100, Number(focusY.value) / 100]; updateFocalUI(); render(); }));
 
-  function projectPayload() { const payload = Core.clone(state); payload.schemaVersion = Core.PROJECT_SCHEMA_VERSION; payload.appVersion = Core.APP_VERSION; return payload; }
-  document.getElementById("save-project").addEventListener("click", () => { downloadBlob(new Blob([JSON.stringify(projectPayload(), null, 2)], {type: "application/json"}), `${slug()}.realtor-poster.json`); setStatus("Versioned portable project downloaded."); });
+  function projectPayload() { Recovery.ensureProjectId(state); const payload = Core.clone(state); payload.schemaVersion = Core.PROJECT_SCHEMA_VERSION; payload.appVersion = Core.APP_VERSION; return payload; }
+  restoreDraftButton.addEventListener("click", async () => { if (pendingSnapshot) await restoreRecoverySnapshot(pendingSnapshot); });
+  downloadRecoveryButton.addEventListener("click", () => {
+    if (!pendingSnapshot) return; downloadBlob(new Blob([JSON.stringify(pendingSnapshot, null, 2)], {type: "application/json"}), `${slug()}.recovery.json`); setStatus("Recovery copy downloaded. / 恢复副本已下载。");
+  });
+  discardDraftButton.addEventListener("click", async () => {
+    if (!pendingSnapshot || !draftStore) return;
+    const conflict = pendingRecoveryMode === "conflict";
+    const message = conflict
+      ? "Keep this tab's version and overwrite the newer draft after your next edit? / 保留本标签页版本，并在下次编辑时覆盖较新草稿吗？"
+      : "Discard this locally recovered draft? This cannot be undone unless you downloaded a copy. / 放弃这个本地恢复草稿？如未下载副本，此操作无法撤销。";
+    if (!window.confirm(message)) return;
+    if (!conflict) await draftStore.delete(pendingSnapshot.projectId);
+    hideRecoveryPanel(); autosaveEnabled = true; if (conflict) stateRevision += 1; dirtySinceSave = stateRevision > persistedRevision;
+    if (dirtySinceSave) await saveRecoverySnapshot(conflict ? "cross-tab-version-kept" : "after-recovery-choice", {force: true});
+    else setAutosaveState("Draft discarded; autosave remains ready. / 草稿已放弃，自动保存仍然可用。", "saved");
+  });
+  document.getElementById("clear-drafts").addEventListener("click", async () => {
+    if (!draftStore) { setAutosaveState("Local recovery storage is unavailable. / 本地恢复存储不可用。", "warning"); return; }
+    if (!window.confirm("Clear every locally recovered project on this device? Portable files will not be affected. / 清除此设备上的所有本地恢复项目？已下载的项目文件不会受影响。")) return;
+    await draftStore.clear(); hideRecoveryPanel(); autosaveEnabled = true; stateRevision = 0; persistedRevision = 0; dirtySinceSave = false; lastSavedFingerprint = ""; setAutosaveState("All local recovery drafts cleared. / 所有本地恢复草稿已清除。", "saved");
+  });
+  document.getElementById("save-project").addEventListener("click", async () => { await prepareAction("before-project-download"); downloadBlob(new Blob([JSON.stringify(projectPayload(), null, 2)], {type: "application/json"}), `${slug()}.realtor-poster.json`); setStatus("Versioned portable project downloaded."); });
   document.getElementById("open-project").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
-    try { state = Core.normalizeProject(JSON.parse(await readFile(file, "text")), DEFAULT_PROJECT); await hydrateImages(); syncControls(); render(); setStatus("Project opened locally."); }
+    if (!window.confirm("Replace the current workspace with this project? A recovery snapshot will be saved first. / 用该项目替换当前工作区？系统会先保存恢复快照。")) { event.target.value = ""; return; }
+    await prepareAction("before-open-project");
+    try { state = Core.normalizeProject(JSON.parse(await readFile(file, "text")), DEFAULT_PROJECT); Recovery.ensureProjectId(state); hideRecoveryPanel(); autosaveEnabled = true; await hydrateImages(); syncControls(); render(); setStatus("Project opened locally."); }
     catch (error) { setStatus(`Could not open project: ${error.message}`); }
+    event.target.value = "";
   });
   document.getElementById("import-listing").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
+    if (!window.confirm("Replace the current workspace with this listing? A recovery snapshot will be saved first. / 用该房源替换当前工作区？系统会先保存恢复快照。")) { event.target.value = ""; return; }
+    await prepareAction("before-import-listing");
     try {
       const text = await readFile(file, "text"); const raw = file.name.toLowerCase().endsWith(".json") ? JSON.parse(text) : Core.parseSimpleYaml(text);
-      state = Core.projectFromListingData(raw, DEFAULT_PROJECT); await hydrateImages(); syncControls(); render(); setStatus("Listing data imported. Reselect local image files referenced by path.");
+      state = Core.projectFromListingData(raw, DEFAULT_PROJECT); state.projectId = Recovery.newProjectId("project"); hideRecoveryPanel(); autosaveEnabled = true; await hydrateImages(); syncControls(); render(); setStatus("Listing data imported. Reselect local image files referenced by path.");
     } catch (error) { setStatus(`Could not import listing: ${error.message}`); }
+    event.target.value = "";
   });
-  document.getElementById("export-yaml").addEventListener("click", () => { const yaml = `${Core.toSimpleYaml(Core.toListingData(state))}\n`; downloadBlob(new Blob([yaml], {type: "text/yaml"}), `${slug()}.yaml`); setStatus("Python-compatible YAML downloaded."); });
-  document.getElementById("export-json").addEventListener("click", () => { downloadBlob(new Blob([JSON.stringify(Core.toListingData(state), null, 2)], {type: "application/json"}), `${slug()}.listing.json`); setStatus("Python-compatible listing JSON downloaded."); });
+  document.getElementById("export-yaml").addEventListener("click", async () => { await prepareAction("before-yaml-export"); const yaml = `${Core.toSimpleYaml(Core.toListingData(state))}\n`; downloadBlob(new Blob([yaml], {type: "text/yaml"}), `${slug()}.yaml`); setStatus("Python-compatible YAML downloaded."); });
+  document.getElementById("export-json").addEventListener("click", async () => { await prepareAction("before-json-export"); downloadBlob(new Blob([JSON.stringify(Core.toListingData(state), null, 2)], {type: "application/json"}), `${slug()}.listing.json`); setStatus("Python-compatible listing JSON downloaded."); });
 
-  document.getElementById("save-template").addEventListener("click", () => {
+  document.getElementById("save-template").addEventListener("click", async () => {
+    await prepareAction("before-template-export");
     const template = Core.buildTemplate(state);
     downloadBlob(new Blob([JSON.stringify(template, null, 2)], {type: "application/json"}), `${slug()}.brand-template.json`); setStatus("Versioned brand template downloaded.");
   });
@@ -685,41 +822,51 @@
   });
   document.getElementById("open-template").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
+    if (!window.confirm("Apply this template to the current project? A recovery snapshot will be saved first. / 将此模板应用到当前项目？系统会先保存恢复快照。")) { event.target.value = ""; return; }
+    await prepareAction("before-template-import");
     try {
       const template = JSON.parse(await readFile(file, "text")); state = Core.applyTemplate(state, template);
       images.logoLight = await loadImage(state.media.logoLightDataUrl); images.logoDark = await loadImage(state.media.logoDarkDataUrl); syncControls(); render(); setStatus("Brand template applied without changing saved projects.");
     } catch (error) { setStatus(`Could not import template: ${error.message}`); }
+    event.target.value = "";
   });
-  document.getElementById("save-compliance").addEventListener("click", () => {
+  document.getElementById("save-compliance").addEventListener("click", async () => {
+    await prepareAction("before-compliance-export");
     const profile = Core.activeComplianceProfile(state); const payload = {kind: "realtor-poster-compliance", schemaVersion: 1, profile: {...profile, disclaimer: state.compliance.disclaimer}};
     downloadBlob(new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"}), `${profile.id}.compliance-profile.json`); setStatus("Compliance profile downloaded.");
   });
   document.getElementById("open-compliance").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
+    if (!window.confirm("Apply this compliance profile? A recovery snapshot will be saved first. / 应用此合规配置？系统会先保存恢复快照。")) { event.target.value = ""; return; }
+    await prepareAction("before-compliance-import");
     try {
       const payload = JSON.parse(await readFile(file, "text")); if (payload.kind !== "realtor-poster-compliance" || !payload.profile) throw new Error("Not a Realtor Poster compliance profile");
       state.compliance.profile = payload.profile; state.compliance.profileId = payload.profile.id || "custom"; state.compliance.disclaimer = payload.profile.disclaimer || "";
       const select = document.getElementById("compliance-profile"); if (![...select.options].some(option => option.value === state.compliance.profileId)) select.add(new Option(payload.profile.name || "Custom profile", state.compliance.profileId));
       syncControls(); render(); setStatus("Compliance profile imported.");
     } catch (error) { setStatus(`Could not import compliance profile: ${error.message}`); }
+    event.target.value = "";
   });
   document.getElementById("compliance-profile").addEventListener("change", event => {
     const profile = Core.COMPLIANCE_PROFILES[event.target.value]; if (!profile) return; state.compliance.profile = null; state.compliance.profileId = profile.id; state.compliance.disclaimer = profile.disclaimer; syncControls(); render();
   });
   document.getElementById("open-baseline").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
-    try { state.review.baseline = Core.normalizeProject(JSON.parse(await readFile(file, "text")), DEFAULT_PROJECT); updateChangeSummary(); setStatus("Comparison project loaded locally."); }
+    await prepareAction("before-baseline-import");
+    try { state.review.baseline = Core.normalizeProject(JSON.parse(await readFile(file, "text")), DEFAULT_PROJECT); updateChangeSummary(); scheduleAutosave(); setStatus("Comparison project loaded locally."); }
     catch (error) { setStatus(`Could not compare project: ${error.message}`); }
+    event.target.value = "";
   });
 
   function canvasBytes(target) { return new Promise(resolve => target.toBlob(async blob => resolve(new Uint8Array(await blob.arrayBuffer())), "image/png")); }
   async function presetFile(preset) { const target = document.createElement("canvas"); drawPoster(target, preset); return {name: `${slug()}.${preset}.png`, data: await canvasBytes(target)}; }
-  document.getElementById("download-png").addEventListener("click", () => {
-    if (!exportGuard()) return; canvas.toBlob(blob => { downloadBlob(blob, `${slug()}.${state.preset}.png`); setStatus("Validated PNG downloaded."); }, "image/png");
+  document.getElementById("download-png").addEventListener("click", async () => {
+    if (!exportGuard()) return; await prepareAction("before-png-export"); canvas.toBlob(blob => { downloadBlob(blob, `${slug()}.${state.preset}.png`); setStatus("Validated PNG downloaded. Your editable draft remains saved locally."); }, "image/png");
   });
-  document.getElementById("print-pdf").addEventListener("click", () => {
+  document.getElementById("print-pdf").addEventListener("click", async () => {
     if (!exportGuard()) return; const popup = window.open("", "poster-print", "width=900,height=1000");
     if (!popup) { setStatus("Allow pop-ups to print or save the poster as PDF."); return; }
+    await prepareAction("before-pdf-export");
     const data = canvas.toDataURL("image/png"); popup.document.write(`<!doctype html><title>${escapeHtml(slug())}</title><style>@page{margin:0}body{margin:0;display:grid;place-items:center;background:white}img{display:block;max-width:100%;max-height:100vh;object-fit:contain}</style><img src="${data}" alt="Poster">`);
     popup.document.close(); popup.focus(); popup.onload = () => popup.print(); setStatus("Print dialog opened — choose Save as PDF.");
   });
@@ -729,12 +876,12 @@
     const manifest = await Core.buildManifest(state, files); return [...files, jsonFile(`${slug()}.manifest.json`, manifest)];
   }
   document.getElementById("download-pack").addEventListener("click", async () => {
-    if (!exportGuard()) return; setStatus("Rendering four social formats and provenance…"); const files = [];
+    if (!exportGuard()) return; await prepareAction("before-social-export"); setStatus("Rendering four social formats and provenance…"); const files = [];
     for (const preset of SOCIAL_PRESETS) files.push(await presetFile(preset)); files.push(jsonFile(`${slug()}.listing.json`, Core.toListingData(state)));
     downloadBlob(new Blob([Core.makeZip(await packageWithManifest(files))], {type: "application/zip"}), `${slug()}.social-pack.zip`); setStatus("Validated social ZIP with manifest downloaded.");
   });
   document.getElementById("download-manifest").addEventListener("click", async () => {
-    if (!exportGuard()) return; const file = {name: `${slug()}.${state.preset}.png`, data: await canvasBytes(canvas)}; const manifest = await Core.buildManifest(state, [file]);
+    if (!exportGuard()) return; await prepareAction("before-manifest-export"); const file = {name: `${slug()}.${state.preset}.png`, data: await canvasBytes(canvas)}; const manifest = await Core.buildManifest(state, [file]);
     downloadBlob(new Blob([`${JSON.stringify(manifest, null, 2)}\n`], {type: "application/json"}), `${slug()}.manifest.json`); setStatus("Provenance manifest downloaded.");
   });
   function proofHtml(files, changes) {
@@ -748,7 +895,7 @@
     return `<!doctype html><meta charset="utf-8"><title>${escapeHtml(state.listing.address)} campaign proof</title><style>body{font:15px/1.45 Arial,sans-serif;margin:36px;color:#102c2b}h1,h2{font-family:Georgia,serif}header,section{margin-bottom:28px}dl{display:grid;grid-template-columns:160px 1fr;max-width:800px}dt{font-weight:700}figure{display:inline-block;width:30%;min-width:240px;vertical-align:top;margin:1%}img{max-width:100%;max-height:520px;object-fit:contain;box-shadow:0 5px 24px #0002}figcaption{font-size:12px;margin-top:6px}.module-grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:18px}.module-grid h3{margin-bottom:4px}.module-grid ul{margin-top:4px}@media print{figure,.module-grid>div{break-inside:avoid}}</style><header><h1>${escapeHtml(state.listing.address)} · Campaign proof</h1><p>Generated locally by Realtor Poster Studio ${Core.APP_VERSION} · Daniel Xu</p></header><section><h2>Listing facts</h2><dl><dt>Status</dt><dd>${escapeHtml(state.listing.status)}</dd><dt>Price</dt><dd>${escapeHtml(priceCopy())}</dd><dt>MLS®</dt><dd>${escapeHtml(state.listing.mls)}</dd><dt>Agent</dt><dd>${escapeHtml(state.contact.name)}</dd><dt>Brokerage</dt><dd>${escapeHtml(state.brand.name)}</dd><dt>Compliance</dt><dd>${escapeHtml(Core.activeComplianceProfile(state).name)}</dd><dt>Review</dt><dd>${escapeHtml(state.review.status)} · ${escapeHtml(state.review.reviewer || "Unassigned")} · ${escapeHtml(state.review.reviewedAt || "No date")}</dd></dl></section><section><h2>Structured campaign modules</h2><div class="module-grid"><div><h3>Property facts</h3><ul>${factsHtml || "<li>None</li>"}</ul></div><div><h3>Floor plans</h3><ul>${plansHtml || "<li>None</li>"}</ul></div><div><h3>Feature spotlights</h3><ul>${spotsHtml || "<li>None</li>"}</ul></div><div><h3>Lease details</h3><ul>${leaseHtml || "<li>None</li>"}</ul></div><div><h3>Rent inclusions</h3><ul>${costsHtml || "<li>None</li>"}</ul></div></div></section><section><h2>Change summary</h2>${changesHtml}</section><section><h2>Artwork</h2>${imagesHtml}</section><section><h2>Reviewer notes</h2><p>${escapeHtml(state.review.notes || "No notes.")}</p><p><strong>Internal review only.</strong> This record is not an electronic signature or legal, regulatory, MLS®, or brokerage approval.</p></section>`;
   }
   document.getElementById("download-approval").addEventListener("click", async () => {
-    if (!exportGuard()) return; setStatus("Building review package and integrity records…"); const files = [];
+    if (!exportGuard()) return; await prepareAction("before-approval-export"); setStatus("Building review package and integrity records…"); const files = [];
     for (const preset of Object.keys(PRESETS)) files.push(await presetFile(preset));
     const changes = state.review.baseline ? Core.diffProjects(state.review.baseline, state) : [];
     files.push(jsonFile(`${slug()}.listing.json`, Core.toListingData(state))); files.push(jsonFile(`${slug()}.project.json`, projectPayload()));
@@ -759,12 +906,18 @@
   });
 
   document.getElementById("reset-button").addEventListener("click", async () => {
-    state = Core.normalizeProject(DEFAULT_PROJECT, DEFAULT_PROJECT); await hydrateImages(); syncControls(); render(); setStatus("Workspace reset.");
+    if (!window.confirm("Start a new workspace? The current project will remain available as a recovery draft. / 新建工作区？当前项目会保留为可恢复草稿。")) return;
+    await prepareAction("before-reset"); state = Core.normalizeProject(DEFAULT_PROJECT, DEFAULT_PROJECT); state.projectId = Recovery.newProjectId("project"); hideRecoveryPanel(); autosaveEnabled = true;
+    await hydrateImages(); syncControls(); render({autosave: false}); stateRevision = 0; persistedRevision = 0; dirtySinceSave = false; setAutosaveState("New workspace ready; the previous project remains recoverable. / 新工作区已就绪，原项目仍可恢复。", "saved"); setStatus("Workspace reset as a new project.");
   });
 
   async function hydrateIcons() {
     const loaded = await Promise.all(ICON_NAMES.map(name => loadImage(`assets/icons/${name}.svg`).catch(() => null)));
     ICON_NAMES.forEach((name, index) => { images.icons[name] = loaded[index]; });
   }
-  Promise.all([hydrateImages(), hydrateIcons()]).then(() => { syncControls(); render(); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && dirtySinceSave) saveRecoverySnapshot("visibility-hidden", {force: true}); });
+  window.addEventListener("pagehide", () => { if (dirtySinceSave) saveRecoverySnapshot("page-hide", {force: true}); });
+  window.addEventListener("beforeunload", event => { if (!dirtySinceSave) return; event.preventDefault(); event.returnValue = ""; });
+
+  Promise.all([hydrateImages(), hydrateIcons(), initializeRecovery()]).then(() => { syncControls(); render({autosave: false}); });
 })();

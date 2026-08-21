@@ -28,13 +28,15 @@ Open the [live editor](https://xudaniel.github.io/realtor-poster-generator/) for
 4. Save versioned templates with selectively locked brand fields and switch among English, Chinese, and bilingual artwork.
 5. Preview five formats, download PNG, print to PDF, or export a social ZIP, SHA-256 manifest, and complete approval package.
 
-Photos, contact details, and project files remain in the current browser tab and are not uploaded to a server. The editor contains no analytics code. It can also run entirely on your computer:
+Photos, contact details, and project files remain in browser-local storage on the current device and are not uploaded to a server. The editor contains no analytics code. It can also run entirely on your computer:
 
 ```bash
 python3 scripts/serve_web.py
 ```
 
 Then open `http://127.0.0.1:8765`. Browser projects can be saved as JSON or YAML and preserve the form, theme, focal point, images, template, compliance profile, and review record. Approval packages include five proofs, source data, the review record, a manifest, and checksums; they record workflow status but do not constitute legal or brokerage approval.
+
+The v1.4 editor also autosaves the complete editable project—including browser-local images—to IndexedDB after changes and immediately before project replacement, reset, or export. When the editor is reopened, a bilingual recovery panel offers the newest draft with its save time. Projects have separate identifiers, a newer draft from another tab triggers a conflict warning, storage failures are shown explicitly, and portable project downloads remain available as a manual backup. Use **Clear saved drafts** to remove recovery copies from this browser.
 
 ## Features
 
@@ -60,12 +62,15 @@ Then open `http://127.0.0.1:8765`. Browser projects can be saved as JSON or YAML
 - v1.4 phase one adds up to three bilingual, image-led feature spotlights with circle, rounded-square, or rectangle masks
 - v1.4 phase one adds bilingual lease rows that can be reordered, hidden, or marked not applicable
 - v1.4 phase one adds reorderable rent inclusions with locally bundled MIT-licensed Tabler icons and an unknown/verify state
+- v1.4 cross-cutting recovery ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20)) preserves editable fields and local images after generation, export, reload, reset, or project replacement without changing Stories 1–10 numbering
 
 ## v1.4 phase one: Stories 1–5
 
 The development branch moves browser projects to schema version 3. Property facts, paired floor plans, feature spotlights, lease details, and rent inclusions are preserved in project files, comparisons, provenance manifests, and approval packages. Every value and phrase remains user-supplied; the editor does not translate, infer, or rewrite dates, amounts, measurements, or lease conditions.
 
-Floor plans and spotlight images remain in the current browser tab. Each plan records its original pixel dimensions and produces a warning when it may be too small for the selected output; manifests include SHA-256 hashes for embedded plan and spotlight assets. Tabler icons are bundled locally and used under their MIT licence.
+Floor plans and spotlight images remain in browser-local storage on the current device. Each plan records its original pixel dimensions and produces a warning when it may be too small for the selected output; manifests include SHA-256 hashes for embedded plan and spotlight assets. Tabler icons are bundled locally and used under their MIT licence.
+
+Issue #20 is a cross-cutting v1.4 foundation rather than Story 11. It stores the schema-driven project as one recovery snapshot, so fields and assets introduced by the numbered v1.4 modules inherit the same autosave and recovery path instead of creating competing persistence systems.
 
 ## Quick start
 

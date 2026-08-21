@@ -25,7 +25,23 @@
         </div>
         <button id="reset-button" class="button button-quiet" type="button">Reset</button>
       </div>
-      <p class="intro">Create complete English, Chinese, or bilingual print and social artwork. Listing files and photos stay inside this browser tab.</p>
+      <p class="intro">Create complete English, Chinese, or bilingual print and social artwork. Listing files and photos stay in local browser storage on this device.</p>
+
+      <section id="recovery-panel" class="recovery-panel" aria-live="assertive" hidden>
+        <div>
+          <strong id="recovery-title">Recover local draft / 恢复本地草稿</strong>
+          <p id="recovery-message">A locally saved project is available.</p>
+        </div>
+        <div class="recovery-actions">
+          <button id="restore-draft" class="button button-primary" type="button">Restore / 恢复</button>
+          <button id="download-recovery" class="button button-secondary" type="button" hidden>Download copy / 下载副本</button>
+          <button id="discard-draft" class="button button-quiet" type="button">Discard / 放弃</button>
+        </div>
+      </section>
+      <div class="autosave-bar">
+        <span id="autosave-state" role="status">Checking local recovery… / 正在检查本地恢复记录…</span>
+        <button id="clear-drafts" class="text-button" type="button">Clear saved drafts / 清除草稿</button>
+      </div>
 
       <details open>
         <summary><span>01</span> Listing and language</summary>
@@ -234,6 +250,7 @@ Dining and shopping</textarea></label>
     <span>Browser-local · English / 中文 · MIT License</span>
   </footer>
   <script src="core.js"></script>
+  <script src="recovery.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
