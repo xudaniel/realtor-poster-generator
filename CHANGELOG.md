@@ -2,6 +2,25 @@
 
 All notable changes to Realtor Poster Generator are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] - v1.4.0 phase one
+
+See the bilingual [v1.4.0 development release notes](RELEASE_NOTES_v1.4.0.md).
+
+### Added
+
+- Reorderable, hideable property-facts ribbon with up to eight shared values, bilingual labels, accessible text, and four-fact social priorities
+- Two independent browser-local floor-plan slots for furnished 3D and technical 2D plans, including contain, fit-width, crop, focal, caption, note, pixel-dimension, and SHA-256 metadata
+- Up to three image-led bilingual feature spotlights with circle, rounded-square, and rectangle masks
+- Structured bilingual lease-detail rows with active, not-applicable, and hidden states plus sale-campaign collapse
+- Reorderable rent-included costs with locally bundled MIT-licensed Tabler icons, unknown/verify states, and conflict warnings
+- Browser project schema version 3 and `1.4.0-dev` browser generator metadata
+
+### Changed
+
+- Print artwork now uses an original high-information modular hierarchy inspired by the supplied reference without copying its assets, wording, icons, colours, or geometry
+- Project files, listing interchange, comparisons, manifests, and approval packages now preserve the five phase-one modules and their local image hashes
+- Browser documentation and product requirements now describe v1.4 Stories 1–5 in English and Chinese
+
 ## [1.3.0] - 2026-08-20
 
 See the complete [bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md).

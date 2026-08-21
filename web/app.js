@@ -9,13 +9,14 @@
   };
   const SOCIAL_PRESETS = ["square", "portrait", "story", "landscape"];
   const STATUS_ZH = {"FOR LEASE": "出租", "FOR SALE": "出售", "JUST LISTED": "全新上市", "OPEN HOUSE": "开放参观"};
+  const ICON_NAMES = ["bed", "bath", "ruler-measure", "building-skyscraper", "compass", "building-community", "parking", "calendar", "key", "receipt", "shield-check", "paw", "smoking-no", "droplet", "flame", "snowflake", "tool", "bolt", "photo", "building-bank", "circle-check"];
 
   const DEFAULT_PROJECT = {
     schemaVersion: Core.PROJECT_SCHEMA_VERSION, appVersion: Core.APP_VERSION,
     listing: {
       address: "88 Harbour Street", unit: "2608", status: "FOR LEASE", city: "Toronto, ON", postalCode: "M5J 2N8",
       price: "$3,850", rentPeriod: "per month", mls: "C1234567", beds: "2", baths: "2", sqft: "815",
-      floor: "26th", exposure: "South-East", parking: "1 Space", availability: "Immediately",
+      floor: "26th", exposure: "South-East", balcony: "Open balcony", parking: "1 Space", availability: "Immediately",
       headlineEn: "Lake views. Downtown energy. A home above it all.", headlineZh: "湖景之上，都市生活触手可及",
     },
     contact: {name: "Daniel Xu", title: "Sales Representative", license: "", phone: "416-555-0198", email: "hello@example.com"},
@@ -31,7 +32,42 @@
     focal: [.5, .5], preset: "poster",
     media: {
       heroDataUrl: "", heroName: "", heroType: "", gallery: [], floorplanDataUrl: "", floorplanName: "", floorplanType: "",
+      floorplans: [
+        {role: "furnished3d", name: "", type: "", dataUrl: "", fit: "contain", focal: [.5, .5], captionEn: "Furnished 3D plan", captionZh: "三维家具户型图", noteEn: "", noteZh: "", pixelWidth: 0, pixelHeight: 0},
+        {role: "technical2d", name: "", type: "", dataUrl: "", fit: "contain", focal: [.5, .5], captionEn: "Technical 2D plan", captionZh: "二维技术户型图", noteEn: "", noteZh: "", pixelWidth: 0, pixelHeight: 0},
+      ],
       logoLightDataUrl: "", logoLightName: "", logoLightType: "", logoDarkDataUrl: "", logoDarkName: "", logoDarkType: "",
+    },
+    modules: {
+      propertyFacts: [
+        {id: "beds", icon: "bed", source: "listing.beds", labelEn: "Bedrooms", labelZh: "卧室", visible: true, priority: 1},
+        {id: "baths", icon: "bath", source: "listing.baths", labelEn: "Bathrooms", labelZh: "卫浴", visible: true, priority: 2},
+        {id: "area", icon: "ruler-measure", source: "listing.sqft", labelEn: "Approx. sq. ft.", labelZh: "约平方英尺", visible: true, priority: 3},
+        {id: "floor", icon: "building-skyscraper", source: "listing.floor", labelEn: "Floor", labelZh: "楼层", visible: true, priority: 4},
+        {id: "exposure", icon: "compass", source: "listing.exposure", labelEn: "Exposure", labelZh: "朝向", visible: true, priority: 5},
+        {id: "balcony", icon: "building-community", source: "listing.balcony", labelEn: "Balcony", labelZh: "阳台", visible: true, priority: 6},
+        {id: "parking", icon: "parking", source: "listing.parking", labelEn: "Parking", labelZh: "车位", visible: true, priority: 7},
+      ],
+      spotlights: [],
+      leaseDetails: [
+        {id: "term", labelEn: "Lease term", labelZh: "租期", valueEn: "12 months preferred", valueZh: "优先一年租期", state: "active"},
+        {id: "availability", labelEn: "Available", labelZh: "可入住", valueEn: "Immediately", valueZh: "随时入住", state: "active"},
+        {id: "deposit", labelEn: "Deposit", labelZh: "押金", valueEn: "Key deposit as stated", valueZh: "钥匙押金以填写内容为准", state: "active"},
+        {id: "payment", labelEn: "Payment", labelZh: "付款", valueEn: "Payment schedule as stated", valueZh: "付款安排以填写内容为准", state: "active"},
+        {id: "insurance", labelEn: "Insurance", labelZh: "保险", valueEn: "Tenant insurance required", valueZh: "需购买租客保险", state: "active"},
+        {id: "keys", labelEn: "Keys", labelZh: "钥匙", valueEn: "1 locker included", valueZh: "含一个储物柜", state: "active"},
+        {id: "pets", labelEn: "Pets", labelZh: "宠物", valueEn: "Building rules apply", valueZh: "须遵守大楼规定", state: "active"},
+        {id: "smoking", labelEn: "Smoking", labelZh: "吸烟", valueEn: "No smoking", valueZh: "禁止吸烟", state: "active"},
+        {id: "parking", labelEn: "Parking", labelZh: "停车", valueEn: "1 space included", valueZh: "含一个车位", state: "active"},
+      ],
+      includedCosts: [
+        {id: "water", icon: "droplet", labelEn: "Water", labelZh: "水费", state: "included"},
+        {id: "heat", icon: "flame", labelEn: "Heat", labelZh: "暖气", state: "included"},
+        {id: "air-conditioning", icon: "snowflake", labelEn: "Air conditioning", labelZh: "中央空调", state: "included"},
+        {id: "maintenance", icon: "tool", labelEn: "Maintenance", labelZh: "物业维护", state: "included"},
+        {id: "insurance", icon: "shield-check", labelEn: "Building insurance", labelZh: "大楼保险", state: "included"},
+      ],
+      tenantPaidCosts: [{id: "hydro", icon: "bolt", labelEn: "Hydro", labelZh: "电费", state: "tenant-paid"}],
     },
     compliance: {profileId: "lease", profile: null, disclaimer: Core.COMPLIANCE_PROFILES.lease.disclaimer},
     template: {name: "Harbour Editorial", version: "1.0.0", lockedFields: []},
@@ -39,7 +75,7 @@
   };
 
   let state = Core.normalizeProject(DEFAULT_PROJECT, DEFAULT_PROJECT);
-  const images = {hero: null, floorplan: null, logoLight: null, logoDark: null, gallery: []};
+  const images = {hero: null, logoLight: null, logoDark: null, gallery: [], floorplans: [], spotlights: [], icons: {}};
   const canvas = document.getElementById("poster-canvas");
   const status = document.getElementById("status");
   const focalPad = document.getElementById("focal-pad");
@@ -115,6 +151,25 @@
     const sourceY = Math.max(0, Math.min(image.naturalHeight - sourceH, focal[1] * image.naturalHeight - sourceH / 2));
     ctx.drawImage(image, sourceX, sourceY, sourceW, sourceH, x, y, width, height);
   }
+  function drawFittedImage(ctx, image, x, y, width, height, fit = "contain", focal = [.5, .5]) {
+    ctx.fillStyle = "#fff"; ctx.fillRect(x, y, width, height);
+    if (!image) return;
+    if (fit === "crop") { drawCover(ctx, image, x, y, width, height, focal); return; }
+    let scale = fit === "fit-width" ? width / image.naturalWidth : Math.min(width / image.naturalWidth, height / image.naturalHeight);
+    let drawWidth = image.naturalWidth * scale; let drawHeight = image.naturalHeight * scale;
+    if (fit === "fit-width" && drawHeight > height) {
+      const sourceHeight = height / scale; const sourceY = Math.max(0, Math.min(image.naturalHeight - sourceHeight, focal[1] * image.naturalHeight - sourceHeight / 2));
+      ctx.drawImage(image, 0, sourceY, image.naturalWidth, sourceHeight, x, y, width, height); return;
+    }
+    ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+  }
+  function iconImage(name) { return images.icons[name] || images.icons.photo || null; }
+  function drawIcon(ctx, name, x, y, size, background, foreground) {
+    ctx.save(); ctx.fillStyle = background; ctx.beginPath(); ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2); ctx.fill();
+    const icon = iconImage(name); if (icon) { ctx.globalCompositeOperation = "source-over"; ctx.drawImage(icon, x + size * .22, y + size * .22, size * .56, size * .56); }
+    ctx.strokeStyle = foreground; ctx.lineWidth = Math.max(1, size * .025); ctx.beginPath(); ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  }
+  function moduleCopy(item, englishKey, chineseKey) { return localized(item[englishKey] || "", item[chineseKey] || ""); }
   function drawLogo(ctx, x, y, maxWidth, maxHeight, surface = "dark") {
     const image = surface === "light" ? (images.logoDark || images.logoLight) : (images.logoLight || images.logoDark);
     if (!image) return;
@@ -177,59 +232,125 @@
     ctx.clearRect(0, 0, width, height); ctx.fillStyle = theme.paper; ctx.fillRect(0, 0, width, height);
     if (preset === "poster") drawPrintPoster(ctx, width, height, S, theme);
     else if (preset === "landscape") drawLandscape(ctx, width, height, S, theme);
-    else drawSocial(ctx, width, height, S, theme);
+    else drawSocial(ctx, width, height, S, theme, preset);
     ctx.fillStyle = rgba(theme.ink, .23); ctx.font = `${Math.round(12 * S)}px ${fontFamily("english")}`; ctx.textAlign = "right";
     ctx.fillText(`Generated locally · ${state.template.name} ${state.template.version}`, width - 62 * S, height - 14 * S);
   }
+  function drawFactsRibbon(ctx, width, top, height, S, theme, preset = "poster") {
+    const facts = Core.resolvedPropertyFacts(state, preset); ctx.fillStyle = theme.ink; ctx.fillRect(0, top, width, height);
+    if (!facts.length) return;
+    facts.forEach((fact, index) => {
+      const cellWidth = width / facts.length; const left = index * cellWidth; const center = left + cellWidth / 2;
+      if (index) { ctx.fillStyle = rgba(theme.paper, .18); ctx.fillRect(left, top + 26 * S, Math.max(1, 1.5 * S), height - 52 * S); }
+      const iconSize = Math.min(48 * S, cellWidth * .22); drawIcon(ctx, fact.icon, center - iconSize / 2, top + 23 * S, iconSize, theme.paper, rgba(theme.ink, .28));
+      ctx.textAlign = "center"; ctx.fillStyle = theme.paper; fitText(ctx, fact.value, cellWidth - 20 * S, 27 * S, 15 * S, 800); ctx.fillText(fact.value, center, top + 101 * S);
+      ctx.font = `700 ${12 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent;
+      wrapText(ctx, moduleCopy(fact, "labelEn", "labelZh"), cellWidth - 18 * S, 2).forEach((line, lineIndex) => ctx.fillText(line, center, top + (126 + lineIndex * 15) * S));
+    });
+  }
+  function drawModuleHeader(ctx, title, x, y, width, S, theme) {
+    roundRect(ctx, x, y, width, 42 * S, 11 * S, theme.ink); ctx.fillStyle = theme.paper; ctx.textAlign = "left"; ctx.font = `800 ${15 * S}px ${fontFamily()}`;
+    ctx.fillText(title, x + 18 * S, y + 27 * S);
+  }
+  function planEntries() {
+    return (state.media.floorplans || []).map((plan, index) => ({plan, image: images.floorplans[index]})).filter(item => item.plan.dataUrl || item.plan.name);
+  }
+  function spotlightEntries() {
+    return (state.modules.spotlights || []).map((spotlight, index) => ({spotlight, image: images.spotlights[index]})).filter(item => item.spotlight.visible !== false && item.spotlight.dataUrl && (item.spotlight.titleEn || item.spotlight.titleZh));
+  }
+  function drawPlansModule(ctx, x, y, width, height, S, theme) {
+    const entries = planEntries(); if (!entries.length) return;
+    drawModuleHeader(ctx, localized("SPACE PLANS", "空间户型"), x, y, width, S, theme);
+    const gap = 16 * S; const top = y + 54 * S; const cardWidth = (width - gap * (entries.length - 1)) / entries.length; const captionHeight = 52 * S; const imageHeight = height - 54 * S - captionHeight;
+    entries.forEach(({plan, image}, index) => {
+      const left = x + index * (cardWidth + gap); ctx.save(); ctx.strokeStyle = rgba(theme.ink, .22); ctx.lineWidth = 1.5 * S; ctx.strokeRect(left, top, cardWidth, imageHeight);
+      drawFittedImage(ctx, image, left + 2 * S, top + 2 * S, cardWidth - 4 * S, imageHeight - 4 * S, plan.fit, plan.focal); ctx.restore();
+      ctx.textAlign = "left"; ctx.fillStyle = theme.ink; ctx.font = `750 ${16 * S}px ${fontFamily()}`; const caption = moduleCopy(plan, "captionEn", "captionZh") || plan.name;
+      wrapText(ctx, caption, cardWidth, 1).forEach(line => ctx.fillText(line, left, top + imageHeight + 22 * S));
+      ctx.fillStyle = rgba(theme.ink, .62); ctx.font = `500 ${12 * S}px ${fontFamily()}`; const note = moduleCopy(plan, "noteEn", "noteZh");
+      if (note) wrapText(ctx, note, cardWidth, 1).forEach(line => ctx.fillText(line, left, top + imageHeight + 42 * S));
+    });
+  }
+  function drawSpotlightsModule(ctx, x, y, width, height, S, theme) {
+    const entries = spotlightEntries(); if (!entries.length) return;
+    drawModuleHeader(ctx, localized("FEATURE SPOTLIGHTS", "重点卖点"), x, y, width, S, theme);
+    const gap = 18 * S; const top = y + 54 * S; const cardWidth = (width - gap * (entries.length - 1)) / entries.length;
+    entries.forEach(({spotlight, image}, index) => {
+      const left = x + index * (cardWidth + gap); const imageSize = Math.min(height - 64 * S, cardWidth * .34); const imageX = left; const imageY = top + 4 * S;
+      ctx.save(); ctx.beginPath();
+      if (spotlight.mask === "circle") ctx.arc(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 2, 0, Math.PI * 2);
+      else if (spotlight.mask === "rounded") ctx.roundRect(imageX, imageY, imageSize, imageSize, 18 * S);
+      else ctx.rect(imageX, imageY, imageSize, imageSize);
+      ctx.clip(); drawCover(ctx, image, imageX, imageY, imageSize, imageSize, spotlight.focal); ctx.restore();
+      const textX = imageX + imageSize + 14 * S; const textWidth = cardWidth - imageSize - 14 * S; ctx.textAlign = "left"; ctx.fillStyle = theme.ink; ctx.font = `800 ${17 * S}px ${fontFamily()}`;
+      wrapText(ctx, moduleCopy(spotlight, "titleEn", "titleZh"), textWidth, 2).forEach((line, lineIndex) => ctx.fillText(line, textX, imageY + (22 + lineIndex * 21) * S));
+      ctx.fillStyle = rgba(theme.ink, .7); ctx.font = `500 ${13 * S}px ${fontFamily()}`;
+      wrapText(ctx, moduleCopy(spotlight, "detailEn", "detailZh"), textWidth, 3).forEach((line, lineIndex) => ctx.fillText(line, textX, imageY + (72 + lineIndex * 17) * S));
+    });
+  }
+  function socialFactsCopy(preset) {
+    return Core.resolvedPropertyFacts(state, preset).map(fact => `${fact.value} ${moduleCopy(fact, "labelEn", "labelZh")}`).join("  •  ");
+  }
+  function drawLeaseAndCosts(ctx, x, y, width, height, S, theme) {
+    const lease = Core.activeLeaseDetails(state); const costs = Core.activeIncludedCosts(state); if (!lease.length && !costs.length) return;
+    const gap = 18 * S; const leaseWidth = lease.length && costs.length ? width * .6 : lease.length ? width : 0; const costX = x + (leaseWidth ? leaseWidth + gap : 0); const costWidth = costs.length ? width - leaseWidth - (leaseWidth ? gap : 0) : 0;
+    if (lease.length) {
+      drawModuleHeader(ctx, localized("LEASE DETAILS", "租约详情"), x, y, leaseWidth, S, theme); const rowHeight = Math.max(18 * S, (height - 54 * S) / Math.min(lease.length, 9));
+      lease.slice(0, 9).forEach((item, index) => {
+        const rowY = y + 58 * S + index * rowHeight; const iconSize = 18 * S; drawIcon(ctx, "circle-check", x + 2 * S, rowY - 13 * S, iconSize, theme.paper, rgba(theme.ink, .3));
+        ctx.fillStyle = theme.ink; ctx.textAlign = "left"; ctx.font = `650 ${14 * S}px ${fontFamily()}`; const text = `${moduleCopy(item, "labelEn", "labelZh")}: ${moduleCopy(item, "valueEn", "valueZh")}`;
+        wrapText(ctx, text, leaseWidth - 34 * S, 1).forEach(line => ctx.fillText(line, x + 27 * S, rowY));
+      });
+    }
+    if (costs.length) {
+      drawModuleHeader(ctx, localized("RENT INCLUDES", "租金包含"), costX, y, costWidth, S, theme); const columns = Math.min(3, Math.max(2, Math.ceil(costs.length / 2))); const rows = Math.ceil(costs.length / columns); const cellWidth = costWidth / columns; const cellHeight = (height - 54 * S) / rows;
+      costs.forEach((item, index) => {
+        const column = index % columns; const row = Math.floor(index / columns); const centerX = costX + column * cellWidth + cellWidth / 2; const top = y + 54 * S + row * cellHeight; const iconSize = Math.min(38 * S, cellHeight * .46);
+        drawIcon(ctx, item.icon, centerX - iconSize / 2, top + 5 * S, iconSize, theme.paper, rgba(theme.ink, .3)); ctx.fillStyle = theme.ink; ctx.textAlign = "center"; ctx.font = `700 ${13 * S}px ${fontFamily()}`;
+        wrapText(ctx, moduleCopy(item, "labelEn", "labelZh"), cellWidth - 10 * S, 2).forEach((line, lineIndex) => ctx.fillText(line, centerX, top + iconSize + (23 + lineIndex * 16) * S));
+        if (item.state === "unknown") { ctx.fillStyle = theme.accent; ctx.font = `700 ${10 * S}px ${fontFamily()}`; ctx.fillText(localized("VERIFY", "待确认"), centerX, top + cellHeight - 5 * S); }
+      });
+    }
+  }
   function drawPrintPoster(ctx, width, height, S, theme) {
-    const l = state.listing; const margin = 74 * S; const heroH = 860 * S;
+    const l = state.listing; const margin = 74 * S; const heroH = 650 * S;
     drawCover(ctx, images.hero, 0, 0, width, heroH, state.focal);
     const overlay = ctx.createLinearGradient(0, 0, 0, heroH); overlay.addColorStop(0, rgba(theme.ink, .08)); overlay.addColorStop(.55, rgba(theme.ink, .2)); overlay.addColorStop(1, rgba(theme.ink, .95));
     ctx.fillStyle = overlay; ctx.fillRect(0, 0, width, heroH); drawStatus(ctx, statusCopy(), margin, 62 * S, S, theme); drawLogo(ctx, width - 350 * S, 54 * S, 270 * S, 84 * S, "dark");
     ctx.fillStyle = theme.paper; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; fitText(ctx, l.address, width - 2 * margin, 84 * S, 44 * S, 800, serifFamily());
-    ctx.fillText(l.address, margin, 615 * S); ctx.font = `700 ${38 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent;
-    ctx.fillText(localized(`UNIT ${l.unit}`, `${l.unit} 室`), margin, 682 * S); fitText(ctx, priceCopy(), width - 2 * margin, 68 * S, 38 * S, 800);
-    ctx.fillStyle = theme.paper; ctx.fillText(priceCopy(), margin, 780 * S); ctx.textAlign = "right"; ctx.font = `700 ${22 * S}px ${fontFamily("english")}`; ctx.fillText(`MLS® ${l.mls}`, width - margin, 778 * S);
+    ctx.fillText(l.address, margin, 420 * S); ctx.font = `700 ${34 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent;
+    ctx.fillText(localized(`UNIT ${l.unit}`, `${l.unit} 室`), margin, 484 * S); fitText(ctx, priceCopy(), width - 2 * margin, 62 * S, 36 * S, 800);
+    ctx.fillStyle = theme.paper; ctx.fillText(priceCopy(), margin, 580 * S); ctx.textAlign = "right"; ctx.font = `700 ${20 * S}px ${fontFamily("english")}`; ctx.fillText(`MLS® ${l.mls}`, width - margin, 578 * S);
 
-    const factsTop = heroH; const factsH = 176 * S; ctx.fillStyle = theme.ink; ctx.fillRect(0, factsTop, width, factsH);
-    const facts = [[l.beds, factLabel("BEDS", "卧室")], [l.baths, factLabel("BATHS", "卫浴")], [l.sqft, factLabel("SQ FT", "平方英尺")], [l.parking, factLabel("PARKING", "车位")]];
-    facts.forEach(([value, label], index) => {
-      const cellW = width / facts.length; const x = cellW * index + cellW / 2;
-      if (index) { ctx.fillStyle = rgba(theme.paper, .2); ctx.fillRect(cellW * index, factsTop + 34 * S, 2 * S, 108 * S); }
-      ctx.textAlign = "center"; ctx.fillStyle = theme.paper; fitText(ctx, value, cellW - 34 * S, 34 * S, 21 * S, 800); ctx.fillText(value, x, factsTop + 78 * S);
-      ctx.font = `700 ${15 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent; ctx.fillText(label, x, factsTop + 120 * S);
-    });
+    const factsTop = heroH; const factsH = 168 * S; drawFactsRibbon(ctx, width, factsTop, factsH, S, theme, "poster");
 
     const contentTop = factsTop + factsH; ctx.fillStyle = theme.paper; ctx.fillRect(0, contentTop, width, height - contentTop); ctx.textAlign = "left";
-    ctx.fillStyle = theme.ink; ctx.font = `700 ${21 * S}px ${fontFamily()}`; ctx.fillText(localized("A REMARKABLE PLACE TO LIVE", "值得珍藏的理想居所"), margin, contentTop + 72 * S);
-    drawHeadlineBlock(ctx, margin, contentTop + 142 * S, width - 2 * margin, S);
-    const dividerY = contentTop + 350 * S; ctx.fillStyle = theme.accent; ctx.fillRect(margin, dividerY, width - 2 * margin, 3 * S);
+    ctx.fillStyle = theme.ink; ctx.font = `700 ${18 * S}px ${fontFamily()}`; ctx.fillText(localized("A REMARKABLE PLACE TO LIVE", "值得珍藏的理想居所"), margin, contentTop + 46 * S);
+    drawHeadlineBlock(ctx, margin, contentTop + 105 * S, width - 2 * margin, S);
+    const dividerY = contentTop + 195 * S; ctx.fillStyle = theme.accent; ctx.fillRect(margin, dividerY, width - 2 * margin, 3 * S);
     const copy = Core.campaignCopy(state); const featureCount = Math.min(4, state.language.mode === "chinese" ? (copy.chinese.features.length || copy.english.features.length) : copy.english.features.length);
-    const featureY = dividerY + 56 * S;
-    Array.from({length: featureCount}).forEach((_, index) => {
+    const visibleFeatureCount = Math.min(featureCount, 2); const featureY = dividerY + 38 * S;
+    Array.from({length: visibleFeatureCount}).forEach((_, index) => {
       const col = index % 2; const row = Math.floor(index / 2); const colW = width / 2 - 1.5 * margin; const x = margin + col * (width / 2); const y = featureY + row * 102 * S;
       drawFeatureBlock(ctx, x, y, colW, S, index);
     });
 
-    const photoItems = [...images.gallery.slice(0, 3), images.floorplan].filter(Boolean); const stripY = height - 690 * S; const stripH = 255 * S;
-    if (photoItems.length) {
-      const gap = 12 * S; const itemW = (width - 2 * margin - gap * (photoItems.length - 1)) / photoItems.length;
-      photoItems.forEach((image, index) => drawCover(ctx, image, margin + index * (itemW + gap), stripY, itemW, stripH, [.5, .5]));
-    } else {
-      roundRect(ctx, margin, stripY, width - 2 * margin, stripH, 18 * S, rgba(theme.ink, .06)); ctx.fillStyle = rgba(theme.ink, .55); ctx.textAlign = "center";
-      ctx.font = `700 ${24 * S}px ${fontFamily()}`; ctx.fillText(localized("Add interior photos and a floor plan", "添加室内照片与户型图"), width / 2, stripY + stripH / 2);
-    }
+    let moduleY = contentTop + (state.language.mode === "bilingual" ? 340 : 300) * S; const moduleWidth = width - 2 * margin; const sectionGap = 14 * S;
+    const plansHeight = (state.language.mode === "bilingual" ? 330 : 360) * S;
+    if (planEntries().length) { drawPlansModule(ctx, margin, moduleY, moduleWidth, plansHeight, S, theme); moduleY += plansHeight + sectionGap; }
+    if (spotlightEntries().length) { drawSpotlightsModule(ctx, margin, moduleY, moduleWidth, 170 * S, S, theme); moduleY += 170 * S + sectionGap; }
+    if (Core.activeLeaseDetails(state).length || Core.activeIncludedCosts(state).length) drawLeaseAndCosts(ctx, margin, moduleY, moduleWidth, 310 * S, S, theme);
 
-    const cardY = height - 385 * S; roundRect(ctx, margin, cardY, width - 2 * margin, 270 * S, 22 * S, theme.ink); ctx.textAlign = "left";
-    ctx.fillStyle = theme.paper; ctx.font = `800 ${38 * S}px ${fontFamily()}`; ctx.fillText(state.contact.name, margin + 40 * S, cardY + 62 * S);
+    const cardY = height - 285 * S; roundRect(ctx, margin, cardY, width - 2 * margin, 225 * S, 22 * S, theme.ink); ctx.textAlign = "left";
+    ctx.fillStyle = theme.paper; ctx.font = `800 ${34 * S}px ${fontFamily()}`; ctx.fillText(state.contact.name, margin + 36 * S, cardY + 54 * S);
     const professionalLine = [state.contact.title, state.contact.license, state.brand.name].filter(Boolean).join(" · ");
-    fitText(ctx, professionalLine, width - 2 * margin - 390 * S, 16 * S, 12 * S, 700, fontFamily()); ctx.fillStyle = theme.accent; ctx.fillText(professionalLine, margin + 40 * S, cardY + 98 * S);
-    ctx.font = `500 ${19 * S}px ${fontFamily("english")}`; ctx.fillStyle = theme.paper; ctx.fillText(`${state.contact.phone}   •   ${state.contact.email}`, margin + 40 * S, cardY + 142 * S);
-    ctx.font = `500 ${13 * S}px ${fontFamily()}`; ctx.fillStyle = rgba(theme.paper, .75); const disclaimer = state.compliance.disclaimer || Core.activeComplianceProfile(state).disclaimer;
-    wrapText(ctx, disclaimer, width - 2 * margin - 380 * S, 2).forEach((line, index) => ctx.fillText(line, margin + 40 * S, cardY + (191 + index * 18) * S));
-    drawLogo(ctx, width - margin - 305 * S, cardY + 58 * S, 250 * S, 110 * S, "dark");
+    fitText(ctx, professionalLine, width - 2 * margin - 365 * S, 15 * S, 11 * S, 700, fontFamily()); ctx.fillStyle = theme.accent; ctx.fillText(professionalLine, margin + 36 * S, cardY + 86 * S);
+    ctx.font = `500 ${17 * S}px ${fontFamily("english")}`; ctx.fillStyle = theme.paper; ctx.fillText(`${state.contact.phone}   •   ${state.contact.email}`, margin + 36 * S, cardY + 124 * S);
+    ctx.font = `500 ${11 * S}px ${fontFamily()}`; ctx.fillStyle = rgba(theme.paper, .75); const disclaimer = state.compliance.disclaimer || Core.activeComplianceProfile(state).disclaimer;
+    wrapText(ctx, disclaimer, width - 2 * margin - 350 * S, 2).forEach((line, index) => ctx.fillText(line, margin + 36 * S, cardY + (165 + index * 15) * S));
+    drawLogo(ctx, width - margin - 290 * S, cardY + 45 * S, 240 * S, 100 * S, "dark");
   }
-  function drawSocial(ctx, width, height, S, theme) {
+  function drawSocial(ctx, width, height, S, theme, preset) {
     const l = state.listing; drawCover(ctx, images.hero, 0, 0, width, height, state.focal);
     const overlay = ctx.createLinearGradient(0, height * .1, 0, height); overlay.addColorStop(0, rgba(theme.ink, .04)); overlay.addColorStop(.42, rgba(theme.ink, .24)); overlay.addColorStop(1, rgba(theme.ink, .97));
     ctx.fillStyle = overlay; ctx.fillRect(0, 0, width, height); const margin = 60 * S; drawStatus(ctx, statusCopy(), margin, 54 * S, S, theme); drawLogo(ctx, width - 305 * S, 45 * S, 245 * S, 72 * S, "dark");
@@ -239,7 +360,7 @@
     ctx.font = `800 ${34 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent; ctx.fillText(localized(`UNIT ${l.unit}`, `${l.unit} 室`), margin, bottom - 82 * S);
     fitText(ctx, priceCopy(), width - 2 * margin, 54 * S, 32 * S, 800); ctx.fillStyle = theme.paper; ctx.fillText(priceCopy(), margin, bottom);
     ctx.font = `700 ${16 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent;
-    ctx.fillText(`${l.beds} ${factLabel("BED", "卧室")}  •  ${l.baths} ${factLabel("BATH", "卫浴")}  •  ${l.sqft} ${factLabel("SQ FT", "平方英尺")}`, margin, bottom + 52 * S);
+    const facts = socialFactsCopy(preset); fitText(ctx, facts, width - 2 * margin, 16 * S, 10 * S, 700, fontFamily()); ctx.fillText(facts, margin, bottom + 52 * S);
     ctx.fillStyle = theme.ink; ctx.fillRect(0, height - 116 * S, width, 116 * S); ctx.font = `800 ${22 * S}px ${fontFamily()}`; ctx.fillStyle = theme.paper; ctx.fillText(state.contact.name, margin, height - 63 * S);
     ctx.textAlign = "right"; fitText(ctx, state.contact.phone, width * .42, 20 * S, 14 * S, 600, fontFamily("english")); ctx.fillText(state.contact.phone, width - margin, height - 63 * S);
   }
@@ -250,17 +371,27 @@
     fitText(ctx, l.address, 570 * S, 50 * S, 30 * S, 800, serifFamily()); wrapText(ctx, l.address, 570 * S, 2).forEach((line, index) => ctx.fillText(line, margin, (175 + index * 56) * S));
     ctx.font = `800 ${32 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent; ctx.fillText(localized(`UNIT ${l.unit}`, `${l.unit} 室`), margin, 302 * S);
     fitText(ctx, priceCopy(), 570 * S, 52 * S, 31 * S, 800); ctx.fillStyle = theme.paper; ctx.fillText(priceCopy(), margin, 390 * S);
-    ctx.font = `700 ${16 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent; ctx.fillText(`${l.beds} ${factLabel("BED", "卧室")}  •  ${l.baths} ${factLabel("BATH", "卫浴")}  •  ${l.sqft} ${factLabel("SQ FT", "平方英尺")}`, margin, 448 * S);
+    ctx.font = `700 ${16 * S}px ${fontFamily()}`; ctx.fillStyle = theme.accent; const facts = socialFactsCopy("landscape"); fitText(ctx, facts, 570 * S, 16 * S, 10 * S, 700, fontFamily()); ctx.fillText(facts, margin, 448 * S);
     ctx.fillStyle = theme.ink; ctx.fillRect(0, height - 82 * S, width, 82 * S); ctx.font = `800 ${19 * S}px ${fontFamily()}`; ctx.fillStyle = theme.paper; ctx.fillText(`${state.contact.name}  •  ${state.contact.phone}`, margin, height - 42 * S);
     drawLogo(ctx, width - 300 * S, 32 * S, 240 * S, 72 * S, "dark");
   }
 
-  function render() { drawPoster(canvas); updateValidation(); updateChangeSummary(); }
+  function updateArtworkDescription() {
+    const facts = Core.resolvedPropertyFacts(state, state.preset).map(fact => `${moduleCopy(fact, "labelEn", "labelZh")}: ${fact.value}`);
+    const plans = Core.activeFloorPlans(state).map(plan => moduleCopy(plan, "captionEn", "captionZh") || plan.name);
+    const spots = Core.activeSpotlights(state).map(item => moduleCopy(item, "titleEn", "titleZh"));
+    document.getElementById("artwork-description").textContent = [
+      `${statusCopy()} ${state.listing.address}, unit ${state.listing.unit}, ${priceCopy()}.`,
+      facts.length ? `Property facts: ${facts.join("; ")}.` : "",
+      plans.length ? `Floor plans: ${plans.join("; ")}.` : "",
+      spots.length ? `Feature spotlights: ${spots.join("; ")}.` : "",
+    ].filter(Boolean).join(" ");
+  }
+  function render() { drawPoster(canvas); updateArtworkDescription(); updateValidation(); updateChangeSummary(); }
   function mediaDescriptors() {
     const output = [];
     if (state.media.heroDataUrl || state.media.heroName) output.push({kind: "hero", name: state.media.heroName || "Hero photo", dataUrl: state.media.heroDataUrl});
     state.media.gallery.forEach((item, index) => output.push({kind: "gallery", index, name: item.name || `Interior ${index + 1}`, dataUrl: item.dataUrl}));
-    if (state.media.floorplanDataUrl || state.media.floorplanName) output.push({kind: "floorplan", name: state.media.floorplanName || "Floor plan", dataUrl: state.media.floorplanDataUrl});
     if (state.media.logoLightDataUrl || state.media.logoLightName) output.push({kind: "logoLight", name: state.media.logoLightName || "Light logo", dataUrl: state.media.logoLightDataUrl});
     if (state.media.logoDarkDataUrl || state.media.logoDarkName) output.push({kind: "logoDark", name: state.media.logoDarkName || "Dark logo", dataUrl: state.media.logoDarkDataUrl});
     return output;
@@ -269,7 +400,7 @@
     const container = document.getElementById("media-list"); const items = mediaDescriptors();
     if (!items.length) { container.innerHTML = '<div class="field-note">No local media selected. Paths imported from YAML must be reselected in the browser.</div>'; return; }
     container.innerHTML = items.map(item => {
-      const gallery = item.kind === "gallery"; const label = gallery ? `Interior ${item.index + 1}` : ({hero: "Hero", floorplan: "Floor plan", logoLight: "Light logo", logoDark: "Dark logo"}[item.kind]);
+      const gallery = item.kind === "gallery"; const label = gallery ? `Interior ${item.index + 1}` : ({hero: "Hero", logoLight: "Light logo", logoDark: "Dark logo"}[item.kind]);
       return `<div class="media-row" data-kind="${item.kind}" data-index="${item.index == null ? "" : item.index}">
         ${item.dataUrl ? `<img src="${item.dataUrl}" alt="">` : '<span class="media-placeholder" aria-hidden="true"></span>'}
         <span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(item.name)}${item.dataUrl ? "" : " · reselect file"}</small></span>
@@ -277,6 +408,100 @@
       </div>`;
     }).join("");
   }
+  function moduleActions(collection, index, count, removable = true) {
+    return `<span class="module-actions">
+      <button class="icon-button" type="button" data-module-action="up" data-collection="${collection}" data-index="${index}" title="Move up" ${index === 0 ? "disabled" : ""}>↑</button>
+      <button class="icon-button" type="button" data-module-action="down" data-collection="${collection}" data-index="${index}" title="Move down" ${index === count - 1 ? "disabled" : ""}>↓</button>
+      ${removable ? `<button class="icon-button" type="button" data-module-action="remove" data-collection="${collection}" data-index="${index}" title="Remove">×</button>` : ""}
+    </span>`;
+  }
+  function option(value, selected, label = value) { return `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`; }
+  function iconOptions(selected) { return ICON_NAMES.map(name => option(name, selected, name.replaceAll("-", " "))).join(""); }
+  function renderFactsEditor() {
+    const container = document.getElementById("facts-editor"); const facts = state.modules.propertyFacts;
+    container.innerHTML = facts.length ? facts.map((fact, index) => {
+      const value = fact.source ? Core.getPath(state, fact.source) : fact.value;
+      return `<div class="module-card">
+        <div class="module-card-header"><strong>${escapeHtml(fact.labelEn || `Fact ${index + 1}`)}</strong>${moduleActions("propertyFacts", index, facts.length)}</div>
+        <div class="module-card-grid">
+          <label>English label<input data-collection="propertyFacts" data-index="${index}" data-field="labelEn" value="${escapeHtml(fact.labelEn || "")}"></label>
+          <label>中文标签<input lang="zh-Hans" data-collection="propertyFacts" data-index="${index}" data-field="labelZh" value="${escapeHtml(fact.labelZh || "")}"></label>
+          ${fact.source ? `<label>Shared listing value<input value="${escapeHtml(value || "")}" disabled><small>${escapeHtml(fact.source)}</small></label>` : `<label>Shared value<input data-collection="propertyFacts" data-index="${index}" data-field="value" value="${escapeHtml(fact.value || "")}"></label>`}
+          <label>Icon<select data-collection="propertyFacts" data-index="${index}" data-field="icon">${iconOptions(fact.icon)}</select></label>
+          <label>Social priority<input type="number" min="1" max="8" data-collection="propertyFacts" data-index="${index}" data-field="priority" value="${Number(fact.priority || index + 1)}"></label>
+          <label class="module-toggle"><input type="checkbox" data-collection="propertyFacts" data-index="${index}" data-field="visible" ${fact.visible !== false ? "checked" : ""}> Show this fact</label>
+        </div>
+      </div>`;
+    }).join("") : '<div class="module-empty">No facts selected. Add a custom fact to rebuild the ribbon.</div>';
+    document.getElementById("add-custom-fact").disabled = facts.length >= Core.MODULE_LIMITS.propertyFacts;
+  }
+  function renderPlansEditor() {
+    const container = document.getElementById("plans-editor"); const plans = state.media.floorplans || [];
+    const cards = plans.map((plan, index) => `<div class="module-card">
+      <div class="module-card-header"><strong>${plan.role === "technical2d" ? "Technical 2D plan" : "Furnished 3D plan"}</strong>${moduleActions("floorplans", index, plans.length)}</div>
+      <div class="module-card-grid">
+        ${plan.dataUrl ? `<img class="module-thumb span-2" src="${plan.dataUrl}" alt="${escapeHtml(plan.captionEn || plan.name || "Floor plan")}">` : ""}
+        <label class="inline-upload span-2">${plan.dataUrl ? "Replace image" : "Choose local image"}<input type="file" data-module-file="floorplans" data-index="${index}" accept="image/jpeg,image/png,image/webp"></label>
+        <label>Plan role<select data-collection="floorplans" data-index="${index}" data-field="role">${option("furnished3d", plan.role, "Furnished 3D")}${option("technical2d", plan.role, "Technical 2D")}</select></label>
+        <label>Image treatment<select data-collection="floorplans" data-index="${index}" data-field="fit">${option("contain", plan.fit, "Contain")}${option("fit-width", plan.fit, "Fit width")}${option("crop", plan.fit, "Crop")}</select></label>
+        <label>English caption<input data-collection="floorplans" data-index="${index}" data-field="captionEn" value="${escapeHtml(plan.captionEn || "")}"></label>
+        <label>中文说明<input lang="zh-Hans" data-collection="floorplans" data-index="${index}" data-field="captionZh" value="${escapeHtml(plan.captionZh || "")}"></label>
+        <label>English source / measurement note<input data-collection="floorplans" data-index="${index}" data-field="noteEn" value="${escapeHtml(plan.noteEn || "")}"></label>
+        <label>中文来源 / 尺寸备注<input lang="zh-Hans" data-collection="floorplans" data-index="${index}" data-field="noteZh" value="${escapeHtml(plan.noteZh || "")}"></label>
+        <label>Horizontal focus<input type="range" min="0" max="100" data-collection="floorplans" data-index="${index}" data-field="focalX" value="${Math.round((plan.focal || [.5, .5])[0] * 100)}"></label>
+        <label>Vertical focus<input type="range" min="0" max="100" data-collection="floorplans" data-index="${index}" data-field="focalY" value="${Math.round((plan.focal || [.5, .5])[1] * 100)}"></label>
+      </div>
+      ${plan.pixelWidth ? `<p class="field-note">${plan.pixelWidth} × ${plan.pixelHeight} px · stored locally</p>` : ""}
+    </div>`).join("");
+    const add = plans.length < Core.MODULE_LIMITS.floorPlans ? '<button class="button button-quiet" type="button" data-module-action="add-plan">Add floor-plan slot</button>' : "";
+    container.innerHTML = cards || '<div class="module-empty">No plan slots. Add one when a plan is available.</div>'; container.insertAdjacentHTML("beforeend", add);
+  }
+  function renderSpotlightsEditor() {
+    const container = document.getElementById("spotlights-editor"); const items = state.modules.spotlights;
+    container.innerHTML = items.length ? items.map((item, index) => `<div class="module-card">
+      <div class="module-card-header"><strong>${escapeHtml(item.titleEn || `Feature spotlight ${index + 1}`)}</strong>${moduleActions("spotlights", index, items.length)}</div>
+      <div class="module-card-grid">
+        ${item.dataUrl ? `<img class="module-thumb span-2" src="${item.dataUrl}" alt="${escapeHtml(item.titleEn || item.name || "Feature spotlight")}">` : ""}
+        <label class="inline-upload span-2">${item.dataUrl ? "Replace image" : "Choose local image"}<input type="file" data-module-file="spotlights" data-index="${index}" accept="image/jpeg,image/png,image/webp"></label>
+        <label>English title<input data-collection="spotlights" data-index="${index}" data-field="titleEn" value="${escapeHtml(item.titleEn || "")}"></label>
+        <label>中文标题<input lang="zh-Hans" data-collection="spotlights" data-index="${index}" data-field="titleZh" value="${escapeHtml(item.titleZh || "")}"></label>
+        <label class="span-2">English detail<textarea rows="2" data-collection="spotlights" data-index="${index}" data-field="detailEn">${escapeHtml(item.detailEn || "")}</textarea></label>
+        <label class="span-2">中文详情<textarea rows="2" lang="zh-Hans" data-collection="spotlights" data-index="${index}" data-field="detailZh">${escapeHtml(item.detailZh || "")}</textarea></label>
+        <label>Image mask<select data-collection="spotlights" data-index="${index}" data-field="mask">${option("circle", item.mask, "Circle")}${option("rounded", item.mask, "Rounded square")}${option("rectangle", item.mask, "Rectangle")}</select></label>
+        <label class="module-toggle"><input type="checkbox" data-collection="spotlights" data-index="${index}" data-field="visible" ${item.visible !== false ? "checked" : ""}> Show this callout</label>
+        <label>Horizontal focus<input type="range" min="0" max="100" data-collection="spotlights" data-index="${index}" data-field="focalX" value="${Math.round((item.focal || [.5, .5])[0] * 100)}"></label>
+        <label>Vertical focus<input type="range" min="0" max="100" data-collection="spotlights" data-index="${index}" data-field="focalY" value="${Math.round((item.focal || [.5, .5])[1] * 100)}"></label>
+      </div>
+    </div>`).join("") : '<div class="module-empty">No feature spotlights. Add one when you have a differentiating image and reviewed copy.</div>';
+    document.getElementById("add-spotlight").disabled = items.length >= Core.MODULE_LIMITS.spotlights;
+  }
+  function renderLeaseEditor() {
+    const container = document.getElementById("lease-editor"); const items = state.modules.leaseDetails;
+    container.innerHTML = items.length ? items.map((item, index) => `<div class="module-card">
+      <div class="module-card-header"><strong>${escapeHtml(item.labelEn || `Lease row ${index + 1}`)}</strong>${moduleActions("leaseDetails", index, items.length)}</div>
+      <div class="module-card-grid">
+        <label>English label<input data-collection="leaseDetails" data-index="${index}" data-field="labelEn" value="${escapeHtml(item.labelEn || "")}"></label>
+        <label>中文标签<input lang="zh-Hans" data-collection="leaseDetails" data-index="${index}" data-field="labelZh" value="${escapeHtml(item.labelZh || "")}"></label>
+        <label>English value<input data-collection="leaseDetails" data-index="${index}" data-field="valueEn" value="${escapeHtml(item.valueEn || "")}"></label>
+        <label>中文内容<input lang="zh-Hans" data-collection="leaseDetails" data-index="${index}" data-field="valueZh" value="${escapeHtml(item.valueZh || "")}"></label>
+        <label>Row state<select data-collection="leaseDetails" data-index="${index}" data-field="state">${option("active", item.state, "Active")}${option("not-applicable", item.state, "Not applicable")}${option("hidden", item.state, "Hidden")}</select></label>
+      </div>
+    </div>`).join("") : '<div class="module-empty">No lease details. Sale campaigns collapse this module automatically.</div>';
+  }
+  function renderCostsEditor() {
+    const container = document.getElementById("costs-editor"); const items = state.modules.includedCosts;
+    container.innerHTML = items.length ? items.map((item, index) => `<div class="module-card">
+      <div class="module-card-header"><strong>${escapeHtml(item.labelEn || `Included cost ${index + 1}`)}</strong>${moduleActions("includedCosts", index, items.length)}</div>
+      <div class="module-card-grid">
+        <label>English label<input data-collection="includedCosts" data-index="${index}" data-field="labelEn" value="${escapeHtml(item.labelEn || "")}"></label>
+        <label>中文标签<input lang="zh-Hans" data-collection="includedCosts" data-index="${index}" data-field="labelZh" value="${escapeHtml(item.labelZh || "")}"></label>
+        <label>Icon<select data-collection="includedCosts" data-index="${index}" data-field="icon">${iconOptions(item.icon)}</select></label>
+        <label>Responsibility state<select data-collection="includedCosts" data-index="${index}" data-field="state">${option("included", item.state, "Included")}${option("unknown", item.state, "Unknown — verify")}${option("hidden", item.state, "Hidden")}</select></label>
+      </div>
+    </div>`).join("") : '<div class="module-empty">No rent inclusions selected. The poster will remove this panel.</div>';
+    document.getElementById("add-included-cost").disabled = items.length >= Core.MODULE_LIMITS.includedCosts;
+  }
+  function renderModuleEditors() { renderFactsEditor(); renderPlansEditor(); renderSpotlightsEditor(); renderLeaseEditor(); renderCostsEditor(); }
   function updateFocalUI() {
     const x = Math.round(state.focal[0] * 100); const y = Math.round(state.focal[1] * 100);
     focusX.value = x; focusY.value = y; document.getElementById("focus-x-output").value = `${x}%`; document.getElementById("focus-y-output").value = `${y}%`;
@@ -292,7 +517,7 @@
     }
     profileSelect.value = state.compliance.profileId;
     document.querySelectorAll("[data-lock]").forEach(input => { input.checked = state.template.lockedFields.includes(input.dataset.lock); });
-    document.getElementById("preset-select").value = state.preset; updateFocalUI(); applyLocks(); renderMediaList();
+    document.getElementById("preset-select").value = state.preset; updateFocalUI(); applyLocks(); renderMediaList(); renderModuleEditors();
     document.documentElement.style.setProperty("--accent", state.theme.accent); document.documentElement.style.setProperty("--ink", state.theme.ink); document.documentElement.style.setProperty("--paper", state.theme.paper);
   }
   function applyLocks() {
@@ -321,9 +546,11 @@
     return changes;
   }
   async function hydrateImages() {
-    images.hero = await loadImage(state.media.heroDataUrl); images.floorplan = await loadImage(state.media.floorplanDataUrl);
+    images.hero = await loadImage(state.media.heroDataUrl);
     images.logoLight = await loadImage(state.media.logoLightDataUrl); images.logoDark = await loadImage(state.media.logoDarkDataUrl);
     images.gallery = await Promise.all(state.media.gallery.map(item => loadImage(item.dataUrl)));
+    images.floorplans = await Promise.all((state.media.floorplans || []).map(item => loadImage(item.dataUrl)));
+    images.spotlights = await Promise.all((state.modules.spotlights || []).map(item => loadImage(item.dataUrl)));
     updateFocalUI(); renderMediaList();
   }
   async function setNamedMedia(kind, file) {
@@ -346,6 +573,56 @@
     else { state.media[`${kind}DataUrl`] = ""; state.media[`${kind}Name`] = ""; state.media[`${kind}Type`] = ""; images[kind] = null; }
     renderMediaList(); updateFocalUI(); render(); setStatus("Media removed from this project.");
   }
+  function collectionFor(name) { return name === "floorplans" ? state.media.floorplans : state.modules[name]; }
+  function moduleImageCollection(name) { return name === "floorplans" ? images.floorplans : name === "spotlights" ? images.spotlights : null; }
+  function newPlan(role = "furnished3d") {
+    return {role, name: "", type: "", dataUrl: "", fit: "contain", focal: [.5, .5], captionEn: role === "technical2d" ? "Technical 2D plan" : "Furnished 3D plan", captionZh: role === "technical2d" ? "二维技术户型图" : "三维家具户型图", noteEn: "", noteZh: "", pixelWidth: 0, pixelHeight: 0};
+  }
+  document.addEventListener("input", event => {
+    const input = event.target; const collectionName = input.dataset.collection; if (!collectionName || input.dataset.moduleFile) return;
+    const collection = collectionFor(collectionName); const item = collection && collection[Number(input.dataset.index)]; if (!item) return;
+    if (input.dataset.field === "focalX" || input.dataset.field === "focalY") {
+      const axis = input.dataset.field === "focalX" ? 0 : 1; if (!Array.isArray(item.focal)) item.focal = [.5, .5]; item.focal[axis] = Number(input.value) / 100;
+    } else if (input.type === "checkbox") item[input.dataset.field] = input.checked;
+    else if (input.type === "number") item[input.dataset.field] = Number(input.value);
+    else item[input.dataset.field] = input.value;
+    render();
+  });
+  document.addEventListener("click", async event => {
+    const button = event.target.closest("[data-module-action]"); if (!button) return; const action = button.dataset.moduleAction;
+    if (action === "add-plan") {
+      const plans = state.media.floorplans; if (plans.length >= Core.MODULE_LIMITS.floorPlans) return;
+      plans.push(newPlan(plans.some(plan => plan.role === "furnished3d") ? "technical2d" : "furnished3d")); images.floorplans.push(null);
+    } else {
+      const collectionName = button.dataset.collection; const collection = collectionFor(collectionName); const index = Number(button.dataset.index); if (!collection || !collection[index]) return;
+      const imageCollection = moduleImageCollection(collectionName);
+      if (action === "remove") { collection.splice(index, 1); if (imageCollection) imageCollection.splice(index, 1); }
+      else if (action === "up" && index > 0) { [collection[index - 1], collection[index]] = [collection[index], collection[index - 1]]; if (imageCollection) [imageCollection[index - 1], imageCollection[index]] = [imageCollection[index], imageCollection[index - 1]]; }
+      else if (action === "down" && index < collection.length - 1) { [collection[index + 1], collection[index]] = [collection[index], collection[index + 1]]; if (imageCollection) [imageCollection[index + 1], imageCollection[index]] = [imageCollection[index], imageCollection[index + 1]]; }
+    }
+    renderModuleEditors(); render(); setStatus("Module order and visibility updated locally.");
+  });
+  document.addEventListener("change", async event => {
+    const input = event.target; const collectionName = input.dataset.moduleFile; if (!collectionName || !input.files || !input.files[0]) return;
+    const file = input.files[0]; const index = Number(input.dataset.index); const collection = collectionFor(collectionName); if (!collection || !collection[index]) return;
+    const dataUrl = await readFile(file); const image = await loadImage(dataUrl); Object.assign(collection[index], {name: file.name, type: file.type, dataUrl, pixelWidth: image.naturalWidth, pixelHeight: image.naturalHeight});
+    moduleImageCollection(collectionName)[index] = image; renderModuleEditors(); render(); setStatus(`${file.name} loaded locally with its pixel dimensions.`);
+  });
+  document.getElementById("add-custom-fact").addEventListener("click", () => {
+    if (state.modules.propertyFacts.length >= Core.MODULE_LIMITS.propertyFacts) return;
+    state.modules.propertyFacts.push({id: `custom-${Date.now()}`, icon: "building-bank", value: "", labelEn: "Custom fact", labelZh: "自定义信息", visible: true, priority: state.modules.propertyFacts.length + 1}); renderModuleEditors(); render();
+  });
+  document.getElementById("add-spotlight").addEventListener("click", () => {
+    if (state.modules.spotlights.length >= Core.MODULE_LIMITS.spotlights) return;
+    state.modules.spotlights.push({id: `spotlight-${Date.now()}`, name: "", type: "", dataUrl: "", titleEn: "Feature spotlight", titleZh: "重点卖点", detailEn: "", detailZh: "", mask: "circle", focal: [.5, .5], visible: true, pixelWidth: 0, pixelHeight: 0}); images.spotlights.push(null); renderModuleEditors(); render();
+  });
+  document.getElementById("add-lease-detail").addEventListener("click", () => {
+    state.modules.leaseDetails.push({id: `custom-${Date.now()}`, labelEn: "Custom condition", labelZh: "自定义条款", valueEn: "", valueZh: "", state: "active"}); renderModuleEditors(); render();
+  });
+  document.getElementById("add-included-cost").addEventListener("click", () => {
+    if (state.modules.includedCosts.length >= Core.MODULE_LIMITS.includedCosts) return;
+    state.modules.includedCosts.push({id: `custom-${Date.now()}`, icon: "receipt", labelEn: "Custom inclusion", labelZh: "自定义包含项目", state: "included"}); renderModuleEditors(); render();
+  });
 
   document.querySelectorAll("[data-path]").forEach(input => input.addEventListener("input", () => {
     if (state.template.lockedFields.includes(input.dataset.path)) { syncControls(); return; }
@@ -361,7 +638,6 @@
   }));
   document.getElementById("preset-select").addEventListener("change", event => { state.preset = event.target.value; render(); });
   document.getElementById("hero-upload").addEventListener("change", event => event.target.files[0] && setNamedMedia("hero", event.target.files[0]));
-  document.getElementById("floorplan-upload").addEventListener("change", event => event.target.files[0] && setNamedMedia("floorplan", event.target.files[0]));
   document.getElementById("logo-light-upload").addEventListener("change", event => event.target.files[0] && setNamedMedia("logoLight", event.target.files[0]));
   document.getElementById("logo-dark-upload").addEventListener("change", event => event.target.files[0] && setNamedMedia("logoDark", event.target.files[0]));
   document.getElementById("gallery-upload").addEventListener("change", event => event.target.files.length && addGallery(event.target.files));
@@ -464,7 +740,12 @@
   function proofHtml(files, changes) {
     const imagesHtml = files.filter(file => file.name.endsWith(".png")).map(file => `<figure><img src="${escapeHtml(file.name)}" alt="${escapeHtml(file.name)}"><figcaption>${escapeHtml(file.name)}</figcaption></figure>`).join("");
     const changesHtml = changes.length ? `<ul>${changes.map(change => `<li>${escapeHtml(change.path)}</li>`).join("")}</ul>` : "<p>No baseline changes recorded.</p>";
-    return `<!doctype html><meta charset="utf-8"><title>${escapeHtml(state.listing.address)} campaign proof</title><style>body{font:15px/1.45 Arial,sans-serif;margin:36px;color:#102c2b}h1,h2{font-family:Georgia,serif}header,section{margin-bottom:28px}dl{display:grid;grid-template-columns:160px 1fr;max-width:800px}dt{font-weight:700}figure{display:inline-block;width:30%;min-width:240px;vertical-align:top;margin:1%}img{max-width:100%;max-height:520px;object-fit:contain;box-shadow:0 5px 24px #0002}figcaption{font-size:12px;margin-top:6px}@media print{figure{break-inside:avoid}}</style><header><h1>${escapeHtml(state.listing.address)} · Campaign proof</h1><p>Generated locally by Realtor Poster Studio ${Core.APP_VERSION} · Daniel Xu</p></header><section><h2>Listing facts</h2><dl><dt>Status</dt><dd>${escapeHtml(state.listing.status)}</dd><dt>Price</dt><dd>${escapeHtml(priceCopy())}</dd><dt>MLS®</dt><dd>${escapeHtml(state.listing.mls)}</dd><dt>Agent</dt><dd>${escapeHtml(state.contact.name)}</dd><dt>Brokerage</dt><dd>${escapeHtml(state.brand.name)}</dd><dt>Compliance</dt><dd>${escapeHtml(Core.activeComplianceProfile(state).name)}</dd><dt>Review</dt><dd>${escapeHtml(state.review.status)} · ${escapeHtml(state.review.reviewer || "Unassigned")} · ${escapeHtml(state.review.reviewedAt || "No date")}</dd></dl></section><section><h2>Change summary</h2>${changesHtml}</section><section><h2>Artwork</h2>${imagesHtml}</section><section><h2>Reviewer notes</h2><p>${escapeHtml(state.review.notes || "No notes.")}</p><p><strong>Internal review only.</strong> This record is not an electronic signature or legal, regulatory, MLS®, or brokerage approval.</p></section>`;
+    const factsHtml = Core.resolvedPropertyFacts(state, "poster").map(fact => `<li>${escapeHtml(fact.labelEn)} / ${escapeHtml(fact.labelZh)}: ${escapeHtml(fact.value)}</li>`).join("");
+    const plansHtml = Core.activeFloorPlans(state).map(plan => `<li>${escapeHtml(plan.captionEn || plan.name)} / ${escapeHtml(plan.captionZh || "")} · ${escapeHtml(plan.pixelWidth || "unknown")} × ${escapeHtml(plan.pixelHeight || "unknown")} px</li>`).join("");
+    const spotsHtml = Core.activeSpotlights(state).map(item => `<li>${escapeHtml(item.titleEn)} / ${escapeHtml(item.titleZh)}</li>`).join("");
+    const leaseHtml = Core.activeLeaseDetails(state).map(item => `<li>${escapeHtml(item.labelEn)}: ${escapeHtml(item.valueEn)} / ${escapeHtml(item.valueZh)}</li>`).join("");
+    const costsHtml = Core.activeIncludedCosts(state).map(item => `<li>${escapeHtml(item.labelEn)} / ${escapeHtml(item.labelZh)}${item.state === "unknown" ? " · VERIFY" : ""}</li>`).join("");
+    return `<!doctype html><meta charset="utf-8"><title>${escapeHtml(state.listing.address)} campaign proof</title><style>body{font:15px/1.45 Arial,sans-serif;margin:36px;color:#102c2b}h1,h2{font-family:Georgia,serif}header,section{margin-bottom:28px}dl{display:grid;grid-template-columns:160px 1fr;max-width:800px}dt{font-weight:700}figure{display:inline-block;width:30%;min-width:240px;vertical-align:top;margin:1%}img{max-width:100%;max-height:520px;object-fit:contain;box-shadow:0 5px 24px #0002}figcaption{font-size:12px;margin-top:6px}.module-grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:18px}.module-grid h3{margin-bottom:4px}.module-grid ul{margin-top:4px}@media print{figure,.module-grid>div{break-inside:avoid}}</style><header><h1>${escapeHtml(state.listing.address)} · Campaign proof</h1><p>Generated locally by Realtor Poster Studio ${Core.APP_VERSION} · Daniel Xu</p></header><section><h2>Listing facts</h2><dl><dt>Status</dt><dd>${escapeHtml(state.listing.status)}</dd><dt>Price</dt><dd>${escapeHtml(priceCopy())}</dd><dt>MLS®</dt><dd>${escapeHtml(state.listing.mls)}</dd><dt>Agent</dt><dd>${escapeHtml(state.contact.name)}</dd><dt>Brokerage</dt><dd>${escapeHtml(state.brand.name)}</dd><dt>Compliance</dt><dd>${escapeHtml(Core.activeComplianceProfile(state).name)}</dd><dt>Review</dt><dd>${escapeHtml(state.review.status)} · ${escapeHtml(state.review.reviewer || "Unassigned")} · ${escapeHtml(state.review.reviewedAt || "No date")}</dd></dl></section><section><h2>Structured campaign modules</h2><div class="module-grid"><div><h3>Property facts</h3><ul>${factsHtml || "<li>None</li>"}</ul></div><div><h3>Floor plans</h3><ul>${plansHtml || "<li>None</li>"}</ul></div><div><h3>Feature spotlights</h3><ul>${spotsHtml || "<li>None</li>"}</ul></div><div><h3>Lease details</h3><ul>${leaseHtml || "<li>None</li>"}</ul></div><div><h3>Rent inclusions</h3><ul>${costsHtml || "<li>None</li>"}</ul></div></div></section><section><h2>Change summary</h2>${changesHtml}</section><section><h2>Artwork</h2>${imagesHtml}</section><section><h2>Reviewer notes</h2><p>${escapeHtml(state.review.notes || "No notes.")}</p><p><strong>Internal review only.</strong> This record is not an electronic signature or legal, regulatory, MLS®, or brokerage approval.</p></section>`;
   }
   document.getElementById("download-approval").addEventListener("click", async () => {
     if (!exportGuard()) return; setStatus("Building review package and integrity records…"); const files = [];
@@ -481,5 +762,9 @@
     state = Core.normalizeProject(DEFAULT_PROJECT, DEFAULT_PROJECT); await hydrateImages(); syncControls(); render(); setStatus("Workspace reset.");
   });
 
-  hydrateImages().then(() => { syncControls(); render(); });
+  async function hydrateIcons() {
+    const loaded = await Promise.all(ICON_NAMES.map(name => loadImage(`assets/icons/${name}.svg`).catch(() => null)));
+    ICON_NAMES.forEach((name, index) => { images.icons[name] = loaded[index]; });
+  }
+  Promise.all([hydrateImages(), hydrateIcons()]).then(() => { syncControls(); render(); });
 })();

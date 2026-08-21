@@ -5,12 +5,12 @@ const Core = require("../web/core.js");
 
 function project() {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     appVersion: Core.APP_VERSION,
     listing: {
       address: "88 Harbour Street", unit: "2608", status: "FOR LEASE", city: "Toronto, ON", postalCode: "M5J 2N8",
       price: "$3,850", rentPeriod: "per month", mls: "C1234567", beds: "2", baths: "2", sqft: "815",
-      floor: "26th", exposure: "South-East", parking: "1 Space", availability: "Immediately",
+      floor: "26th", exposure: "South-East", balcony: "Open balcony", parking: "1 Space", availability: "Immediately",
       headlineEn: "Lake views", headlineZh: "湖景生活",
     },
     contact: {name: "Daniel Xu", title: "Sales Representative", license: "", phone: "416-555-0198", email: "hello@example.com"},
@@ -20,7 +20,23 @@ function project() {
     media: {
       heroDataUrl: "data:image/png;base64,AA==", heroName: "hero.png", heroType: "image/png", gallery: [],
       floorplanDataUrl: "", floorplanName: "", floorplanType: "", logoLightDataUrl: "", logoLightName: "", logoLightType: "",
-      logoDarkDataUrl: "", logoDarkName: "", logoDarkType: "",
+      logoDarkDataUrl: "", logoDarkName: "", logoDarkType: "", floorplans: [],
+    },
+    modules: {
+      propertyFacts: [
+        {id: "beds", icon: "bed", source: "listing.beds", labelEn: "Bedrooms", labelZh: "卧室", visible: true, priority: 1},
+        {id: "baths", icon: "bath", source: "listing.baths", labelEn: "Bathrooms", labelZh: "卫浴", visible: true, priority: 2},
+        {id: "area", icon: "ruler-measure", source: "listing.sqft", labelEn: "Area", labelZh: "面积", visible: true, priority: 3},
+        {id: "floor", icon: "building-skyscraper", source: "listing.floor", labelEn: "Floor", labelZh: "楼层", visible: true, priority: 6},
+        {id: "parking", icon: "parking", source: "listing.parking", labelEn: "Parking", labelZh: "车位", visible: true, priority: 4},
+      ],
+      spotlights: [],
+      leaseDetails: [
+        {id: "term", labelEn: "Lease term", labelZh: "租期", valueEn: "12 months", valueZh: "一年", state: "active"},
+        {id: "availability", labelEn: "Available", labelZh: "可入住", valueEn: "Immediately", valueZh: "随时", state: "active"},
+      ],
+      includedCosts: [{id: "water", icon: "droplet", labelEn: "Water", labelZh: "水费", state: "included"}],
+      tenantPaidCosts: [{id: "hydro", icon: "bolt", labelEn: "Hydro", labelZh: "电费", state: "tenant-paid"}],
     },
     compliance: {profileId: "lease", profile: null, disclaimer: Core.COMPLIANCE_PROFILES.lease.disclaimer},
     template: {name: "Harbour Editorial", version: "1.0.0", lockedFields: ["brand.name"]},
@@ -29,8 +45,8 @@ function project() {
 }
 
 (async () => {
-  assert.equal(Core.APP_VERSION, "1.3.0");
-  assert.equal(Core.PROJECT_SCHEMA_VERSION, 2);
+  assert.equal(Core.APP_VERSION, "1.4.0-dev");
+  assert.equal(Core.PROJECT_SCHEMA_VERSION, 3);
 
   const valid = Core.validateProject(project());
   assert.deepEqual(valid.errors, []);
@@ -85,6 +101,9 @@ function project() {
   const listingRoundTrip = Core.projectFromListingData(listingData, project());
   assert.equal(listingRoundTrip.media.heroDataUrl, project().media.heroDataUrl);
   assert.equal(listingRoundTrip.template.name, "Harbour Editorial");
+  assert.deepEqual(listingRoundTrip.modules.propertyFacts, project().modules.propertyFacts);
+  assert.deepEqual(listingRoundTrip.modules.leaseDetails, project().modules.leaseDetails);
+  assert.deepEqual(listingRoundTrip.modules.includedCosts, project().modules.includedCosts);
 
   const templateSource = project();
   templateSource.preset = "story";
@@ -121,6 +140,46 @@ function project() {
   assert.deepEqual(copy.english.features, ["Windows", "Transit"]);
   assert.deepEqual(copy.chinese.features, ["落地窗", "公共交通"]);
 
+  const factsProject = project();
+  assert.equal(Core.resolvedPropertyFacts(factsProject, "poster").length, 5);
+  assert.equal(Core.resolvedPropertyFacts(factsProject, "square").length, 4);
+  assert.ok(!Core.resolvedPropertyFacts(factsProject, "square").some(fact => fact.id === "floor"));
+  factsProject.listing.beds = "3";
+  assert.equal(Core.resolvedPropertyFacts(factsProject, "poster")[0].value, "3");
+  const tooManyFacts = project();
+  tooManyFacts.modules.propertyFacts = Array.from({length: 9}, (_, index) => ({id: `fact-${index}`, icon: "photo", value: String(index), labelEn: "Fact", labelZh: "信息", visible: true, priority: index + 1}));
+  assert.match(Core.validateProject(tooManyFacts).errors.join("\n"), /at most 8 facts/);
+
+  const planProject = project();
+  planProject.media.floorplans = [
+    {role: "furnished3d", name: "3d.png", type: "image/png", dataUrl: "data:image/png;base64,AQ==", fit: "contain", focal: [.5, .5], captionEn: "3D plan", captionZh: "三维户型图", noteEn: "Illustrative", noteZh: "示意", pixelWidth: 1600, pixelHeight: 1200},
+    {role: "technical2d", name: "2d.png", type: "image/png", dataUrl: "data:image/png;base64,Ag==", fit: "crop", focal: [.4, .6], captionEn: "2D plan", captionZh: "二维户型图", noteEn: "Verify dimensions", noteZh: "请核实尺寸", pixelWidth: 500, pixelHeight: 500},
+  ];
+  assert.equal(Core.activeFloorPlans(planProject).length, 2);
+  assert.match(Core.validateProject(planProject).warnings.join("\n"), /low-resolution/);
+  const invalidPlan = project(); invalidPlan.media.floorplans = [{role: "technical2d", fit: "stretch", focal: [2, 0], dataUrl: "data:image/png;base64,AQ=="}];
+  assert.match(Core.validateProject(invalidPlan).errors.join("\n"), /fit must be contain/);
+  assert.match(Core.validateProject(invalidPlan).errors.join("\n"), /focal must be/);
+
+  const spotlightProject = project();
+  spotlightProject.modules.spotlights = [
+    {id: "laundry", name: "laundry.png", dataUrl: "data:image/png;base64,Aw==", titleEn: "In-suite laundry", titleZh: "套内洗衣", detailEn: "Stacked washer and dryer", detailZh: "叠放式洗衣机和烘干机", mask: "circle", focal: [.5, .5], visible: true},
+  ];
+  assert.equal(Core.activeSpotlights(spotlightProject).length, 1);
+  const incompleteSpotlight = project(); incompleteSpotlight.modules.spotlights = [{id: "view", titleEn: "View", titleZh: "", mask: "rounded", focal: [.5, .5], visible: true}];
+  assert.match(Core.validateProject(incompleteSpotlight).warnings.join("\n"), /missing a Chinese title/);
+  const tooManySpotlights = project(); tooManySpotlights.modules.spotlights = Array.from({length: 4}, (_, index) => ({id: `spot-${index}`, titleEn: "Feature", titleZh: "卖点", mask: "circle", focal: [.5, .5], visible: true}));
+  assert.match(Core.validateProject(tooManySpotlights).errors.join("\n"), /at most 3 callouts/);
+
+  const saleTerms = project(); saleTerms.listing.status = "FOR SALE"; saleTerms.compliance.profileId = "sale"; saleTerms.compliance.disclaimer = Core.COMPLIANCE_PROFILES.sale.disclaimer;
+  assert.deepEqual(Core.activeLeaseDetails(saleTerms), []);
+  const missingLeaseTerm = project(); missingLeaseTerm.modules.leaseDetails.find(item => item.id === "term").state = "hidden";
+  assert.match(Core.validateProject(missingLeaseTerm).warnings.join("\n"), /completed term detail/);
+
+  const conflictProject = project(); conflictProject.modules.tenantPaidCosts.push({id: "water", labelEn: "Water", labelZh: "水费", state: "tenant-paid"});
+  assert.deepEqual(Core.costConflicts(conflictProject), ["Water"]);
+  assert.match(Core.validateProject(conflictProject).warnings.join("\n"), /both included and tenant-paid/);
+
   const current = project(); const previous = project(); current.listing.price = "$3,950"; current.media.heroName = "new-hero.png";
   const changes = Core.diffProjects(previous, current).map(change => change.path);
   assert.ok(changes.includes("listing.price"));
@@ -140,14 +199,22 @@ function project() {
   assert.match(approval.statement, /not an electronic signature or legal/);
 
   const output = {name: "poster.png", data: new Uint8Array([1, 2, 3, 4])};
-  const manifest = await Core.buildManifest(project(), [output]);
-  assert.equal(manifest.generator, "realtor-poster-studio 1.3.0");
+  planProject.modules.spotlights = spotlightProject.modules.spotlights;
+  const manifest = await Core.buildManifest(planProject, [output]);
+  assert.equal(manifest.generator, "realtor-poster-studio 1.4.0-dev");
   assert.equal(manifest.outputs[0].filename, "poster.png");
   assert.equal(manifest.outputs[0].sha256.length, 64);
   assert.equal(manifest.compliance.profile, "Residential lease");
   assert.equal(manifest.template.name, "Harbour Editorial");
   assert.equal(manifest.language.typographyStyle, "editorial");
   assert.ok(manifest.language.fonts.some(font => font.includes("PingFang SC")));
+  assert.equal(manifest.modules.propertyFacts.length, 5);
+  assert.equal(manifest.modules.floorPlans.length, 2);
+  assert.equal(manifest.modules.spotlights.length, 1);
+  assert.equal(manifest.modules.leaseDetails.length, 2);
+  assert.equal(manifest.modules.includedCosts.length, 1);
+  assert.equal(manifest.assets.filter(asset => asset.role.startsWith("floorplan_")).length, 2);
+  assert.equal(manifest.assets.filter(asset => asset.role.startsWith("spotlight_")).length, 1);
 
   console.log("Browser core tests passed.");
 })().catch(error => { console.error(error); process.exit(1); });

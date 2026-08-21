@@ -5,7 +5,8 @@
 ## 1. Document information
 
 - Product: Realtor Poster Generator
-- Current version: 1.3.0
+- Current stable version: 1.3.0
+- Current development scope: v1.4.0 phase one (Stories 1–5)
 - Language: English
 - Product forms: browser-local visual editor, local Python command-line tools, and a self-contained offline HTML preview
 - Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON/YAML, template and compliance profiles, approval ZIP, provenance manifest JSON, batch summary JSON, and focal-preview HTML
@@ -21,7 +22,7 @@ Real-estate agents creating rental or sale artwork repeatedly assemble addresses
 - Artwork made by different team members may not follow one brand system.
 - Output packages may lack traceable input and asset checksums.
 
-The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace with compliance gates, reusable templates, English/Chinese artwork, and approval packages.
+The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; v1.4 phase one adds a complete property-facts ribbon, paired plans, feature spotlights, structured lease details, and rent inclusions.
 
 ## 3. Product goals
 
@@ -369,6 +370,11 @@ Version 1.3.0 is acceptable when:
 27. Versioned brand templates carry colours, typography, dual logos, and a default layout; they support duplication, renaming, and selected-field locks while unlocked project overrides remain editable.
 28. English, Chinese, and bilingual content each render in all five formats with suitable CJK font fallback and independently measured and wrapped bilingual headlines and features.
 29. Approved status requires a reviewer and date; the approval package contains five proofs, source data, the review record, manifest, and SHA-256 catalog.
+30. The property-facts ribbon supports bedrooms, bathrooms, area, floor, exposure, balcony, parking, and custom items; print shows up to eight, social formats show four priority facts, and hidden facts leave no gaps.
+31. Furnished 3D and technical 2D plans can be added, replaced, removed, reordered, contained, fit to width, or cropped independently; low resolution produces a warning and the manifest records source pixels and SHA-256 hashes.
+32. Up to three spotlights preserve a local image, separate English/Chinese title and detail, circle/rounded-square/rectangle mask, and focal point; empty items consume no poster space.
+33. Lease details cover term, availability, deposit, payment, insurance, keys, pets, smoking, parking, and custom rows with reorder, hidden, and not-applicable states; sale campaigns collapse the module.
+34. Rent inclusions support standard and custom costs, ordering, removal, and an unknown/verify state; duplicates with tenant-paid costs produce warnings and all content reaches projects, comparisons, manifests, and approval packages.
 
 ## 10. Risks and mitigations
 
@@ -403,6 +409,14 @@ Version 1.3.0 is acceptable when:
 - Portable brand templates and selective field locks
 - English, Chinese, and bilingual artwork in five formats
 - Baseline comparison, review records, and checksummed approval packages
+
+### v1.4 phase one in development (Stories 1–5)
+
+- Complete reorderable property-facts ribbon with social priorities
+- Paired furnished 3D and technical 2D floor-plan presentation
+- Up to three local image-led feature spotlights
+- Structured bilingual lease details
+- Rent inclusions with locally bundled MIT icons
 
 ### 2.0 candidates
 

@@ -6,9 +6,9 @@
 
 Created and maintained by **Daniel Xu**. 由 **Daniel Xu** 创建并维护。
 
-[中文 README](README.md) · [Bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+[中文 README](README.md) · [Bilingual v1.4.0 development notes](RELEASE_NOTES_v1.4.0.md) · [v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-Current version: **1.3.0**
+Current stable version: **1.3.0** · v1.4 phase-one development identifier: **1.4.0-dev**
 
 Realtor Poster Generator is a reusable, structured-data-driven toolkit for real-estate sale and rental artwork. Its information hierarchy includes a prominent listing status, address and price, property facts, interior photography, an optional floor plan, detail sections, neighbourhood highlights, and agent contact information. The composition, typography, colours, shapes, and layout are original rather than a pixel-for-pixel copy of any reference design.
 
@@ -23,7 +23,7 @@ The Python workflow uses Pillow and the browser workflow uses Canvas. Both rende
 Open the [live editor](https://xudaniel.github.io/realtor-poster-generator/) for a no-install visual campaign workflow:
 
 1. Enter complete listing, agent, brand, and English/Chinese campaign content.
-2. Add a hero, four ordered interior photos, a floor plan, and light/dark logo variants, then control the hero crop.
+2. Add a hero, four ordered interior photos, a furnished 3D plan, a technical 2D plan, and light/dark logo variants, with contain, fit-width, or crop controls for each plan.
 3. Select a lease, sale, open-house, or just-listed compliance profile and clear its export preflight.
 4. Save versioned templates with selectively locked brand fields and switch among English, Chinese, and bilingual artwork.
 5. Preview five formats, download PNG, print to PDF, or export a social ZIP, SHA-256 manifest, and complete approval package.
@@ -55,6 +55,17 @@ Then open `http://127.0.0.1:8765`. Browser projects can be saved as JSON or YAML
 - Lease, sale, open-house, and just-listed compliance profiles with agent title/licence data and blocking export preflight
 - Versioned brand templates carrying typography and a default layout, selective field locks, and independently composed English/Chinese artwork
 - Approved-baseline comparison, review status, and a checksummed approval package
+- v1.4 phase one adds a reorderable 3–8 item property-facts ribbon with a four-fact priority subset for social formats
+- v1.4 phase one adds independently replaceable, reorderable, aspect-preserving furnished 3D and technical 2D floor plans
+- v1.4 phase one adds up to three bilingual, image-led feature spotlights with circle, rounded-square, or rectangle masks
+- v1.4 phase one adds bilingual lease rows that can be reordered, hidden, or marked not applicable
+- v1.4 phase one adds reorderable rent inclusions with locally bundled MIT-licensed Tabler icons and an unknown/verify state
+
+## v1.4 phase one: Stories 1–5
+
+The development branch moves browser projects to schema version 3. Property facts, paired floor plans, feature spotlights, lease details, and rent inclusions are preserved in project files, comparisons, provenance manifests, and approval packages. Every value and phrase remains user-supplied; the editor does not translate, infer, or rewrite dates, amounts, measurements, or lease conditions.
+
+Floor plans and spotlight images remain in the current browser tab. Each plan records its original pixel dimensions and produces a warning when it may be too small for the selected output; manifests include SHA-256 hashes for embedded plan and spotlight assets. Tabler icons are bundled locally and used under their MIT licence.
 
 ## Quick start
 
