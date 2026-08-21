@@ -1,11 +1,11 @@
-# Design QA — complete v1.4 Stories 1–10
+# Design QA — v1.4.1 authorized MLS import and complete v1.4 Stories 1–10
 
 ## Scope
 
 - Reference: `/var/folders/b7/57f0jdc92vxfxymp3y3mpz7c0000gn/T/codex-clipboard-4af1ec7d-503c-4fc8-9f64-cda5f0abbaf5.png` (1002 × 1080)
 - Implementation: local browser editor at `http://127.0.0.1:8765/`
-- Browser identifier: `1.4.0`
-- Project schema: 4
+- Browser identifier: `1.4.1`
+- Project schema: 5
 - Print artwork: 1800 × 2400 canvas, displayed at 776 × 1035 during the final desktop pass
 - Final evidence:
   - `design-qa-v1.4-implementation-final.png`
@@ -30,6 +30,8 @@ The reference is used as an information-hierarchy target, not as an asset or geo
 10. One original modular print composition plus adaptive social summaries.
 
 Cross-cutting issue #20 also preserves the complete schema-driven project and local media in IndexedDB.
+
+Issue #22 adds a discoverable **00 Authorized MLS import / 获授权 MLS 导入** section before manual listing fields. It preserves the existing editing hierarchy while making the connector boundary, provider context, one-number lookup, completeness, image rights, and human review visible as one contained workflow.
 
 ## Mandatory comparison pass
 
@@ -81,6 +83,14 @@ Cross-cutting issue #20 also preserves the complete schema-driven project and lo
 - Restore recovered the hero, two gallery images, two plans, the spotlight, project fields, and the checked application confirmation.
 - Browser-local recovery remained isolated from cloud upload and analytics.
 
+## v1.4.1 connector verification
+
+- The local editor rendered at 1440 × 1400 with the v1.4.1 identifier, bilingual authorized-import heading, existing listing controls, and the unchanged poster preview without overlap or horizontal overflow.
+- A live synthetic connector on `127.0.0.1:8766` returned provider/board context and one normalized synthetic record to the locally served editor origin on `127.0.0.1:8765`.
+- Response headers included `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, and the exact local `Access-Control-Allow-Origin`.
+- Connector logs contained only method, fixed route, and status; the submitted listing number, request body, authorization, and response data were absent.
+- Core tests confirmed that unresolved image rights and missing human review block export, user edits become field-level overrides, same-listing refresh produces a diff, and manifest provenance omits embedded provider image data.
+
 ## Release-hardening verification
 
 - Destructive imports and reset stop when the required pre-action recovery snapshot fails.
@@ -96,4 +106,4 @@ Cross-cutting issue #20 also preserves the complete schema-driven project and lo
 - Automated checks: browser core tests, browser recovery tests, minimum/typical/maximum/bilingual layout-contract goldens, Python unit tests, JavaScript syntax checks, and whitespace validation all pass.
 - Remaining P0/P1/P2 design findings: none.
 
-The complete Stories 1–10 implementation and release-hardening pass are ready for the v1.4.0 publication workflow.
+The complete Stories 1–10 implementation, recovery foundation, and authorized Issue #22 import are ready for the v1.4.1 publication workflow.

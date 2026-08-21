@@ -5,10 +5,10 @@
 ## 1. Document information
 
 - Product: Realtor Poster Generator
-- Current stable version: 1.4.0
-- Current release scope: Stories 1–10 plus cross-cutting recovery issue #20
+- Current stable version: 1.4.1
+- Current release scope: Stories 1–10, cross-cutting recovery issue #20, and authorized MLS import issue #22
 - Language: English
-- Product forms: browser-local visual editor, local Python command-line tools, and a self-contained offline HTML preview
+- Product forms: browser-local visual editor, local Python command-line tools, a loopback-only authorized MLS connector, and a self-contained offline HTML preview
 - Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON/YAML, template and compliance profiles, approval ZIP, provenance manifest JSON, batch summary JSON, and focal-preview HTML
 
 ## 2. Background
@@ -22,7 +22,7 @@ Real-estate agents creating rental or sale artwork repeatedly assemble addresses
 - Artwork made by different team members may not follow one brand system.
 - Output packages may lack traceable input and asset checksums.
 
-The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; the v1.4.0 release adds the full ten-story reference-informed module set, while cross-cutting issue #20 makes the generate-review-correct loop recoverable.
+The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; v1.4.0 adds the full ten-story reference-informed module set; cross-cutting issue #20 makes the generate-review-correct loop recoverable; and v1.4.1 issue #22 deterministically creates an editable poster from an authorized record without giving provider secrets to the static page.
 
 ## 3. Product goals
 
@@ -100,6 +100,10 @@ An agent opens the hosted or locally served visual editor, enters complete listi
 ### Use case H: correct a generated poster without re-entry
 
 An agent generates or exports a poster, notices an error, returns to the editor, restores the latest local draft when needed, corrects only the affected field, and regenerates the artwork without re-entering unaffected information or reselecting recoverable images.
+
+### Use case I: generate from an authorized MLS record
+
+An agent starts the connector locally, connects one approved official or contractual provider endpoint, and enters one exact listing number. The system imports only one provider/board/number/status/address/unit identity, shows completeness and image-rights summaries, preserves saved brand and agent data, allows every field to be corrected, and requires explicit human review before export.
 
 ## 6. User flow
 
@@ -348,14 +352,15 @@ The system must provide:
 
 ### 8.5 Privacy
 
-- The browser editor must not upload listing data or images.
+- Manual editing must not upload listing data or images. Authorized import may contact only the configured provider after the user explicitly connects the local bridge and submits one listing number.
 - It must not include analytics or tracking code.
 - Portable project files must be created only through an explicit user action.
 - Manifests must avoid unnecessary absolute local paths and personal data.
+- Provider secrets must be read only from the connector environment and must never enter the page, project, manifest, logs, or repository.
 
 ## 9. Acceptance criteria
 
-The v1.4.0 release is acceptable when:
+The v1.4.1 release is acceptable when:
 
 1. The sample YAML validates.
 2. It produces an 1800 × 2400 RGB PNG.
@@ -376,7 +381,7 @@ The v1.4.0 release is acceptable when:
 17. Focal-preview HTML references no external images or scripts.
 18. Repeated rendering of the same input is pixel-identical in one environment.
 19. Visual regression passes identical images and rejects meaningful changes.
-20. The manifest records version 1.4.0 and social-output SHA-256 hashes.
+20. The manifest records version 1.4.1 and social-output SHA-256 hashes.
 21. The browser editor has no upload or analytics code and processes data only in the current tab.
 22. The browser editor previews and exports the full poster and four social sizes.
 23. Project JSON preserves and reopens form, theme, focal, and selected images.
@@ -401,6 +406,17 @@ The v1.4.0 release is acceptable when:
 42. Reset and project/template/compliance imports require confirmation and a pre-action recovery snapshot; users can also download a portable project and explicitly clear local drafts.
 43. Storage quota, restricted browser mode, corrupt/incompatible recovery data, and cross-tab conflicts produce visible bilingual warnings rather than silent data loss.
 44. Automated recovery tests cover full image-bearing snapshots, project isolation, newest-record selection, schema compatibility, and generation/export/reset recovery hooks.
+45. Authorized import accepts only one exact provider, board, and MLS-number match; zero, multiple, or incomplete-identity matches block import.
+46. The connector binds only to `127.0.0.1`; its upstream target is fixed at startup and must use HTTPS, so the page cannot select arbitrary remote targets.
+47. Provider authorization comes only from an environment variable and never appears in page responses, browser projects, manifests, logs, fixtures, or the repository.
+48. Withdrawn, expired, suspended, unauthorized, authorization-expired, rate-limited, and provider-outage cases show bilingual errors and leave the current project unchanged.
+49. Status, address, unit, city, postal code, price, period, MLS number, beds, baths, area, floor, exposure, balcony, parking, availability, open house, property facts, amenities, lease details, descriptions, and images use a fixed mapping; missing content is never guessed, translated, summarized, or rewritten.
+50. Saved agent, brokerage, licence, brand, language, template, and compliance values are user-owned and are not replaced by provider records.
+51. Browser project schema 5 stores provider, board, MLS number, retrieval time, original value, current value, and user-override state per imported field without storing authorization.
+52. A same-listing refresh shows a diff and asks again before replacing user edits or local images.
+53. Images retain source ID, order, caption, pixel dimensions, and rights status. Without explicit reuse permission, an image blocks export until the user confirms rights or selects a local replacement.
+54. Authorized imports can export only after listing status, required fields, disclosures, image rights, and explicit human review pass. This gate is not legal, regulatory, MLS®, board, brokerage, or copyright approval.
+55. Automated tests use fully synthetic records and cover exact, ambiguous, incomplete, withdrawn, stale, overridden, refreshed, image-rights, authorization-expiry, rate-limit, and outage paths without real listing data.
 
 ## 10. Risks and mitigations
 
@@ -453,11 +469,18 @@ The v1.4.0 release is acceptable when:
 - Original modular print and adaptive social layouts integrating all ten stories
 - Cross-cutting issue #20: schema-driven on-device autosave and recovery for all v1.4 modules without renumbering Stories 1–10
 
+### Completed in 1.4.1 (Issue #22)
+
+- Loopback-only authorized MLS connector with an environment-only authorization boundary
+- Exact matching, deterministic mapping, field-level provenance, completeness status, and refresh diffs
+- Blocking gates for image rights/replacement, listing status, disclosures, and explicit human review
+- Fully synthetic connector and browser tests with no real listing record or credential
+
 ### 2.0 candidates
 
 - Optional desktop application
 - Shared brokerage-team configurations
-- External listing-data integration only after explicit authorization
+- More authorized provider adapters (data rights are not supplied by this project)
 - Optional QR-code layouts
 
 ## 12. Compliance principles

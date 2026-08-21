@@ -1,0 +1,47 @@
+{
+  "title": "Realtor Poster v1.4.1 normalized authorized listing response",
+  "type": "object",
+  "required": ["provider", "retrievedAt", "matches"],
+  "properties": {
+    "provider": {
+      "type": "object",
+      "required": ["id", "name", "board"],
+      "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "board": {"type": "string"}}
+    },
+    "retrievedAt": {"type": "string"},
+    "sourceUpdatedAt": {"type": "string"},
+    "stale": {"type": "boolean"},
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["providerId", "board", "listingNumber", "status", "address", "unit"],
+        "properties": {
+          "providerId": {"type": "string"}, "board": {"type": "string"}, "listingNumber": {"type": "string"},
+          "status": {"type": "string"}, "address": {"type": "string"}, "unit": {"type": "string"},
+          "city": {"type": "string"}, "postalCode": {"type": "string"}, "price": {"type": "string"},
+          "rentPeriod": {"type": "string"}, "beds": {}, "baths": {}, "sqft": {}, "floor": {}, "exposure": {},
+          "balcony": {}, "parking": {}, "availability": {}, "openHouse": {}, "descriptionEn": {}, "descriptionZh": {},
+          "headlineEn": {}, "headlineZh": {}, "featuresEn": {"type": "array"}, "featuresZh": {"type": "array"},
+          "sourceUpdatedAt": {"type": "string"},
+          "propertyFacts": {"type": "array"}, "spotlights": {"type": "array"}, "leaseDetails": {"type": "array"},
+          "includedCosts": {"type": "array"}, "tenantPaidCosts": {"type": "array"}, "amenities": {"type": "array"},
+          "applicationRequirements": {"type": "array"},
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["sourceId", "role", "order", "rightsStatus", "reuseAllowed"],
+              "properties": {
+                "sourceId": {"type": "string"}, "role": {"type": "string"}, "order": {"type": "number"},
+                "caption": {"type": "string"}, "pixelWidth": {"type": "number"}, "pixelHeight": {"type": "number"},
+                "rightsStatus": {"type": "string"}, "reuseAllowed": {"type": "boolean"}, "name": {"type": "string"},
+                "type": {"type": "string"}, "dataUrl": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -11,9 +11,9 @@
   <header class="site-header">
     <a class="brand" href="#top" aria-label="Realtor Poster Studio home">
       <span class="brand-mark" aria-hidden="true">DX</span>
-      <span><strong>Realtor Poster Studio</strong><small>by Daniel Xu · v1.4.0</small></span>
+      <span><strong>Realtor Poster Studio</strong><small>by Daniel Xu · v1.4.1</small></span>
     </a>
-    <div class="privacy-badge"><span aria-hidden="true">●</span> Private by design — no uploads or analytics</div>
+    <div class="privacy-badge"><span aria-hidden="true">●</span> Local editing · optional authorized connector · no analytics</div>
   </header>
 
   <main id="top" class="app-shell">
@@ -25,7 +25,7 @@
         </div>
         <button id="reset-button" class="button button-quiet" type="button">Reset</button>
       </div>
-      <p class="intro">Create complete English, Chinese, or bilingual print and social artwork. Listing files and photos stay in local browser storage on this device.</p>
+      <p class="intro">Create complete English, Chinese, or bilingual print and social artwork. Manual files and edits stay on this device; an optional local connector can retrieve an authorized provider record.</p>
 
       <section id="recovery-panel" class="recovery-panel" aria-live="assertive" hidden>
         <div>
@@ -42,6 +42,22 @@
         <span id="autosave-state" role="status">Checking local recovery… / 正在检查本地恢复记录…</span>
         <button id="clear-drafts" class="text-button" type="button">Clear saved drafts / 清除草稿</button>
       </div>
+
+      <details id="mls-section" open>
+        <summary><span>00</span> Authorized MLS import / 获授权 MLS 导入</summary>
+        <p class="field-note">Run the editor and connector on the same device. GitHub Pages cannot store provider secrets; credentials stay only in the connector's environment variable. No scraping, number guessing, or credential sharing is supported.</p>
+        <div class="form-grid">
+          <label class="span-2">Local connector URL / 本机连接器地址<input id="mls-connector-url" value="http://127.0.0.1:8766" inputmode="url" autocomplete="off"></label>
+          <button id="mls-connect" class="button button-quiet" type="button">Connect locally / 本机连接</button>
+          <div id="mls-provider-context" class="mls-context">Not connected / 尚未连接</div>
+          <label class="span-2">MLS® listing number / 房源编号<input id="mls-number" autocomplete="off" placeholder="Enter one exact listing number"></label>
+          <button id="mls-generate" class="button button-primary" type="button" disabled>Retrieve and build / 获取并生成</button>
+        </div>
+        <div id="mls-completeness" class="validation-summary" aria-live="polite"><strong>Manual workspace</strong>No authorized listing has been imported.</div>
+        <div id="mls-rights" class="module-editor" aria-live="polite"></div>
+        <label class="module-toggle module-confirmation"><input id="mls-review-confirmed" type="checkbox" disabled> I reviewed the exact listing, corrections, disclosures, and image rights / 我已核对房源、修改、披露和图片权利</label>
+        <p class="field-note"><strong>Important:</strong> this workflow does not provide legal, regulatory, MLS®, board, brokerage, or copyright approval. The user remains responsible for authorization and publication review.</p>
+      </details>
 
       <details open>
         <summary><span>01</span> Listing and language</summary>
@@ -61,7 +77,8 @@
           <label>Exposure<input data-path="listing.exposure" value="South-East"></label>
           <label>Balcony<input data-path="listing.balcony" value="Open balcony"></label>
           <label>Parking<input data-path="listing.parking" value="1 Space"></label>
-          <label class="span-2">Availability / open-house time<input data-path="listing.availability" value="Immediately"></label>
+          <label>Availability<input data-path="listing.availability" value="Immediately"></label>
+          <label>Open-house time<input data-path="listing.openHouse" placeholder="Optional"></label>
           <label>Artwork language<select data-path="language.mode" id="language-mode"><option value="english">English</option><option value="chinese">中文</option><option value="bilingual">English + 中文</option></select></label>
           <label class="span-2">English headline<input data-path="listing.headlineEn" value="Lake views. Downtown energy. A home above it all."></label>
           <label class="span-2">中文标题<input data-path="listing.headlineZh" lang="zh-Hans" value="湖景之上，都市生活触手可及"></label>
@@ -80,6 +97,8 @@ Amenities for work and wellness</textarea></label>
 灵活书房与充裕储物空间
 步行可达公共交通与湖滨
 工作与休闲配套齐全</textarea></label>
+          <label class="span-2">Provider description — English<textarea data-path="listing.descriptionEn" rows="3" placeholder="Imported literally or entered by the user"></textarea></label>
+          <label class="span-2">供应商说明 — 中文<textarea data-path="listing.descriptionZh" rows="3" lang="zh-Hans" placeholder="原样导入或由用户填写"></textarea></label>
           <label class="span-2">English location highlights<textarea data-path="content.locationEn" rows="3">Waterfront
 Union Station
 Dining and shopping</textarea></label>
@@ -282,6 +301,7 @@ Dining and shopping</textarea></label>
   </footer>
   <script src="core.js"></script>
   <script src="recovery.js"></script>
+  <script src="mls.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

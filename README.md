@@ -6,9 +6,9 @@
 
 由 **Daniel Xu** 创建并维护。Created and maintained by **Daniel Xu**.
 
-[English README](README.en.md) · [v1.4.0 中英双语发布说明](RELEASE_NOTES_v1.4.0.md) · [v1.3.0 发布说明](RELEASE_NOTES_v1.3.0.md) · [中文产品需求文档](PRD.md) · [English PRD](PRD.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
+[English README](README.en.md) · [v1.4.1 中英双语发布说明](RELEASE_NOTES_v1.4.1.md) · [v1.4.0 发布说明](RELEASE_NOTES_v1.4.0.md) · [中文产品需求文档](PRD.md) · [English PRD](PRD.en.md) · [在线可视化编辑器 / Live visual editor](https://xudaniel.github.io/realtor-poster-generator/) · [更新记录](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md)
 
-当前稳定版本：**1.4.0** · 浏览器项目结构：**第 4 版**
+当前稳定版本：**1.4.1** · 浏览器项目结构：**第 5 版**
 
 这是一个可重复使用、由结构化数据驱动的房地产租售海报生成工具。设计参考了用户提供样图的信息层级，例如醒目的租售状态、地址与价格、房屋数据栏、室内照片、户型图、详细信息分区、周边亮点和经纪人联系方式；整体构图、字体、配色、形状和排版均为重新设计，并非对参考图逐像素复制。
 
@@ -28,7 +28,7 @@ Python 流程使用 Pillow，浏览器流程使用 Canvas；两者都根据经�
 4. 保存可锁定品牌字段的版本化模板，切换英文、中文或双语版式；
 5. 实时预览五种尺寸，下载 PNG、打印为 PDF，或导出社交媒体 ZIP、SHA-256 清单和完整审批包。
 
-照片、联系资料和项目文件只保存在当前设备的浏览器本地存储中，不会上传到服务器。也可以完全离线运行：
+手工编辑模式下，照片、联系资料和项目文件只保存在当前设备的浏览器本地存储中，不会上传到服务器。v1.4.1 的 MLS 导入只有在用户主动连接本机授权连接器并输入一个房源编号时才会向已配置供应商发出请求；编辑器没有分析代码。也可以完全离线运行：
 
 ```bash
 python3 scripts/serve_web.py
@@ -37,6 +37,24 @@ python3 scripts/serve_web.py
 然后打开 `http://127.0.0.1:8765`。浏览器项目可保存为 JSON 或 YAML，并保留表单、主题、焦点、图片、模板、合规配置及审核记录。审批包包含五张校样、源数据、审核记录、清单和校验值；它记录审批状态，但不代表法律或经纪公司批准。
 
 v1.4 编辑器还会在修改后，以及替换项目、重置或导出前，把完整可编辑项目（包括浏览器本地图片）自动保存到 IndexedDB。再次打开编辑器时，中英双语恢复栏会显示最新草稿及保存时间。不同项目使用独立标识；另一标签页出现较新草稿时会发出冲突警告；存储失败不会静默忽略；用户仍可下载便携项目文件作为手动备份。点击“清除草稿”可删除本浏览器中的恢复副本。
+
+## v1.4.1：从获授权 MLS 记录生成
+
+v1.4.1 实现 [Issue #22](https://github.com/xudaniel/realtor-poster-generator/issues/22)。静态 GitHub Pages 无法安全保存 MLS/供应商密钥，因此正式访问使用一个仅监听 `127.0.0.1` 的本机连接器。密钥只从环境变量读取；网页、仓库、日志、项目导出和来源清单都不会收到密钥。连接器只调用由操作者固定配置的官方或合同 HTTPS 接口，不提供抓取、全局编号搜索、猜号或绕过权限功能。
+
+使用获授权连接器：
+
+```bash
+export MLS_PROVIDER_TOKEN="由供应商安全提供的密钥"
+realtor-poster-mls \
+  --provider-id YOUR_PROVIDER \
+  --provider-name "Your Authorized Provider" \
+  --board YOUR_BOARD \
+  --endpoint 'https://provider.example/listings/{listing_number}'
+python3 scripts/serve_web.py
+```
+
+然后打开 `http://127.0.0.1:8765`，在“获授权 MLS 导入”中连接 `http://127.0.0.1:8766`。供应商接口必须返回[标准化合同](docs/MLS_CONNECTOR_CONTRACT.md)；不同供应商需要经过授权的适配器。导入要求“供应商 + board + MLS 号”唯一匹配，并保留逐字段原值、获取时间、人工覆盖和图片权利状态。撤销、过期、歧义、无权访问和未解决图片权利会阻止导出；刷新会先显示差异；最后必须由用户明确核对。系统不会自动补写、翻译或改写供应商未提供的内容，也不代表法律、监管、MLS、地产局、经纪公司或版权批准。
 
 ## 主要功能
 
@@ -67,6 +85,7 @@ v1.4 编辑器还会在修改后，以及替换项目、重置或导出前，把
 - v1.4 新增照片、插画、姓名首字母或无头像四种经纪人资料页脚，以及双语行动号召
 - v1.4 用原创深绿/金色模块化版式统一打印海报与社交尺寸，并在空间不足时按优先级收拢内容
 - v1.4 横向恢复功能（[#20](https://github.com/xudaniel/realtor-poster-generator/issues/20)）会在生成、导出、刷新、重置或替换项目前保留可编辑字段与本地图片，不改变故事 1–10 的编号
+- v1.4.1 新增仅本机运行的获授权 MLS 连接器、唯一匹配、确定性字段映射、逐字段来源、刷新差异、图片权利门禁和人工审核门禁
 
 ## v1.4 正式版：故事 1–10
 
@@ -290,8 +309,10 @@ realtor_poster/batch.py            批量发现、预验证和输出摘要
 realtor_poster/social.py           四种自适应社交媒体版式
 realtor_poster/preview.py          离线主图焦点与版面预览页面
 realtor_poster/visual_regression.py 视觉差异指标和差异图
-web/                              无上传、浏览器本地运行的完整广告编辑器
+realtor_poster/mls_connector.py   获授权供应商的本机回环连接器
+web/                              手工本地编辑器及可选本机授权导入
 web/core.js                       项目结构、验证、YAML、清单与比较核心
+web/mls.js                        仅允许回环地址的连接器客户端
 scripts/new_listing.py             经纪人交互式填写工具
 scripts/create_sample_assets.py    虚构示例素材生成脚本
 scripts/serve_web.py               本地可视化编辑器启动脚本
@@ -302,6 +323,7 @@ examples/assets/                   虚构示例图片与品牌标志
 input_template.yaml                可复制使用的数据模板
 tests/test_poster.py               Python 与静态浏览器测试
 tests/test_web_core.js             浏览器核心单元测试
+tests/test_web_mls.js              浏览器连接器边界测试
 outputs/                           生成的海报和清单
 PRD.md                             中文产品需求文档
 PRD.en.md                          English product requirements document

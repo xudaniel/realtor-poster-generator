@@ -2,6 +2,29 @@
 
 All notable changes to Realtor Poster Generator are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.1] - 2026-08-21
+
+See the bilingual [v1.4.1 release notes](RELEASE_NOTES_v1.4.1.md).
+
+### Added
+
+- Loopback-only `realtor-poster-mls` bridge for operator-approved official or contractual HTTPS provider endpoints, with environment-only authorization and local-origin controls
+- Authorized MLS import UI with exact provider/board/listing-number matching, deterministic field/module mapping, completeness summary, bilingual failure messages, and explicit human review
+- Browser project schema version 5 with field-level provider, board, listing number, retrieval/source times, original values, current values, and user-override provenance
+- Same-listing refresh diffs with confirmation before protected user edits or local listing images are overwritten
+- Image source/order/caption/dimensions/rights provenance plus blocking confirmation or local-replacement workflow
+- Fully synthetic provider fixture and Python/Node coverage for exact, ambiguous, incomplete, withdrawn, stale, auth-expired, rate-limited, outage, override, refresh, and image-rights paths
+
+### Changed
+
+- Security and privacy documentation now distinguishes fully local manual editing from explicitly initiated authorized provider access
+- README, English README, Chinese/English PRDs, release notes, package metadata, browser metadata, and manifest metadata now report v1.4.1
+- Browser preflight blocks authorized imports until identity, publishable status, image rights, required content, disclosures, and human review are complete
+
+### Security
+
+- Browser connector URLs are restricted to loopback hosts, provider upstream URLs are fixed at connector startup and require HTTPS, and authorization never enters browser responses, project files, manifests, logs, fixtures, or the repository
+
 ## [1.4.0] - 2026-08-20
 
 See the bilingual [v1.4.0 release notes](RELEASE_NOTES_v1.4.0.md).
@@ -101,4 +124,5 @@ See the complete [bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md).
 [1.2.1]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.2.1
 [1.3.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.3.0
 [1.4.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.0
+[1.4.1]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.1
 [1.0.0]: https://github.com/xudaniel/realtor-poster-generator/commits/main/

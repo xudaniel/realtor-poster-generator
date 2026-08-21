@@ -47,9 +47,10 @@ jobs:
         with:
           node-version: "20"
       - name: JavaScript syntax
-        run: node --check web/core.js && node --check web/recovery.js && node --check web/app.js
-      - name: Browser core and recovery tests
-        run: node tests/test_web_core.js && node tests/test_web_recovery.js && node tests/test_web_layout_goldens.js
-      - name: Confirm editor has no network calls or remote assets
+        run: node --check web/core.js && node --check web/recovery.js && node --check web/mls.js && node --check web/app.js
+      - name: Browser core, recovery, connector, and layout tests
+        run: node tests/test_web_core.js && node tests/test_web_recovery.js && node tests/test_web_mls.js && node tests/test_web_layout_goldens.js
+      - name: Confirm manual editor has no network calls or remote assets
         run: |
-          ! grep -R -E "fetch\(|XMLHttpRequest|https?://" web/core.js web/recovery.js web/app.js web/index.html web/styles.css
+          ! grep -R -E "fetch\(|XMLHttpRequest|https?://" web/core.js web/recovery.js web/app.js web/styles.css
+          ! grep -E '(src|href)="https?://' web/index.html
