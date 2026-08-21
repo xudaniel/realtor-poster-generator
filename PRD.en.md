@@ -5,8 +5,8 @@
 ## 1. Document information
 
 - Product: Realtor Poster Generator
-- Current stable version: 1.3.0
-- Current development scope: complete v1.4.0 candidate (Stories 1–10) plus cross-cutting recovery issue #20
+- Current stable version: 1.4.0
+- Current release scope: Stories 1–10 plus cross-cutting recovery issue #20
 - Language: English
 - Product forms: browser-local visual editor, local Python command-line tools, and a self-contained offline HTML preview
 - Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON/YAML, template and compliance profiles, approval ZIP, provenance manifest JSON, batch summary JSON, and focal-preview HTML
@@ -22,7 +22,7 @@ Real-estate agents creating rental or sale artwork repeatedly assemble addresses
 - Artwork made by different team members may not follow one brand system.
 - Output packages may lack traceable input and asset checksums.
 
-The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; the complete v1.4 candidate adds the full ten-story reference-informed module set, while cross-cutting issue #20 makes the generate-review-correct loop recoverable.
+The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; the v1.4.0 release adds the full ten-story reference-informed module set, while cross-cutting issue #20 makes the generate-review-correct loop recoverable.
 
 ## 3. Product goals
 
@@ -355,7 +355,7 @@ The system must provide:
 
 ## 9. Acceptance criteria
 
-The stable 1.3 baseline and the v1.4 development candidate are acceptable when:
+The v1.4.0 release is acceptable when:
 
 1. The sample YAML validates.
 2. It produces an 1800 × 2400 RGB PNG.
@@ -376,7 +376,7 @@ The stable 1.3 baseline and the v1.4 development candidate are acceptable when:
 17. Focal-preview HTML references no external images or scripts.
 18. Repeated rendering of the same input is pixel-identical in one environment.
 19. Visual regression passes identical images and rejects meaningful changes.
-20. The manifest records version 1.3.0 and social-output SHA-256 hashes.
+20. The manifest records version 1.4.0 and social-output SHA-256 hashes.
 21. The browser editor has no upload or analytics code and processes data only in the current tab.
 22. The browser editor previews and exports the full poster and four social sizes.
 23. Project JSON preserves and reopens form, theme, focal, and selected images.
@@ -389,7 +389,7 @@ The stable 1.3 baseline and the v1.4 development candidate are acceptable when:
 30. The property-facts ribbon supports bedrooms, bathrooms, area, floor, exposure, balcony, parking, and custom items; print shows up to eight, social formats show four priority facts, and hidden facts leave no gaps.
 31. Furnished 3D and technical 2D plans can be added, replaced, removed, reordered, contained, fit to width, or cropped independently; low resolution produces a warning and the manifest records source pixels and SHA-256 hashes.
 32. Up to three spotlights preserve a local image, separate English/Chinese title and detail, circle/rounded-square/rectangle mask, and focal point; empty items consume no poster space.
-33. Lease details cover term, availability, deposit, payment, insurance, keys, pets, smoking, parking, and custom rows with reorder, hidden, and not-applicable states; sale campaigns collapse the module.
+33. Lease details render up to nine rows selected from term, availability, deposit, payment, insurance, keys, pets, smoking, parking, and custom entries, with reorder, hidden, and not-applicable states; sale campaigns collapse the module.
 34. Rent inclusions support standard and custom costs, ordering, removal, and an unknown/verify state; all content reaches projects, comparisons, manifests, and approval packages.
 35. Tenant-paid costs support standard and custom categories, ordering, visibility, and bilingual labels; a duplicate active rent-included cost is a blocking preflight error, and sale campaigns collapse both cost modules.
 36. Up to twelve bilingual amenities can be added, reordered, hidden, and rendered with reusable local icons; the print module preserves visible order and collapses without empty gaps when no items remain.
@@ -439,7 +439,7 @@ The stable 1.3 baseline and the v1.4 development candidate are acceptable when:
 - English, Chinese, and bilingual artwork in five formats
 - Baseline comparison, review records, and checksummed approval packages
 
-### Complete v1.4 development candidate (Stories 1–10)
+### Completed in 1.4 (Stories 1–10)
 
 - Complete reorderable property-facts ribbon with social priorities
 - Paired furnished 3D and technical 2D floor-plan presentation

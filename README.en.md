@@ -6,9 +6,9 @@
 
 Created and maintained by **Daniel Xu**. 由 **Daniel Xu** 创建并维护。
 
-[中文 README](README.md) · [Bilingual v1.4.0 development notes](RELEASE_NOTES_v1.4.0.md) · [v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+[中文 README](README.md) · [Bilingual v1.4.0 release notes](RELEASE_NOTES_v1.4.0.md) · [v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-Current stable version: **1.3.0** · complete v1.4 development-candidate identifier: **1.4.0-dev**
+Current stable version: **1.4.0** · browser project schema: **4**
 
 Realtor Poster Generator is a reusable, structured-data-driven toolkit for real-estate sale and rental artwork. Its information hierarchy includes a prominent listing status, address and price, property facts, interior photography, an optional floor plan, detail sections, neighbourhood highlights, and agent contact information. The composition, typography, colours, shapes, and layout are original rather than a pixel-for-pixel copy of any reference design.
 
@@ -60,7 +60,7 @@ The v1.4 editor also autosaves the complete editable project—including browser
 - v1.4 adds a reorderable 3–8 item property-facts ribbon with a four-fact priority subset for social formats
 - v1.4 adds independently replaceable, reorderable, aspect-preserving furnished 3D and technical 2D floor plans
 - v1.4 adds up to three bilingual, image-led feature spotlights with circle, rounded-square, or rectangle masks
-- v1.4 adds bilingual lease rows that can be reordered, hidden, or marked not applicable
+- v1.4 adds up to nine bilingual lease rows that can be reordered, hidden, or marked not applicable
 - v1.4 adds reorderable rent inclusions with locally bundled MIT-licensed Tabler icons and an unknown/verify state
 - v1.4 adds tenant-paid cost categories and makes duplicates with rent inclusions blocking export errors
 - v1.4 adds up to twelve bilingual amenities, up to ten application requirements, and a confirmation/disclaimer export gate
@@ -68,9 +68,9 @@ The v1.4 editor also autosaves the complete editable project—including browser
 - v1.4 unifies print and social artwork under an original dark-green/gold modular layout with priority-aware responsive reduction
 - v1.4 cross-cutting recovery ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20)) preserves editable fields and local images after generation, export, reload, reset, or project replacement without changing Stories 1–10 numbering
 
-## Complete v1.4 development candidate: Stories 1–10
+## v1.4 release: Stories 1–10
 
-The development branch moves browser projects to schema version 4. Property facts, paired floor plans, feature spotlights, lease details, rent inclusions, tenant-paid costs, amenities, application requirements, and the agent-profile footer are preserved in project files, comparisons, provenance manifests, and approval packages. Every value and phrase remains user-supplied; the editor does not translate, infer, or rewrite dates, amounts, measurements, or lease conditions.
+v1.4.0 moves browser projects to schema version 4. Property facts, paired floor plans, feature spotlights, lease details, rent inclusions, tenant-paid costs, amenities, application requirements, and the agent-profile footer are preserved in project files, comparisons, provenance manifests, and approval packages. Every value and phrase remains user-supplied; the editor does not translate, infer, or rewrite dates, amounts, measurements, or lease conditions.
 
 Floor plans, spotlight images, and agent portraits remain in browser-local storage on the current device. Each plan records its original pixel dimensions and produces a warning when it may be too small for the selected output; manifests include SHA-256 hashes for embedded assets. Tabler icons are bundled locally and used under their MIT licence.
 

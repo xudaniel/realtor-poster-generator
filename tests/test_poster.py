@@ -211,7 +211,7 @@ class PosterTests(unittest.TestCase):
         self.assertIn("activeApplicationRequirements", core)
         self.assertIn("layoutSnapshot", core)
         self.assertIn("OUTPUT_DIMENSIONS", core)
-        self.assertEqual(__version__, "1.3.0")
+        self.assertEqual(__version__, "1.4.0")
         combined = index + script + core
         self.assertNotIn("fetch(", combined)
         self.assertNotIn("XMLHttpRequest", combined)

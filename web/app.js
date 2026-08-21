@@ -191,6 +191,27 @@
     }
     return lines;
   }
+  function wrapTextAll(ctx, text, maxWidth) {
+    const source = String(text || ""); const cjk = /[\u3400-\u9fff]/.test(source);
+    const tokens = cjk ? Array.from(source) : source.split(/\s+/).filter(Boolean); const joiner = cjk ? "" : " ";
+    const lines = []; let line = "";
+    tokens.forEach(token => {
+      if (!cjk && ctx.measureText(token).width > maxWidth) {
+        if (line) { lines.push(line); line = ""; }
+        let fragment = "";
+        Array.from(token).forEach(character => {
+          if (fragment && ctx.measureText(`${fragment}${character}`).width > maxWidth) { lines.push(fragment); fragment = character; }
+          else fragment += character;
+        });
+        line = fragment; return;
+      }
+      const candidate = line ? `${line}${joiner}${token}` : token;
+      if (ctx.measureText(candidate).width <= maxWidth || !line) line = candidate;
+      else { lines.push(line); line = token; }
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
   function formattedSavedTime(snapshot) {
     const date = new Date(Number(snapshot && snapshot.savedAtMs || 0));
     return Number.isNaN(date.getTime()) ? "unknown time / 未知时间" : date.toLocaleString();
@@ -234,10 +255,14 @@
     setAutosaveState("Unsaved changes… / 有尚未保存的修改…");
     autosaveTimer = setTimeout(() => { saveRecoverySnapshot("autosave"); }, 650);
   }
-  async function prepareAction(reason) {
+  async function prepareAction(reason, options = {}) {
     let snapshot = await saveRecoverySnapshot(reason, {force: true});
     if (dirtySinceSave) snapshot = await saveRecoverySnapshot(reason, {force: true});
-    return snapshot;
+    if (options.requireSaved && !snapshot) {
+      setStatus("Action stopped because a local recovery copy could not be saved. Download the portable project, then try again. / 操作已停止：无法保存本地恢复副本。请先下载项目文件再重试。");
+      return false;
+    }
+    return Boolean(snapshot);
   }
   async function restoreRecoverySnapshot(snapshot) {
     const validation = Recovery.validateSnapshot(snapshot, {maxProjectSchemaVersion: Core.PROJECT_SCHEMA_VERSION});
@@ -387,14 +412,20 @@
     ctx.fillText(title, x + 18 * S, y + 27 * S);
   }
   function planEntries() {
-    return (state.media.floorplans || []).map((plan, index) => ({plan, image: images.floorplans[index]})).filter(item => item.plan.dataUrl || item.plan.name);
+    const interiors = (state.media.gallery || []).map((photo, index) => ({
+      plan: {role: "interior", name: photo.name, dataUrl: photo.dataUrl, fit: "crop", focal: [.5, .5], captionEn: `Interior photo ${index + 1}`, captionZh: `室内照片 ${index + 1}`, noteEn: "", noteZh: ""},
+      image: images.gallery[index],
+    })).filter(item => item.plan.dataUrl).slice(0, 1);
+    const plans = (state.media.floorplans || []).map((plan, index) => ({plan, image: images.floorplans[index]})).filter(item => item.plan.dataUrl || item.plan.name);
+    return [...interiors, ...plans];
   }
   function spotlightEntries() {
     return (state.modules.spotlights || []).map((spotlight, index) => ({spotlight, image: images.spotlights[index]})).filter(item => item.spotlight.visible !== false && item.spotlight.dataUrl && (item.spotlight.titleEn || item.spotlight.titleZh));
   }
   function drawPlansModule(ctx, x, y, width, height, S, theme) {
     const entries = planEntries(); if (!entries.length) return;
-    drawModuleHeader(ctx, localized("SPACE PLANS", "空间户型"), x, y, width, S, theme);
+    const includesInterior = entries.some(item => item.plan.role === "interior");
+    drawModuleHeader(ctx, includesInterior ? localized("INTERIOR & SPACE PLANS", "室内照片与户型图") : localized("SPACE PLANS", "空间户型"), x, y, width, S, theme);
     const gap = 16 * S; const top = y + 54 * S; const cardWidth = (width - gap * (entries.length - 1)) / entries.length; const captionHeight = 52 * S; const imageHeight = height - 54 * S - captionHeight;
     entries.forEach(({plan, image}, index) => {
       const left = x + index * (cardWidth + gap); ctx.save(); ctx.strokeStyle = rgba(theme.ink, .22); ctx.lineWidth = 1.5 * S; ctx.strokeRect(left, top, cardWidth, imageHeight);
@@ -429,22 +460,30 @@
     if (!items.length) return;
     drawModuleHeader(ctx, title, x, y, width, S, theme);
     const columns = width < 330 * S ? 2 : Math.min(3, Math.max(2, Math.ceil(items.length / 2))); const rows = Math.ceil(items.length / columns);
-    const cellWidth = width / columns; const cellHeight = (height - 50 * S) / Math.max(1, rows);
+    const cellWidth = width / columns; const cellHeight = (height - 50 * S) / Math.max(1, rows); const dense = rows >= 4;
     items.forEach((item, index) => {
       const column = index % columns; const row = Math.floor(index / columns); const centerX = x + column * cellWidth + cellWidth / 2; const top = y + 50 * S + row * cellHeight;
-      const iconSize = Math.min(30 * S, cellHeight * .38); drawIcon(ctx, item.icon, centerX - iconSize / 2, top + 3 * S, iconSize, theme.paper, rgba(theme.ink, .3));
-      ctx.fillStyle = theme.ink; ctx.textAlign = "center"; ctx.font = `700 ${12 * S}px ${fontFamily()}`;
-      wrapText(ctx, moduleCopy(item, "labelEn", "labelZh"), cellWidth - 9 * S, 2).forEach((line, lineIndex) => ctx.fillText(line, centerX, top + iconSize + (17 + lineIndex * 13) * S));
+      const iconSize = Math.min((dense ? 18 : 30) * S, cellHeight * (dense ? .26 : .38)); drawIcon(ctx, item.icon, centerX - iconSize / 2, top + 3 * S, iconSize, theme.paper, rgba(theme.ink, .3));
+      ctx.fillStyle = theme.ink; ctx.textAlign = "center";
+      const label = moduleCopy(item, "labelEn", "labelZh");
+      if (dense) { fitText(ctx, label, cellWidth - 9 * S, 9 * S, 7 * S, 700, fontFamily()); ctx.fillText(label, centerX, top + iconSize + 13 * S); }
+      else { ctx.font = `700 ${12 * S}px ${fontFamily()}`; wrapText(ctx, label, cellWidth - 9 * S, 2).forEach((line, lineIndex) => ctx.fillText(line, centerX, top + iconSize + (17 + lineIndex * 13) * S)); }
       if (item.state === "unknown") { ctx.fillStyle = theme.accent; ctx.font = `800 ${8 * S}px ${fontFamily()}`; ctx.fillText(localized("VERIFY", "待确认"), centerX, top + cellHeight - 4 * S); }
     });
   }
-  function drawChecklistPanel(ctx, title, items, x, y, width, height, S, theme, formatter) {
+  function drawChecklistPanel(ctx, title, items, x, y, width, height, S, theme, formatter, options = {}) {
     if (!items.length) return;
     drawModuleHeader(ctx, title, x, y, width, S, theme); const columns = items.length > 6 ? 2 : 1; const rows = Math.ceil(items.length / columns); const columnWidth = width / columns; const rowHeight = (height - 51 * S) / Math.max(1, rows);
     items.forEach((item, index) => {
       const column = Math.floor(index / rows); const row = index % rows; const left = x + column * columnWidth; const rowY = y + 51 * S + row * rowHeight; const iconSize = Math.min(16 * S, rowHeight * .6);
       drawIcon(ctx, item.icon || "circle-check", left + 2 * S, rowY + 2 * S, iconSize, theme.paper, rgba(theme.ink, .3)); ctx.fillStyle = theme.ink; ctx.textAlign = "left";
-      const text = formatter ? formatter(item) : moduleCopy(item, "labelEn", "labelZh"); fitText(ctx, text, columnWidth - 27 * S, 13 * S, 9 * S, 650, fontFamily()); ctx.fillText(text, left + 24 * S, rowY + 15 * S);
+      const text = formatter ? formatter(item) : moduleCopy(item, "labelEn", "labelZh"); const maxWidth = columnWidth - 27 * S;
+      if (!options.multiline) { fitText(ctx, text, maxWidth, 13 * S, 9 * S, 650, fontFamily()); ctx.fillText(text, left + 24 * S, rowY + 15 * S); return; }
+      let fontSize = 11 * S; let lines = []; const maxLines = Math.max(1, Math.floor((rowHeight - 5 * S) / (11 * S)));
+      while (fontSize >= 8 * S) { ctx.font = `650 ${fontSize}px ${fontFamily()}`; lines = wrapTextAll(ctx, text, maxWidth); if (lines.length <= maxLines) break; fontSize -= S; }
+      if (lines.length > maxLines) { fitText(ctx, text, maxWidth, 9 * S, 7 * S, 650, fontFamily()); ctx.fillText(text, left + 24 * S, rowY + Math.min(rowHeight - 3 * S, 13 * S)); return; }
+      const lineHeight = Math.max(9 * S, fontSize + 1 * S); const blockHeight = lines.length * lineHeight; const firstBaseline = rowY + Math.max(lineHeight, (rowHeight - blockHeight) / 2 + lineHeight * .8);
+      lines.forEach((line, lineIndex) => ctx.fillText(line, left + 24 * S, firstBaseline + lineIndex * lineHeight));
     });
   }
   function drawApplicationRequirementsPanel(ctx, items, x, y, width, height, S, theme) {
@@ -458,7 +497,7 @@
     const lease = Core.activeLeaseDetails(state); const included = Core.activeIncludedCosts(state); const tenant = Core.activeTenantPaidCosts(state);
     const amenities = Core.activeAmenities(state); const requirements = Core.activeApplicationRequirements(state); const gap = 14 * S;
     const topPanels = [
-      lease.length ? {weight: 2.2, draw: (left, panelWidth, panelHeight) => drawChecklistPanel(ctx, localized("LEASE DETAILS", "租约详情"), lease.slice(0, 9), left, y, panelWidth, panelHeight, S, theme, item => `${moduleCopy(item, "labelEn", "labelZh")}: ${moduleCopy(item, "valueEn", "valueZh")}`)} : null,
+      lease.length ? {weight: 2.2, draw: (left, panelWidth, panelHeight) => drawChecklistPanel(ctx, localized("LEASE DETAILS", "租约详情"), lease, left, y, panelWidth, panelHeight, S, theme, item => `${moduleCopy(item, "labelEn", "labelZh")}: ${moduleCopy(item, "valueEn", "valueZh")}`, {multiline: true})} : null,
       included.length ? {weight: 1.25, draw: (left, panelWidth, panelHeight) => drawIconGridPanel(ctx, localized("RENT INCLUDES", "租金包含"), included, left, y, panelWidth, panelHeight, S, theme)} : null,
       tenant.length ? {weight: 1.25, draw: (left, panelWidth, panelHeight) => drawIconGridPanel(ctx, localized("TENANT PAYS", "租客承担"), tenant, left, y, panelWidth, panelHeight, S, theme)} : null,
     ].filter(Boolean);
@@ -519,14 +558,14 @@
     drawHeadlineBlock(ctx, margin, contentTop + 88 * S, width - 2 * margin, S);
     const dividerY = contentTop + 164 * S; ctx.fillStyle = theme.accent; ctx.fillRect(margin, dividerY, width - 2 * margin, 3 * S);
     const copy = Core.campaignCopy(state); const featureCount = Math.min(4, state.language.mode === "chinese" ? (copy.chinese.features.length || copy.english.features.length) : copy.english.features.length);
-    const visibleFeatureCount = Math.min(featureCount, 2); const featureY = dividerY + 30 * S;
+    const visibleFeatureCount = featureCount; const featureY = dividerY + 30 * S;
     Array.from({length: visibleFeatureCount}).forEach((_, index) => {
-      const col = index % 2; const row = Math.floor(index / 2); const colW = width / 2 - 1.5 * margin; const x = margin + col * (width / 2); const y = featureY + row * 102 * S;
-      drawFeatureBlock(ctx, x, y, colW, S, index);
+      const gap = 24 * S; const colW = (width - 2 * margin - gap * (visibleFeatureCount - 1)) / visibleFeatureCount; const x = margin + index * (colW + gap);
+      drawFeatureBlock(ctx, x, featureY, colW, S, index);
     });
 
-    let moduleY = contentTop + (state.language.mode === "bilingual" ? 260 : 238) * S; const moduleWidth = width - 2 * margin; const sectionGap = 14 * S;
-    const plansHeight = (state.language.mode === "bilingual" ? 296 : 310) * S;
+    let moduleY = featureY + (state.language.mode === "bilingual" ? 112 : 68) * S; const moduleWidth = width - 2 * margin; const sectionGap = 14 * S;
+    const plansHeight = (state.language.mode === "bilingual" ? 260 : 286) * S;
     if (planEntries().length) { drawPlansModule(ctx, margin, moduleY, moduleWidth, plansHeight, S, theme); moduleY += plansHeight + sectionGap; }
     if (spotlightEntries().length) { drawSpotlightsModule(ctx, margin, moduleY, moduleWidth, 140 * S, S, theme); moduleY += 140 * S + sectionGap; }
     const footerY = 2040 * S; drawInformationModules(ctx, margin, moduleY, moduleWidth, footerY - moduleY - 16 * S, S, theme);
@@ -680,13 +719,14 @@
     container.innerHTML = items.length ? items.map((item, index) => `<div class="module-card">
       <div class="module-card-header"><strong>${escapeHtml(item.labelEn || `Lease row ${index + 1}`)}</strong>${moduleActions("leaseDetails", index, items.length)}</div>
       <div class="module-card-grid">
-        <label>English label<input data-collection="leaseDetails" data-index="${index}" data-field="labelEn" value="${escapeHtml(item.labelEn || "")}"></label>
-        <label>中文标签<input lang="zh-Hans" data-collection="leaseDetails" data-index="${index}" data-field="labelZh" value="${escapeHtml(item.labelZh || "")}"></label>
-        <label>English value<input data-collection="leaseDetails" data-index="${index}" data-field="valueEn" value="${escapeHtml(item.valueEn || "")}"></label>
-        <label>中文内容<input lang="zh-Hans" data-collection="leaseDetails" data-index="${index}" data-field="valueZh" value="${escapeHtml(item.valueZh || "")}"></label>
+        <label>English label<input maxlength="58" data-collection="leaseDetails" data-index="${index}" data-field="labelEn" value="${escapeHtml(item.labelEn || "")}"></label>
+        <label>中文标签<input maxlength="58" lang="zh-Hans" data-collection="leaseDetails" data-index="${index}" data-field="labelZh" value="${escapeHtml(item.labelZh || "")}"></label>
+        <label>English value<input maxlength="58" data-collection="leaseDetails" data-index="${index}" data-field="valueEn" value="${escapeHtml(item.valueEn || "")}"></label>
+        <label>中文内容<input maxlength="58" lang="zh-Hans" data-collection="leaseDetails" data-index="${index}" data-field="valueZh" value="${escapeHtml(item.valueZh || "")}"></label>
         <label>Row state<select data-collection="leaseDetails" data-index="${index}" data-field="state">${option("active", item.state, "Active")}${option("not-applicable", item.state, "Not applicable")}${option("hidden", item.state, "Hidden")}</select></label>
       </div>
     </div>`).join("") : '<div class="module-empty">No lease details. Sale campaigns collapse this module automatically.</div>';
+    document.getElementById("add-lease-detail").disabled = items.length >= Core.MODULE_LIMITS.leaseDetails;
   }
   function renderCostEditor(containerId, collectionName, itemName, emptyText, buttonId) {
     const container = document.getElementById(containerId); const items = state.modules[collectionName];
@@ -855,6 +895,7 @@
     state.modules.spotlights.push({id: `spotlight-${Date.now()}`, name: "", type: "", dataUrl: "", titleEn: "Feature spotlight", titleZh: "重点卖点", detailEn: "", detailZh: "", mask: "circle", focal: [.5, .5], visible: true, pixelWidth: 0, pixelHeight: 0}); images.spotlights.push(null); renderModuleEditors(); render();
   });
   document.getElementById("add-lease-detail").addEventListener("click", () => {
+    if (state.modules.leaseDetails.length >= Core.MODULE_LIMITS.leaseDetails) return;
     state.modules.leaseDetails.push({id: `custom-${Date.now()}`, labelEn: "Custom condition", labelZh: "自定义条款", valueEn: "", valueZh: "", state: "active"}); renderModuleEditors(); render();
   });
   document.getElementById("add-included-cost").addEventListener("click", () => {
@@ -877,6 +918,7 @@
   document.querySelectorAll("[data-path]").forEach(input => input.addEventListener("input", () => {
     if (state.template.lockedFields.includes(input.dataset.path)) { syncControls(); return; }
     Core.setPath(state, input.dataset.path, input.type === "checkbox" ? input.checked : input.value);
+    if (state.modules.propertyFacts.some(fact => fact.source === input.dataset.path)) renderFactsEditor();
     if (input.dataset.path === "listing.status" && !state.compliance.profile) {
       const id = Core.profileForStatus(input.value); state.compliance.profileId = id; state.compliance.disclaimer = Core.COMPLIANCE_PROFILES[id].disclaimer; syncControls();
     }
@@ -939,7 +981,7 @@
   document.getElementById("open-project").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
     if (!window.confirm("Replace the current workspace with this project? A recovery snapshot will be saved first. / 用该项目替换当前工作区？系统会先保存恢复快照。")) { event.target.value = ""; return; }
-    await prepareAction("before-open-project");
+    if (!(await prepareAction("before-open-project", {requireSaved: true}))) { event.target.value = ""; return; }
     try { state = Core.normalizeProject(JSON.parse(await readFile(file, "text")), DEFAULT_PROJECT); Recovery.ensureProjectId(state); hideRecoveryPanel(); autosaveEnabled = true; await hydrateImages(); syncControls(); render(); setStatus("Project opened locally."); }
     catch (error) { setStatus(`Could not open project: ${error.message}`); }
     event.target.value = "";
@@ -947,7 +989,7 @@
   document.getElementById("import-listing").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
     if (!window.confirm("Replace the current workspace with this listing? A recovery snapshot will be saved first. / 用该房源替换当前工作区？系统会先保存恢复快照。")) { event.target.value = ""; return; }
-    await prepareAction("before-import-listing");
+    if (!(await prepareAction("before-import-listing", {requireSaved: true}))) { event.target.value = ""; return; }
     try {
       const text = await readFile(file, "text"); const raw = file.name.toLowerCase().endsWith(".json") ? JSON.parse(text) : Core.parseSimpleYaml(text);
       state = Core.projectFromListingData(raw, DEFAULT_PROJECT); state.projectId = Recovery.newProjectId("project"); hideRecoveryPanel(); autosaveEnabled = true; await hydrateImages(); syncControls(); render(); setStatus("Listing data imported. Reselect local image files referenced by path.");
@@ -968,7 +1010,7 @@
   document.getElementById("open-template").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
     if (!window.confirm("Apply this template to the current project? A recovery snapshot will be saved first. / 将此模板应用到当前项目？系统会先保存恢复快照。")) { event.target.value = ""; return; }
-    await prepareAction("before-template-import");
+    if (!(await prepareAction("before-template-import", {requireSaved: true}))) { event.target.value = ""; return; }
     try {
       const template = JSON.parse(await readFile(file, "text")); state = Core.applyTemplate(state, template);
       images.logoLight = await loadImage(state.media.logoLightDataUrl); images.logoDark = await loadImage(state.media.logoDarkDataUrl); syncControls(); render(); setStatus("Brand template applied without changing saved projects.");
@@ -983,7 +1025,7 @@
   document.getElementById("open-compliance").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
     if (!window.confirm("Apply this compliance profile? A recovery snapshot will be saved first. / 应用此合规配置？系统会先保存恢复快照。")) { event.target.value = ""; return; }
-    await prepareAction("before-compliance-import");
+    if (!(await prepareAction("before-compliance-import", {requireSaved: true}))) { event.target.value = ""; return; }
     try {
       const payload = JSON.parse(await readFile(file, "text")); if (payload.kind !== "realtor-poster-compliance" || !payload.profile) throw new Error("Not a Realtor Poster compliance profile");
       state.compliance.profile = payload.profile; state.compliance.profileId = payload.profile.id || "custom"; state.compliance.disclaimer = payload.profile.disclaimer || "";
@@ -997,7 +1039,7 @@
   });
   document.getElementById("open-baseline").addEventListener("change", async event => {
     const file = event.target.files[0]; if (!file) return;
-    await prepareAction("before-baseline-import");
+    if (!(await prepareAction("before-baseline-import", {requireSaved: true}))) { event.target.value = ""; return; }
     try { state.review.baseline = Core.normalizeProject(JSON.parse(await readFile(file, "text")), DEFAULT_PROJECT); updateChangeSummary(); scheduleAutosave(); setStatus("Comparison project loaded locally."); }
     catch (error) { setStatus(`Could not compare project: ${error.message}`); }
     event.target.value = "";
@@ -1055,7 +1097,7 @@
 
   document.getElementById("reset-button").addEventListener("click", async () => {
     if (!window.confirm("Start a new workspace? The current project will remain available as a recovery draft. / 新建工作区？当前项目会保留为可恢复草稿。")) return;
-    await prepareAction("before-reset"); state = Core.normalizeProject(DEFAULT_PROJECT, DEFAULT_PROJECT); state.projectId = Recovery.newProjectId("project"); hideRecoveryPanel(); autosaveEnabled = true;
+    if (!(await prepareAction("before-reset", {requireSaved: true}))) return; state = Core.normalizeProject(DEFAULT_PROJECT, DEFAULT_PROJECT); state.projectId = Recovery.newProjectId("project"); hideRecoveryPanel(); autosaveEnabled = true;
     await hydrateImages(); syncControls(); render({autosave: false}); stateRevision = 0; persistedRevision = 0; dirtySinceSave = false; setAutosaveState("New workspace ready; the previous project remains recoverable. / 新工作区已就绪，原项目仍可恢复。", "saved"); setStatus("Workspace reset as a new project.");
   });
 

@@ -6,7 +6,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const APP_VERSION = "1.4.0-dev";
+  const APP_VERSION = "1.4.0";
   const PROJECT_SCHEMA_VERSION = 4;
   const OUTPUT_DIMENSIONS = Object.freeze({
     poster: [1800, 2400], square: [1080, 1080], portrait: [1080, 1350], story: [1080, 1920], landscape: [1200, 630],
@@ -16,6 +16,7 @@
     propertyFacts: 8,
     floorPlans: 2,
     spotlights: 3,
+    leaseDetails: 9,
     includedCosts: 12,
     tenantPaidCosts: 12,
     amenities: 12,
@@ -108,11 +109,14 @@
     const items = getPath(project, `modules.${name}`);
     return Array.isArray(items) ? items : [];
   }
-  function resolvedPropertyFacts(project, preset = "poster") {
-    const facts = moduleItems(project, "propertyFacts").map((fact, order) => {
+  function allPropertyFacts(project) {
+    return moduleItems(project, "propertyFacts").map((fact, order) => {
       const value = fact.source ? getPath(project, fact.source) : fact.value;
       return {...clone(fact), value: value == null ? "" : String(value), order};
-    }).filter(fact => fact.visible !== false && populated(fact.value));
+    });
+  }
+  function resolvedPropertyFacts(project, preset = "poster") {
+    const facts = allPropertyFacts(project).filter(fact => fact.visible !== false && populated(fact.value));
     if (preset === "poster") return facts.slice(0, MODULE_LIMITS.propertyFacts);
     return facts.slice().sort((left, right) => Number(left.priority || 99) - Number(right.priority || 99) || left.order - right.order)
       .slice(0, 4).sort((left, right) => left.order - right.order);
@@ -126,7 +130,7 @@
   }
   function activeLeaseDetails(project) {
     if (profileForStatus(getPath(project, "listing.status")) !== "lease") return [];
-    return moduleItems(project, "leaseDetails").filter(item => item.state === "active" && (populated(item.valueEn) || populated(item.valueZh)));
+    return moduleItems(project, "leaseDetails").filter(item => item.state === "active" && (populated(item.valueEn) || populated(item.valueZh))).slice(0, MODULE_LIMITS.leaseDetails);
   }
   function activeIncludedCosts(project) {
     if (profileForStatus(getPath(project, "listing.status")) !== "lease") return [];
@@ -346,13 +350,17 @@
     });
 
     if (profileForStatus(getPath(project, "listing.status")) === "lease") {
+      const leaseDetails = moduleItems(project, "leaseDetails");
+      if (leaseDetails.length > MODULE_LIMITS.leaseDetails) errors.push(`modules.leaseDetails supports at most ${MODULE_LIMITS.leaseDetails} rows`);
       ["term", "availability"].forEach(id => {
-        const detail = moduleItems(project, "leaseDetails").find(item => item.id === id);
+        const detail = leaseDetails.find(item => item.id === id);
         if (!detail || detail.state !== "active" || (!populated(detail.valueEn) && !populated(detail.valueZh))) warnings.push(`Lease profile recommends a completed ${id} detail`);
       });
       activeLeaseDetails(project).forEach((item, index) => {
         if (!populated(item.valueEn)) warnings.push(`Lease detail ${index + 1} is missing English wording`);
         if ((getPath(project, "language.mode") === "chinese" || getPath(project, "language.mode") === "bilingual") && !populated(item.valueZh)) warnings.push(`Lease detail ${index + 1} is missing Chinese wording`);
+        if (`${item.labelEn || ""}: ${item.valueEn || ""}`.length > 120) errors.push(`Lease detail ${index + 1} English wording must be 120 characters or fewer`);
+        if (`${item.labelZh || ""}：${item.valueZh || ""}`.length > 120) errors.push(`Lease detail ${index + 1} Chinese wording must be 120 characters or fewer`);
       });
     }
 
@@ -702,7 +710,7 @@
         },
       },
       modules: {
-        propertyFacts: resolvedPropertyFacts(project, "poster").map(({id, icon, value, labelEn, labelZh, visible, priority, order}) => ({id, icon, value, labelEn, labelZh, visible, priority, order})),
+        propertyFacts: allPropertyFacts(project).map(({id, icon, source, value, labelEn, labelZh, visible, priority, order}) => ({id, icon, source, value, labelEn, labelZh, visible: visible !== false, priority, order})),
         floorPlans: activeFloorPlans(project).map(({role, name, fit, focal, captionEn, captionZh, noteEn, noteZh, pixelWidth, pixelHeight}) => ({role, name, fit, focal, captionEn, captionZh, noteEn, noteZh, pixelWidth, pixelHeight})),
         spotlights: activeSpotlights(project).map(({id, name, mask, focal, titleEn, titleZh, detailEn, detailZh}) => ({id, name, mask, focal, titleEn, titleZh, detailEn, detailZh})),
         leaseDetails: activeLeaseDetails(project).map(({id, labelEn, labelZh, valueEn, valueZh, state}) => ({id, labelEn, labelZh, valueEn, valueZh, state})),
@@ -737,7 +745,7 @@
   return {
     APP_VERSION, PROJECT_SCHEMA_VERSION, OUTPUT_DIMENSIONS, MODULE_LIMITS, MODULE_ORDER, COMPLIANCE_PROFILES, TYPOGRAPHY_PRESETS, clone, getPath, setPath, deepMerge, list,
     profileForStatus, activeComplianceProfile, activeTypography, buildTemplate, applyTemplate, duplicateTemplate,
-    resolvedPropertyFacts, activeFloorPlans, activeSpotlights, activeLeaseDetails, activeIncludedCosts, activeTenantPaidCosts,
+    allPropertyFacts, resolvedPropertyFacts, activeFloorPlans, activeSpotlights, activeLeaseDetails, activeIncludedCosts, activeTenantPaidCosts,
     activeAmenities, activeApplicationRequirements, costConflicts, layoutSnapshot,
     campaignCopy, buildApprovalRecord, validateProject, parseSimpleYaml, toSimpleYaml, toListingData,
     projectFromListingData, normalizeProject, canonicalStringify, diffProjects, dataUrlToBytes, crc32, makeZip,

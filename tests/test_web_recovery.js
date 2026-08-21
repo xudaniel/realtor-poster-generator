@@ -8,7 +8,7 @@ const Recovery = require("../web/recovery.js");
 function project(overrides = {}) {
   return {
     schemaVersion: 4,
-    appVersion: "1.4.0-dev",
+    appVersion: "1.4.0",
     projectId: "project-listing-a",
     listing: {address: "88 Harbour Street", unit: "2608", price: "$3,850"},
     media: {
@@ -22,7 +22,59 @@ function project(overrides = {}) {
   };
 }
 
-(() => {
+class FakeIndexedDb {
+  constructor() { this.databases = new Map(); this.failWrites = false; }
+  open(name) {
+    const request = {};
+    queueMicrotask(() => {
+      let database = this.databases.get(name);
+      const created = !database;
+      if (!database) {
+        const stores = new Map();
+        database = {
+          objectStoreNames: {contains: storeName => stores.has(storeName)},
+          createObjectStore: storeName => { const records = new Map(); stores.set(storeName, records); return {createIndex() {}}; },
+          transaction: (storeName, mode) => {
+            const transaction = {error: null};
+            const records = stores.get(storeName);
+            const finish = error => queueMicrotask(() => {
+              if (error) { transaction.error = error; if (transaction.onerror) transaction.onerror(); }
+              else if (transaction.oncomplete) transaction.oncomplete();
+            });
+            const requestFor = operation => {
+              const child = {};
+              queueMicrotask(() => {
+                try { child.result = operation(); if (child.onsuccess) child.onsuccess(); finish(); }
+                catch (error) { child.error = error; if (child.onerror) child.onerror(); finish(error); }
+              });
+              return child;
+            };
+            transaction.objectStore = () => ({
+              put: value => {
+                queueMicrotask(() => {
+                  if (this.failWrites) { finish(Object.assign(new Error("quota full"), {name: "QuotaExceededError"})); return; }
+                  records.set(value.projectId, JSON.parse(JSON.stringify(value))); finish();
+                });
+              },
+              get: key => requestFor(() => records.has(key) ? JSON.parse(JSON.stringify(records.get(key))) : undefined),
+              getAll: () => requestFor(() => [...records.values()].map(value => JSON.parse(JSON.stringify(value)))),
+              delete: key => queueMicrotask(() => { records.delete(key); finish(); }),
+              clear: () => queueMicrotask(() => { records.clear(); finish(); }),
+            });
+            return transaction;
+          },
+        };
+        this.databases.set(name, database);
+      }
+      request.result = database;
+      if (created && request.onupgradeneeded) request.onupgradeneeded();
+      if (request.onsuccess) request.onsuccess();
+    });
+    return request;
+  }
+}
+
+(async () => {
   assert.equal(Recovery.SNAPSHOT_KIND, "realtor-poster-recovery");
   assert.equal(Recovery.RECOVERY_SCHEMA_VERSION, 1);
 
@@ -61,15 +113,34 @@ function project(overrides = {}) {
   assert.equal(Recovery.validateSnapshot({...snapshot, project: null}).ok, false);
   assert.equal(Recovery.validateSnapshot({...snapshot, projectId: "project-mismatch"}).ok, false);
 
+  const indexedDb = new FakeIndexedDb();
+  const store = new Recovery.IndexedDbDraftStore(indexedDb, {databaseName: "recovery-integration"});
+  await store.open();
+  await store.save(older); await store.save(newer);
+  assert.equal((await store.get("project-old")).projectName, older.projectName);
+  assert.deepEqual((await store.list()).map(item => item.projectId), ["project-new", "project-old"]);
+  assert.equal((await store.latest()).projectId, "project-new");
+  await store.delete("project-old");
+  assert.equal(await store.get("project-old"), null);
+  await store.clear();
+  assert.deepEqual(await store.list(), []);
+  indexedDb.failWrites = true;
+  await assert.rejects(store.save(newer), /quota full/);
+
   const app = fs.readFileSync(path.join(__dirname, "../web/app.js"), "utf8");
   const html = fs.readFileSync(path.join(__dirname, "../web/index.html"), "utf8");
   assert.match(app, /before-png-export/);
   assert.match(app, /before-pdf-export/);
   assert.match(app, /before-reset/);
+  assert.match(app, /before-open-project", \{requireSaved: true\}/);
+  assert.match(app, /before-import-listing", \{requireSaved: true\}/);
+  assert.match(app, /before-template-import", \{requireSaved: true\}/);
+  assert.match(app, /before-compliance-import", \{requireSaved: true\}/);
+  assert.match(app, /before-reset", \{requireSaved: true\}/);
   assert.match(app, /visibility-hidden/);
   assert.match(app, /BroadcastChannel/);
   assert.match(html, /id="restore-draft"/);
   assert.match(html, /src="recovery\.js"/);
 
   console.log("Browser recovery tests passed.");
-})();
+})().catch(error => { console.error(error); process.exit(1); });

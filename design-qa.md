@@ -4,7 +4,7 @@
 
 - Reference: `/var/folders/b7/57f0jdc92vxfxymp3y3mpz7c0000gn/T/codex-clipboard-4af1ec7d-503c-4fc8-9f64-cda5f0abbaf5.png` (1002 × 1080)
 - Implementation: local browser editor at `http://127.0.0.1:8765/`
-- Browser identifier: `1.4.0-dev`
+- Browser identifier: `1.4.0`
 - Project schema: 4
 - Print artwork: 1800 × 2400 canvas, displayed at 776 × 1035 during the final desktop pass
 - Final evidence:
@@ -81,6 +81,14 @@ Cross-cutting issue #20 also preserves the complete schema-driven project and lo
 - Restore recovered the hero, two gallery images, two plans, the spotlight, project fields, and the checked application confirmation.
 - Browser-local recovery remained isolated from cloud upload and analytics.
 
+## Release-hardening verification
+
+- Destructive imports and reset stop when the required pre-action recovery snapshot fails.
+- The print composition preserves all four feature statements and renders the first ordered interior photo with the available floor plans.
+- Nine lease rows use multiline wrapping, and maximum twelve-item responsibility grids keep icons, labels, and verify states separated.
+- Provenance output records hidden property facts with original order, shared source path, and resolved value.
+- Automated IndexedDB coverage performs save, read, list, latest, delete, clear, and simulated write-failure operations.
+
 ## Final result
 
 - Preflight: 0 errors, 0 warnings.
@@ -88,4 +96,4 @@ Cross-cutting issue #20 also preserves the complete schema-driven project and lo
 - Automated checks: browser core tests, browser recovery tests, minimum/typical/maximum/bilingual layout-contract goldens, Python unit tests, JavaScript syntax checks, and whitespace validation all pass.
 - Remaining P0/P1/P2 design findings: none.
 
-The complete Stories 1–10 implementation is ready for branch review. Formal merge, GitHub Pages deployment, and final v1.4.0 release publication remain separate decisions.
+The complete Stories 1–10 implementation and release-hardening pass are ready for the v1.4.0 publication workflow.

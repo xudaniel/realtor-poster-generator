@@ -50,7 +50,7 @@ function project() {
 }
 
 (async () => {
-  assert.equal(Core.APP_VERSION, "1.4.0-dev");
+  assert.equal(Core.APP_VERSION, "1.4.0");
   assert.equal(Core.PROJECT_SCHEMA_VERSION, 4);
 
   const valid = Core.validateProject(project());
@@ -152,6 +152,9 @@ function project() {
   assert.ok(!Core.resolvedPropertyFacts(factsProject, "square").some(fact => fact.id === "floor"));
   factsProject.listing.beds = "3";
   assert.equal(Core.resolvedPropertyFacts(factsProject, "poster")[0].value, "3");
+  factsProject.modules.propertyFacts[0].visible = false;
+  assert.equal(Core.allPropertyFacts(factsProject)[0].value, "3");
+  assert.equal(Core.allPropertyFacts(factsProject)[0].visible, false);
   const tooManyFacts = project();
   tooManyFacts.modules.propertyFacts = Array.from({length: 9}, (_, index) => ({id: `fact-${index}`, icon: "photo", value: String(index), labelEn: "Fact", labelZh: "信息", visible: true, priority: index + 1}));
   assert.match(Core.validateProject(tooManyFacts).errors.join("\n"), /at most 8 facts/);
@@ -184,6 +187,11 @@ function project() {
   assert.deepEqual(Core.activeApplicationRequirements(saleTerms), []);
   const missingLeaseTerm = project(); missingLeaseTerm.modules.leaseDetails.find(item => item.id === "term").state = "hidden";
   assert.match(Core.validateProject(missingLeaseTerm).warnings.join("\n"), /completed term detail/);
+  const tooManyLeaseDetails = project(); tooManyLeaseDetails.modules.leaseDetails = Array.from({length: 10}, (_, index) => ({id: `lease-${index}`, labelEn: "Term", labelZh: "条件", valueEn: "Provided", valueZh: "已提供", state: "active"}));
+  assert.match(Core.validateProject(tooManyLeaseDetails).errors.join("\n"), /at most 9 rows/);
+  assert.equal(Core.activeLeaseDetails(tooManyLeaseDetails).length, 9);
+  const longLeaseDetail = project(); longLeaseDetail.modules.leaseDetails[0].valueEn = "x".repeat(121);
+  assert.match(Core.validateProject(longLeaseDetail).errors.join("\n"), /120 characters or fewer/);
 
   const conflictProject = project(); conflictProject.modules.tenantPaidCosts.push({id: "water", labelEn: "Water", labelZh: "水费", state: "tenant-paid"});
   assert.deepEqual(Core.costConflicts(conflictProject), ["Water"]);
@@ -234,9 +242,10 @@ function project() {
 
   const output = {name: "poster.png", data: new Uint8Array([1, 2, 3, 4])};
   planProject.modules.spotlights = spotlightProject.modules.spotlights;
+  planProject.modules.propertyFacts[4].visible = false;
   planProject.contact.portraitMode = "photo"; planProject.media.portraitName = "agent.png"; planProject.media.portraitDataUrl = "data:image/png;base64,BA==";
   const manifest = await Core.buildManifest(planProject, [output]);
-  assert.equal(manifest.generator, "realtor-poster-studio 1.4.0-dev");
+  assert.equal(manifest.generator, "realtor-poster-studio 1.4.0");
   assert.equal(manifest.outputs[0].filename, "poster.png");
   assert.equal(manifest.outputs[0].sha256.length, 64);
   assert.equal(manifest.compliance.profile, "Residential lease");
@@ -244,6 +253,8 @@ function project() {
   assert.equal(manifest.language.typographyStyle, "editorial");
   assert.ok(manifest.language.fonts.some(font => font.includes("PingFang SC")));
   assert.equal(manifest.modules.propertyFacts.length, 5);
+  assert.equal(manifest.modules.propertyFacts[4].visible, false);
+  assert.equal(manifest.modules.propertyFacts[4].order, 4);
   assert.equal(manifest.modules.floorPlans.length, 2);
   assert.equal(manifest.modules.spotlights.length, 1);
   assert.equal(manifest.modules.leaseDetails.length, 2);

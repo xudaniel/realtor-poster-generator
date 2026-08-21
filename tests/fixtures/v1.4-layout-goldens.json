@@ -11,12 +11,12 @@
   },
   {
     "name": "maximum",
-    "input": {"preset": "poster", "status": "FOR LEASE", "language": "english", "portraitMode": "photo", "facts": 8, "floorPlans": 2, "spotlights": 3, "leaseDetails": 10, "includedCosts": 12, "tenantPaidCosts": 12, "amenities": 12, "applicationRequirements": 10},
-    "expected": {"preset": "poster", "width": 1800, "height": 2400, "language": "english", "portraitMode": "photo", "moduleOrder": ["propertyFacts", "floorPlans", "spotlights", "leaseDetails", "includedCosts", "tenantPaidCosts", "amenities", "applicationRequirements", "agentProfile"], "counts": {"propertyFacts": 8, "floorPlans": 2, "spotlights": 3, "leaseDetails": 10, "includedCosts": 12, "tenantPaidCosts": 12, "amenities": 12, "applicationRequirements": 10, "agentProfile": 1}}
+    "input": {"preset": "poster", "status": "FOR LEASE", "language": "english", "portraitMode": "photo", "facts": 8, "floorPlans": 2, "spotlights": 3, "leaseDetails": 9, "includedCosts": 12, "tenantPaidCosts": 12, "amenities": 12, "applicationRequirements": 10},
+    "expected": {"preset": "poster", "width": 1800, "height": 2400, "language": "english", "portraitMode": "photo", "moduleOrder": ["propertyFacts", "floorPlans", "spotlights", "leaseDetails", "includedCosts", "tenantPaidCosts", "amenities", "applicationRequirements", "agentProfile"], "counts": {"propertyFacts": 8, "floorPlans": 2, "spotlights": 3, "leaseDetails": 9, "includedCosts": 12, "tenantPaidCosts": 12, "amenities": 12, "applicationRequirements": 10, "agentProfile": 1}}
   },
   {
     "name": "bilingual-social-reduction",
-    "input": {"preset": "story", "status": "FOR LEASE", "language": "bilingual", "portraitMode": "illustrated", "facts": 8, "floorPlans": 2, "spotlights": 3, "leaseDetails": 10, "includedCosts": 5, "tenantPaidCosts": 4, "amenities": 12, "applicationRequirements": 10},
+    "input": {"preset": "story", "status": "FOR LEASE", "language": "bilingual", "portraitMode": "illustrated", "facts": 8, "floorPlans": 2, "spotlights": 3, "leaseDetails": 9, "includedCosts": 5, "tenantPaidCosts": 4, "amenities": 12, "applicationRequirements": 10},
     "expected": {"preset": "story", "width": 1080, "height": 1920, "language": "bilingual", "portraitMode": "illustrated", "moduleOrder": ["propertyFacts", "includedCosts", "tenantPaidCosts", "agentProfile"], "counts": {"propertyFacts": 4, "floorPlans": 0, "spotlights": 0, "leaseDetails": 0, "includedCosts": 2, "tenantPaidCosts": 2, "amenities": 0, "applicationRequirements": 0, "agentProfile": 1}}
   }
 ]
