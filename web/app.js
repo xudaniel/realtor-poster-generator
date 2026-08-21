@@ -115,6 +115,7 @@
   const images = {hero: null, portrait: null, logoLight: null, logoDark: null, gallery: [], floorplans: [], spotlights: [], icons: {}};
   const canvas = document.getElementById("poster-canvas");
   const status = document.getElementById("status");
+  const validationSummary = document.getElementById("validation-summary");
   const focalPad = document.getElementById("focal-pad");
   const focalMarker = document.getElementById("focal-marker");
   const focalEmpty = document.getElementById("focal-empty");
@@ -840,15 +841,62 @@
   function applyLocks() {
     document.querySelectorAll("[data-path]").forEach(input => { input.disabled = state.template.lockedFields.includes(input.dataset.path); });
   }
+  function preflightItemHtml(item, tone) {
+    return `<article class="preflight-item preflight-item-${tone}">
+      <span class="preflight-symbol" aria-hidden="true">${tone === "warning" ? "i" : "!"}</span>
+      <div class="preflight-copy"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.detail)}</p></div>
+      <button class="preflight-action" type="button" data-preflight-action data-target-id="${escapeHtml(item.targetId || "")}" data-target-path="${escapeHtml(item.targetPath || "")}">${escapeHtml(item.actionLabel)}</button>
+    </article>`;
+  }
+  function resolvePreflightTarget(targetId, targetPath) {
+    if (targetId) return document.getElementById(targetId);
+    if (!targetPath) return document.getElementById("compliance-section");
+    const exact = [...document.querySelectorAll("[data-path]")].find(input => input.dataset.path === targetPath);
+    if (exact) return exact;
+    if (targetPath.startsWith("modules.")) {
+      const collection = targetPath.split(".")[1];
+      const editorIds = {propertyFacts: "facts-editor", spotlights: "spotlights-editor", leaseDetails: "lease-editor", includedCosts: "costs-editor", tenantPaidCosts: "tenant-costs-editor", amenities: "amenities-editor", applicationRequirements: "requirements-editor"};
+      return document.querySelector(`[data-collection="${collection}"]`) || document.getElementById(editorIds[collection]);
+    }
+    if (targetPath === "media.heroDataUrl") return document.getElementById("hero-upload");
+    if (targetPath === "media.gallery") return document.getElementById("gallery-upload");
+    if (targetPath.startsWith("media.portrait")) return document.getElementById("portrait-upload");
+    if (targetPath.startsWith("media.floorplans")) return document.getElementById("plans-editor");
+    if (targetPath.startsWith("media.") || targetPath === "focal") return document.getElementById("media-section") || focalPad;
+    if (targetPath.startsWith("mlsImport.")) return document.getElementById("mls-section");
+    return document.getElementById("compliance-section");
+  }
+  function focusPreflightTarget(target) {
+    if (!target) return;
+    const disclosure = target.closest("details"); if (disclosure) disclosure.open = true;
+    let focusTarget = target;
+    if (target.matches("details")) focusTarget = target.querySelector("summary") || target;
+    else if (!target.matches("input,select,textarea,button,[tabindex]")) focusTarget = target.querySelector("input:not([type=file]),select,textarea,button") || target;
+    if (focusTarget.disabled) focusTarget = focusTarget.closest("label") || target;
+    if (!focusTarget.matches("input,select,textarea,button,a,[tabindex]")) focusTarget.setAttribute("tabindex", "-1");
+    focusTarget.scrollIntoView({block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+    requestAnimationFrame(() => focusTarget.focus({preventScroll: true}));
+  }
   function updateValidation() {
-    const result = Core.validateProject(state); const container = document.getElementById("validation-summary");
+    const result = Core.validateProject(state); const presentation = Core.preflightPresentation(state, result); const container = validationSummary;
     container.className = `validation-summary ${result.errors.length ? "is-blocked" : result.warnings.length ? "has-warnings" : "is-ready"}`;
-    if (result.errors.length) container.innerHTML = `<strong>Export blocked · ${result.errors.length} issue${result.errors.length === 1 ? "" : "s"}</strong><ul>${result.errors.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>${result.warnings.length ? `<strong>Warnings</strong><ul>${result.warnings.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}`;
-    else if (result.warnings.length) container.innerHTML = `<strong>Ready with ${result.warnings.length} warning${result.warnings.length === 1 ? "" : "s"}</strong><ul>${result.warnings.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
-    else container.innerHTML = "<strong>Preflight passed</strong>Configured required fields and media are ready for export.";
+    const warningPanel = presentation.warnings.length ? `<section class="preflight-panel preflight-panel-warning" aria-labelledby="preflight-warning-title">
+      <div class="preflight-heading"><div><span class="preflight-kicker">Warning</span><strong id="preflight-warning-title">Review ${presentation.warnings.length} non-blocking notice${presentation.warnings.length === 1 ? "" : "s"}</strong></div></div>
+      <div class="preflight-list">${presentation.warnings.map(item => preflightItemHtml(item, "warning")).join("")}</div>
+    </section>` : "";
+    if (presentation.blockers.length) container.innerHTML = `<section class="preflight-panel preflight-panel-blocked" role="alert" aria-labelledby="preflight-blocked-title" aria-atomic="true">
+      <div class="preflight-heading"><div><span class="preflight-kicker">Action required</span><strong id="preflight-blocked-title">Export blocked</strong><p>Complete ${presentation.blockers.length} action${presentation.blockers.length === 1 ? "" : "s"} before exporting.</p></div><span class="preflight-count">${presentation.blockers.length}</span></div>
+      <div class="preflight-list">${presentation.blockers.map(item => preflightItemHtml(item, "blocked")).join("")}</div>
+    </section>${warningPanel}`;
+    else if (presentation.warnings.length) container.innerHTML = `<section class="preflight-panel preflight-panel-ready"><div class="preflight-heading"><div><span class="preflight-kicker">Export available</span><strong>Ready with warnings</strong><p>Warnings do not block export, but should be reviewed before publication.</p></div></div></section>${warningPanel}`;
+    else container.innerHTML = `<section class="preflight-panel preflight-panel-ready" role="status"><div class="preflight-heading"><div><span class="preflight-kicker">Ready</span><strong>Preflight passed</strong><p>Configured required fields and media are ready for export.</p></div></div></section>`;
     document.getElementById("active-profile").textContent = `Compliance: ${result.profile.name} ${result.profile.version} · Template: ${state.template.name} ${state.template.version} · Language: ${state.language.mode}`;
     return result;
   }
+  validationSummary.addEventListener("click", event => {
+    const action = event.target.closest("[data-preflight-action]"); if (!action) return;
+    focusPreflightTarget(resolvePreflightTarget(action.dataset.targetId, action.dataset.targetPath));
+  });
   function exportGuard() {
     const result = updateValidation();
     if (!result.errors.length) return true;

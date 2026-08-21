@@ -8,7 +8,7 @@ const Recovery = require("../web/recovery.js");
 function project(overrides = {}) {
   return {
     schemaVersion: 5,
-    appVersion: "1.4.1",
+    appVersion: "1.4.2",
     projectId: "project-listing-a",
     listing: {address: "88 Harbour Street", unit: "2608", price: "$3,850"},
     media: {
