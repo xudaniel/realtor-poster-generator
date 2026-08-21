@@ -2,6 +2,42 @@
 
 All notable changes to Realtor Poster Generator are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-08-20
+
+See the bilingual [v1.4.0 release notes](RELEASE_NOTES_v1.4.0.md).
+
+### Added
+
+- Reorderable, hideable property-facts ribbon with up to eight shared values, bilingual labels, accessible text, and four-fact social priorities
+- Two independent browser-local floor-plan slots for furnished 3D and technical 2D plans, including contain, fit-width, crop, focal, caption, note, pixel-dimension, and SHA-256 metadata
+- Up to three image-led bilingual feature spotlights with circle, rounded-square, and rectangle masks
+- Structured bilingual lease-detail rows with active, not-applicable, and hidden states plus sale-campaign collapse
+- Reorderable rent-included costs with locally bundled MIT-licensed Tabler icons, unknown/verify states, and conflict warnings
+- Reorderable tenant-paid costs with blocking duplicate detection against rent inclusions
+- Up to twelve ordered bilingual amenities with reusable locally bundled icons and clean empty-state collapse
+- Up to ten bilingual application requirements with explicit confirmation and disclaimer export gates
+- Branded agent profile and CTA footer with photo, illustrated, initials, and no-portrait modes plus focal controls and bilingual contact copy
+- Complete original modular print layout plus compact social summaries for the new cost modules
+- Browser project schema version 4 and `1.4.0` browser generator metadata
+- Cross-cutting v1.4 recovery for complete editor projects and local images using IndexedDB, with debounced autosave, pre-export/reset/import snapshots, bilingual restore controls, per-project isolation, scroll restoration, storage warnings, and cross-tab conflict detection ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20))
+- Browser recovery tests for snapshot completeness, version compatibility, project identity, newest-draft selection, IndexedDB CRUD/write failures, and action hooks
+- Deterministic v1.4 layout-contract golden fixtures for minimum, typical, maximum, and bilingual social-reduction projects
+
+### Changed
+
+- Print artwork now uses an original high-information modular hierarchy inspired by the supplied reference without copying its assets, wording, icons, colours, or geometry
+- Project files, listing interchange, comparisons, manifests, and approval packages now preserve all ten v1.4 story modules and their local image hashes
+- Browser documentation and product requirements now describe v1.4 Stories 1–10 in English and Chinese
+
+### Fixed
+
+- Destructive imports and resets now stop when their required pre-action recovery snapshot cannot be saved
+- Print output now preserves the first ordered interior photo and all four configured feature statements
+- Lease details have a validated nine-row maximum with multiline print rendering
+- Twelve-item responsibility grids use dense spacing that prevents labels, icons, and verify markers from colliding
+- Provenance manifests preserve hidden property facts, original order, source path, and resolved value
+- Shared-value property-fact controls refresh immediately when their referenced listing field changes
+
 ## [1.3.0] - 2026-08-20
 
 See the complete [bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md).
@@ -64,4 +100,5 @@ See the complete [bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md).
 [1.2.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.2.0
 [1.2.1]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.2.1
 [1.3.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.3.0
+[1.4.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.0
 [1.0.0]: https://github.com/xudaniel/realtor-poster-generator/commits/main/
