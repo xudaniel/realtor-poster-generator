@@ -2,11 +2,11 @@
 
 [![Tests](https://img.shields.io/github/actions/workflow/status/xudaniel/realtor-poster-generator/ci.yml?branch=main&label=tests)](https://github.com/xudaniel/realtor-poster-generator/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-d6a25e.svg)](LICENSE)
-[![Browser local](https://img.shields.io/badge/privacy-browser--local-2f7654.svg)](web/)
+[![Manual mode local](https://img.shields.io/badge/privacy-manual_mode_local-2f7654.svg)](web/)
 
 Created and maintained by **Daniel Xu**. 由 **Daniel Xu** 创建并维护。
 
-[中文 README](README.md) · [Bilingual v1.4.0 release notes](RELEASE_NOTES_v1.4.0.md) · [v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+[中文 README](README.md) · [v2 MLS candidate notes / v2 MLS 候选说明](RELEASE_NOTES_v2.0.0-candidate.md) · [Bilingual v1.4.0 release notes](RELEASE_NOTES_v1.4.0.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
 Current stable version: **1.4.0** · browser project schema: **4**
 
@@ -28,7 +28,7 @@ Open the [live editor](https://xudaniel.github.io/realtor-poster-generator/) for
 4. Save versioned templates with selectively locked brand fields and switch among English, Chinese, and bilingual artwork.
 5. Preview five formats, download PNG, print to PDF, or export a social ZIP, SHA-256 manifest, and complete approval package.
 
-Photos, contact details, and project files remain in browser-local storage on the current device and are not uploaded to a server. The editor contains no analytics code. It can also run entirely on your computer:
+Manual photos, contact details, and project files remain in browser-local storage on the current device and are not uploaded to a server. The editor contains no analytics code. The v2 candidate makes one network request only after the user selects an authorized connector and presses Generate; the bundled `DEMO1234` fixture remains offline. It can also run entirely on your computer:
 
 ```bash
 python3 scripts/serve_web.py
@@ -67,6 +67,7 @@ The v1.4 editor also autosaves the complete editable project—including browser
 - v1.4 adds photo, illustrated, initials, and no-portrait agent profiles with bilingual calls to action
 - v1.4 unifies print and social artwork under an original dark-green/gold modular layout with priority-aware responsive reduction
 - v1.4 cross-cutting recovery ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20)) preserves editable fields and local images after generation, export, reload, reset, or project replacement without changing Stories 1–10 numbering
+- v2 candidate: enter one MLS number through a fictional demo or explicitly configured authorized connector to create a complete editable project with source and image-rights provenance
 
 ## v1.4 release: Stories 1–10
 
@@ -77,6 +78,12 @@ Floor plans, spotlight images, and agent portraits remain in browser-local stora
 Application requirements are informational, not automated eligibility screening. Whenever requirements are active, export requires an explicit user confirmation and a visible disclaimer. If an agent portrait is absent or unavailable, the layout falls back to initials rather than displaying a broken image.
 
 Issue #20 is a cross-cutting v1.4 foundation rather than Story 11. It stores the schema-driven project as one recovery snapshot, so fields and assets introduced by the numbered v1.4 modules inherit the same autosave and recovery path instead of creating competing persistence systems.
+
+## v2 candidate: authorized MLS-number generation
+
+Issue [#22](https://github.com/xudaniel/realtor-poster-generator/issues/22) adds an opt-in provider boundary. Enter `DEMO1234` to test a fictional listing without a network request, or choose a separately operated, already-authenticated connector. The connector must return one exact provider/board/MLS/status/address/unit match and explicit export rights for each image. The editor maps only returned facts, preserves agent/brand/template settings, records per-field provenance and local overrides, and never invents or translates listing claims.
+
+Exports remain blocked until the responsible user reviews imported facts, current listing status, disclosures, application requirements, and image rights. Refresh shows changed fields before replacement and uses the v1.4 recovery snapshot path. The browser accepts no MLS password, API key, or bearer token and does not scrape listing pages. See the [English connector contract](docs/MLS_CONNECTOR.en.md) and [candidate release notes](RELEASE_NOTES_v2.0.0-candidate.md).
 
 ## Quick start
 
@@ -294,6 +301,9 @@ realtor_poster/preview.py           Offline hero-focal and layout preview
 realtor_poster/visual_regression.py Visual-difference metrics and diff images
 web/                                Complete browser-local campaign editor with no uploads
 web/core.js                         Project schema, validation, YAML, manifests, and comparison
+web/mls.js                          Authorized MLS connector contract, demo provider, mapping, and provenance
+docs/MLS_CONNECTOR.en.md            English connector protocol and trust boundary
+docs/MLS_CONNECTOR.md               中文连接器协议与信任边界
 scripts/new_listing.py              Interactive agent questionnaire
 scripts/create_sample_assets.py     Fictional sample-asset generator
 scripts/serve_web.py                Local browser-editor server
@@ -304,6 +314,7 @@ examples/assets/                    Fictional sample images and logo
 input_template.yaml                 Copyable listing-data template
 tests/test_poster.py                Python and static browser tests
 tests/test_web_core.js              Browser-core unit tests
+tests/test_web_mls.js               Mock-only MLS validation, mapping, rights, and provenance tests
 outputs/                            Generated artwork and manifests
 PRD.md                              中文产品需求文档
 PRD.en.md                           English product requirements document
@@ -314,8 +325,8 @@ PRD.en.md                           English product requirements document
 ```bash
 python scripts/create_sample_assets.py
 python -m unittest discover -s tests -v
-node --check web/app.js
-node tests/test_web_core.js
+node --check web/app.js && node --check web/mls.js
+node tests/test_web_core.js && node tests/test_web_recovery.js && node tests/test_web_mls.js && node tests/test_web_layout_goldens.js
 ```
 
 Coverage includes:
@@ -330,6 +341,7 @@ Coverage includes:
 - Multi-listing discovery, preflight validation, and batch output
 - Browser-editor privacy boundaries, export functions, and core assets
 - Browser YAML round-trips, compliance gates, template manifests, approval requirements, and project comparison
+- Exact MLS match validation, connector request limits, deterministic schema mapping, rights exclusion, source provenance, refresh differences, recovery round-trips, and review invalidation
 - Multi-version Python CI, JavaScript syntax, sample rendering, and package builds
 
 ## Pre-publication checklist

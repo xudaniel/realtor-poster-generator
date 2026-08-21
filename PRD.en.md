@@ -6,9 +6,9 @@
 
 - Product: Realtor Poster Generator
 - Current stable version: 1.4.0
-- Current release scope: Stories 1–10 plus cross-cutting recovery issue #20
+- Current release scope: stable Stories 1–10 plus cross-cutting recovery issue #20; v2 authorized MLS-number candidate in Issue #22
 - Language: English
-- Product forms: browser-local visual editor, local Python command-line tools, and a self-contained offline HTML preview
+- Product forms: browser-local manual visual editor, opt-in authorized MLS connector, local Python command-line tools, and a self-contained offline HTML preview
 - Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON/YAML, template and compliance profiles, approval ZIP, provenance manifest JSON, batch summary JSON, and focal-preview HTML
 
 ## 2. Background
@@ -42,10 +42,11 @@ The product transforms structured listing data into a professional vertical post
 12. Provide equivalent English and Chinese user and product documentation.
 13. Gate browser exports with configurable compliance preflight and preserve a traceable local review record.
 14. Make brand templates and bilingual content portable, reusable, and selectively lockable.
+15. Let an authorized user resolve one exact MLS number into a complete editable project while retaining field and image-rights provenance.
 
 ### 3.2 Non-goals
 
-- Directly retrieving listing data from an MLS® system
+- Scraping listing pages, bypassing MLS/data-provider authorization, or storing provider credentials in the static application
 - Automatically publishing to social-media or real-estate platforms
 - Deciding whether an advertisement is legal or factually accurate
 - Generating or altering real listing photographs
@@ -101,6 +102,10 @@ An agent opens the hosted or locally served visual editor, enters complete listi
 
 An agent generates or exports a poster, notices an error, returns to the editor, restores the latest local draft when needed, corrects only the affected field, and regenerates the artwork without re-entering unaffected information or reselecting recoverable images.
 
+### Use case I: generate from one authorized MLS number
+
+An authorized agent selects a separately operated connector, enters one MLS number, receives one exact listing match, reviews mapped facts and permitted media, corrects any local exceptions, and exports only after the MLS, application, compliance, and image-rights review gates pass. `DEMO1234` supplies a fictional offline evaluation path.
+
 ## 6. User flow
 
 1. Install Python dependencies or open the browser editor.
@@ -115,6 +120,8 @@ An agent generates or exports a poster, notices an error, returns to the editor,
 10. Run visual regression for important templates.
 11. Complete factual, compliance, and visual review.
 12. Publish or print the final artwork.
+
+For the v2 candidate, steps 2–4 may begin with the explicit MLS-number flow. The editor must save a recovery snapshot before replacing current data, show refresh differences, and retain the complete imported project afterward.
 
 The browser editor provides a complete no-install path for entering all core details; managing the hero, interiors, floor plan, and dual logos; setting the focal point; running validation aligned with Python rules; using compliance profiles and brand templates; previewing five formats in three language modes; and exporting PNG, browser-printed PDF, project JSON/YAML, a social ZIP, a manifest, or an approval package. Folder batch processing and pixel-level visual regression remain Python command-line workflows.
 
@@ -313,6 +320,18 @@ The system must provide:
 - Direct language-switching links at the beginning of every document.
 - The same current version and implemented feature scope in both languages.
 
+### 7.15 Authorized MLS-number generation candidate
+
+- The browser must make no MLS request until the user explicitly chooses an authorized connector and presses Generate.
+- Production connector URLs must use HTTPS; loopback HTTP is allowed only for development. URLs must not contain credentials, query tokens, or fragments.
+- The connector must return exactly one confirmed provider/board/MLS/status/address/unit match and an active supported listing status.
+- Mapping must be deterministic and must not invent, translate, summarize, or rewrite listing claims.
+- The v1.4 modules for lease details, rent inclusions, tenant-paid costs, amenities, application requirements, permitted images, and paired floor plans must map into the existing schema without removing agent, brand, theme, template, or compliance data.
+- Every imported field and media record must retain provider, listing, retrieval, source-ID, rights, and local-override metadata. Media without explicit export permission must not enter artwork.
+- Refresh must show differences and require confirmation before replacing imported or locally edited values.
+- Imported-project exports must remain blocked until a user reviews facts, current status, disclosures, application requirements, and image rights. Editing imported data or media invalidates that review.
+- The browser must accept no MLS password, API key, bearer token, or real provider fixture; authentication and provider secrets belong in the separately operated connector.
+
 ## 8. Non-functional requirements
 
 ### 8.1 Compatibility
@@ -348,7 +367,8 @@ The system must provide:
 
 ### 8.5 Privacy
 
-- The browser editor must not upload listing data or images.
+- Manual editing and the fictional demo must not upload listing data or images.
+- The authorized connector may receive only the normalized MLS number after an explicit Generate action; no background lookup is permitted.
 - It must not include analytics or tracking code.
 - Portable project files must be created only through an explicit user action.
 - Manifests must avoid unnecessary absolute local paths and personal data.
@@ -401,6 +421,13 @@ The v1.4.0 release is acceptable when:
 42. Reset and project/template/compliance imports require confirmation and a pre-action recovery snapshot; users can also download a portable project and explicitly clear local drafts.
 43. Storage quota, restricted browser mode, corrupt/incompatible recovery data, and cross-tab conflicts produce visible bilingual warnings rather than silent data loss.
 44. Automated recovery tests cover full image-bearing snapshots, project isolation, newest-record selection, schema compatibility, and generation/export/reset recovery hooks.
+45. `DEMO1234` generates a complete fictional v1.4 project without a network request or real listing data.
+46. An authorized connector accepts one normalized MLS number and rejects insecure/token-bearing URLs, non-unique or inexact matches, unsupported/withdrawn statuses, oversized or malformed responses, and provider errors with bilingual messages.
+47. Imported listing facts, all supported structured modules, permitted images, and floor plans are deterministically mapped while saved agent, brand, theme, template, and compliance settings remain intact.
+48. Media lacking explicit export rights is excluded; projects and manifests retain source IDs, dimensions, ordering, rights basis, confirmation time, and local media overrides.
+49. Project JSON/YAML round-trips retain the MLS source record, per-field provenance, retrieval/import times, refresh count, blocked-media record, and user overrides.
+50. Import and refresh use Issue #20 snapshots; refresh shows changed fields and requires confirmation before replacement, and failure preserves the current editor state.
+51. Publication export is blocked until both application-requirement confirmation and explicit MLS fact/status/disclosure/image-rights review pass; editing an imported field or image invalidates MLS review.
 
 ## 10. Risks and mitigations
 
@@ -419,6 +446,9 @@ The v1.4.0 release is acceptable when:
 | Newer work overwritten by another browser tab | Per-project identifiers, BroadcastChannel conflict detection, and paused autosave until user resolution |
 | Browser storage unavailable or full | Explicit bilingual warning and manual portable-project backup; never claim that a failed save succeeded |
 | English and Chinese documentation drifting | Same-release version updates, direct links, and scope checks |
+| Unauthorized or stale listing data | Explicit provider selection, exact-match contract, active-status validation, retrieval timestamps, stale warnings, and mandatory human review |
+| Unlicensed provider images | Default-deny media rights, blocked-media records, explicit rights review, and source metadata in manifests |
+| Connector secrets exposed in static hosting | No browser token fields; secure session authentication and all provider credentials remain in the separately operated connector |
 
 ## 11. Roadmap
 
@@ -455,6 +485,7 @@ The v1.4.0 release is acceptable when:
 
 ### 2.0 candidates
 
+- Issue #22 authorized MLS-number import foundation with fictional offline fixture, exact-match contract, provenance, rights filtering, recovery, refresh comparison, and review gates
 - Optional desktop application
 - Shared brokerage-team configurations
 - External listing-data integration only after explicit authorization

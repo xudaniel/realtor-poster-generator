@@ -435,6 +435,18 @@
       if (!String(getPath(project, "review.reviewer") || "").trim()) errors.push("Approved projects require review.reviewer");
       if (!String(getPath(project, "review.reviewedAt") || "").trim()) errors.push("Approved projects require review.reviewedAt");
     }
+    const mlsImport = getPath(project, "mlsImport");
+    if (mlsImport) {
+      const normalizeMls = value => String(value || "").trim().toUpperCase().replace(/\s+/g, "");
+      if (normalizeMls(getPath(project, "listing.mls")) !== normalizeMls(mlsImport.listingNumber)) errors.push("Imported MLS number no longer matches the connected source record");
+      if (!String(mlsImport.humanReviewedAt || "").trim()) errors.push("Imported MLS facts require explicit human review before export");
+      if ((mlsImport.blockedMedia || []).length && !String(mlsImport.rightsReviewedAt || "").trim()) errors.push("Restricted MLS images require replacement or explicit rights review before export");
+      if ((mlsImport.missingFields || []).length) warnings.push(`MLS import is missing ${mlsImport.missingFields.length} required source field${mlsImport.missingFields.length === 1 ? "" : "s"}`);
+      const overrides = Object.values(mlsImport.fieldSources || {}).filter(detail => detail && detail.overriddenAt);
+      if (overrides.length) warnings.push(`${overrides.length} imported field${overrides.length === 1 ? " has" : "s have"} local user overrides`);
+      const retrievedAt = new Date(mlsImport.retrievedAt).getTime();
+      if (Number.isFinite(retrievedAt) && Date.now() - retrievedAt > 24 * 60 * 60 * 1000) warnings.push("MLS source data is more than 24 hours old");
+    }
     return {errors: [...new Set(errors)], warnings: [...new Set(warnings)], profile};
   }
 
@@ -537,6 +549,7 @@
       studio: {
         project_schema_version: PROJECT_SCHEMA_VERSION, language_mode: project.language.mode,
         compliance: clone(project.compliance), template: clone(project.template), review: clone(project.review), media: clone(project.media), modules: clone(project.modules),
+        mls_import: project.mlsImport ? clone(project.mlsImport) : null,
       },
     };
   }
@@ -575,6 +588,7 @@
       if (raw.studio.review) project.review = deepMerge(project.review, raw.studio.review);
       if (raw.studio.media) project.media = deepMerge(project.media, raw.studio.media);
       if (raw.studio.modules) project.modules = deepMerge(project.modules, raw.studio.modules);
+      if (raw.studio.mls_import) project.mlsImport = clone(raw.studio.mls_import);
     }
     return normalizeProject(project, defaults);
   }
@@ -680,6 +694,23 @@
   async function buildManifest(project, outputFiles) {
     const projectCopy = clone(project); delete projectCopy.review.baseline;
     const typography = activeTypography(project);
+    const source = project.mlsImport ? {
+      type: getPath(project, "mlsImport.provider.id") === "demo-fixture" ? "fictional-development-fixture" : "authorized-mls-connector",
+      provider: clone(getPath(project, "mlsImport.provider") || {}),
+      listingNumber: getPath(project, "mlsImport.listingNumber") || "",
+      retrievedAt: getPath(project, "mlsImport.retrievedAt") || "",
+      importedAt: getPath(project, "mlsImport.importedAt") || "",
+      humanReviewedAt: getPath(project, "mlsImport.humanReviewedAt") || "",
+      rightsReviewedAt: getPath(project, "mlsImport.rightsReviewedAt") || "",
+      fieldSources: clone(getPath(project, "mlsImport.fieldSources") || {}),
+      media: clone(getPath(project, "mlsImport.media") || []),
+      mediaOverrides: clone(getPath(project, "mlsImport.mediaOverrides") || []),
+      blockedMediaCount: (getPath(project, "mlsImport.blockedMedia") || []).length,
+      statement: "Imported through an explicitly configured provider connector. Import does not constitute factual, legal, regulatory, MLS, brokerage, or image-rights approval.",
+    } : {
+      type: "manual-user-input",
+      statement: "Listing and module content was entered or imported by the user and was not retrieved from an MLS connector.",
+    };
     const assets = [
       ["hero", project.media.heroName, project.media.heroDataUrl], ["portrait", project.media.portraitName, project.media.portraitDataUrl], ["logo_light", project.media.logoLightName, project.media.logoLightDataUrl],
       ["logo_dark", project.media.logoDarkName, project.media.logoDarkDataUrl], ["floorplan", project.media.floorplanName, project.media.floorplanDataUrl],
@@ -696,6 +727,7 @@
         fonts: project.language.mode === "english" ? [typography.latin, typography.serif] : [typography.cjk, typography.latin, typography.serif],
       },
       compliance: {profile: activeComplianceProfile(project).name, version: activeComplianceProfile(project).version, disclaimer: project.compliance.disclaimer},
+      source,
       template: {
         name: project.template.name,
         version: project.template.version,
@@ -738,7 +770,9 @@
       },
       assets: await Promise.all(assets.map(async ([role, name, dataUrl]) => ({role, filename: name, sha256: await sha256Bytes(dataUrlToBytes(dataUrl))}))),
       outputs: await Promise.all((outputFiles || []).map(async file => ({filename: file.name, bytes: file.data.length, sha256: await sha256Bytes(file.data)}))),
-      provenance: "Listing and module text comes from validated user input. Images are fitted or cropped locally and are never generated or uploaded by this tool.",
+      provenance: project.mlsImport
+        ? "Authorized source facts and permitted media were deterministically mapped into an editable local project; local overrides and review timestamps are recorded. Images are never generated by this tool."
+        : "Listing and module text comes from validated user input. Images are fitted or cropped locally and are never generated or uploaded by this tool.",
     };
   }
 

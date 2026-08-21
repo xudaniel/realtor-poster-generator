@@ -92,6 +92,27 @@ h2 { font-size: 28px; }
 .autosave-bar.is-saved { color: #275b43; }
 .autosave-bar.is-warning { color: #8a332c; }
 .text-button { border: 0; padding: 4px 0; color: inherit; background: transparent; font-size: 11px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.mls-import {
+  margin: 0 0 20px; padding: 18px; border: 1px solid rgba(16, 44, 43, .18); border-radius: 18px;
+  background: linear-gradient(145deg, rgba(235, 244, 240, .9), rgba(255, 249, 237, .92));
+}
+.mls-import-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.mls-import h2 { font-size: 22px; }
+.beta-badge { padding: 6px 9px; border: 1px solid #9ebaaa; border-radius: 999px; color: #275b43; background: #edf7f1; font-size: 10px; font-weight: 850; white-space: nowrap; }
+.mls-grid { margin-bottom: 10px; align-items: end; }
+.mls-grid small { color: var(--muted); font-weight: 500; line-height: 1.35; }
+.mls-generate-cell { display: flex; align-items: end; }
+.mls-generate-cell .button { width: 100%; min-height: 44px; }
+.mls-status { margin: 9px 0; color: #4d5a57; font-size: 12px; }
+.mls-status.is-error { color: #8a332c; }
+.mls-status.is-success { color: #275b43; }
+.mls-summary { margin: 12px 0; padding: 13px; border: 1px solid #b9d4c3; border-radius: 13px; background: #f4faf6; color: #35584a; font-size: 12px; }
+.mls-summary.is-warning { border-color: #e4c489; background: #fff8e7; color: #76551e; }
+.mls-summary > strong { display: block; margin-bottom: 5px; }
+.mls-summary li strong { display: inline; margin: 0; }
+.mls-summary ul { margin: 6px 0 0; padding-left: 20px; }
+.mls-review { margin: 12px 0; display: flex; grid-template-columns: auto 1fr; align-items: flex-start; gap: 9px; color: var(--ink); line-height: 1.4; }
+.mls-review input { width: auto; margin-top: 2px; }
 
 details { border-top: 1px solid var(--line); padding: 17px 0 3px; }
 summary { display: flex; align-items: center; gap: 11px; list-style: none; cursor: pointer; font-weight: 850; letter-spacing: -.01em; }
@@ -221,6 +242,7 @@ footer {
   .module-card-grid .span-2 { grid-column: span 1; }
   .lock-grid { grid-template-columns: 1fr 1fr; }
   .autosave-bar { align-items: flex-start; flex-direction: column; }
+  .mls-import-heading { flex-direction: column; }
   .preview-toolbar { align-items: flex-start; flex-direction: column; }
   .preset-select { width: 100%; }
   .canvas-stage { min-height: 440px; padding: 12px; }
