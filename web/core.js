@@ -6,7 +6,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const APP_VERSION = "1.4.1";
+  const APP_VERSION = "1.4.2";
   const PROJECT_SCHEMA_VERSION = 5;
   const OUTPUT_DIMENSIONS = Object.freeze({
     poster: [1800, 2400], square: [1080, 1080], portrait: [1080, 1350], story: [1080, 1920], landscape: [1200, 630],
@@ -613,8 +613,117 @@
       if (!getPath(project, "mlsImport.reviewConfirmed")) errors.push("Authorized MLS imports require explicit human review before export");
       if (getPath(project, "mlsImport.stale")) warnings.push("Authorized MLS source data is stale; refresh and review it before publication");
       (getPath(project, "mlsImport.missing") || []).forEach(path => warnings.push(`Authorized MLS source did not provide ${path}`));
+      const overrideCount = Object.values(getPath(project, "mlsImport.fields") || {}).filter(field => field && field.status === "user-overridden").length;
+      if (overrideCount) warnings.push(`Authorized MLS import has ${overrideCount} locally changed field${overrideCount === 1 ? "" : "s"}`);
     }
     return {errors: [...new Set(errors)], warnings: [...new Set(warnings)], profile};
+  }
+
+  const PREFLIGHT_FIELD_LABELS = Object.freeze({
+    "listing.address": "address", "listing.unit": "unit", "listing.status": "listing status", "listing.city": "city", "listing.postalCode": "postal code", "listing.price": "price", "listing.mls": "MLS number", "listing.beds": "bedrooms", "listing.baths": "bathrooms", "listing.sqft": "area", "listing.floor": "floor", "listing.exposure": "exposure", "listing.balcony": "balcony", "listing.parking": "parking", "listing.availability": "availability", "listing.openHouse": "open-house time", "listing.headlineZh": "Chinese headline",
+    "contact.name": "agent name", "contact.title": "agent title", "contact.license": "agent licence", "contact.phone": "agent phone", "contact.email": "agent email", "contact.website": "agent website", "contact.portraitMode": "portrait mode", "contact.ctaTitleZh": "Chinese call to action",
+    "brand.name": "brokerage name", "brand.website": "brokerage website", "content.featuresZh": "Chinese features",
+    "media.heroDataUrl": "hero photo", "media.gallery": "interior photos", "media.floorplans": "floor plans",
+    "compliance.applicationRequirementsConfirmed": "application-requirements confirmation", "compliance.applicationDisclaimer": "application disclaimer", "compliance.disclaimer": "compliance disclaimer",
+    "review.reviewer": "reviewer", "review.reviewedAt": "review date", "typography.style": "typography style",
+  });
+
+  function humanizePath(path) {
+    return PREFLIGHT_FIELD_LABELS[path] || String(path || "field").replace(/^(?:listing|contact|brand|theme|typography|compliance|review|modules|media|content)\./, "").replace(/\.\d+\./g, " ").replace(/[._-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  }
+
+  function validationPath(message) {
+    const match = String(message || "").match(/\b(?:listing|contact|brand|theme|typography|compliance|review|modules|media|content|mlsImport)\.[A-Za-z0-9_.-]+/);
+    return match ? match[0].replace(/[.:,;]+$/, "") : "";
+  }
+
+  function blockerPresentation(message, index) {
+    const item = {id: `blocker-${index + 1}`, title: "Resolve preflight issue", detail: message, actionLabel: "Review preflight fields", targetId: "compliance-section", targetPath: ""};
+    if (message === "Authorized MLS imports require explicit human review before export") {
+      return {...item, id: "mls-review-required", title: "Review imported MLS facts", detail: "Confirm the exact listing details, corrections, disclosures, and image rights before exporting.", actionLabel: "Review MLS import", targetId: "mls-review-confirmed"};
+    }
+    if (/^Authorized MLS import has \d+ image-rights item/.test(message)) {
+      return {...item, id: "mls-image-rights", title: "Resolve imported image rights", detail: "Confirm permitted reuse or choose a local replacement for each blocked image.", actionLabel: "Review image rights", targetId: "mls-rights"};
+    }
+    if (message === "Authorized MLS import requires one exact provider, board, and listing-number match" || message.startsWith("Authorized MLS import is missing mlsImport.") || message === "Authorized MLS listing status is not publishable") {
+      return {...item, id: `mls-source-${index + 1}`, title: "Review the MLS source", detail: "Reconnect or retrieve one exact, active provider record before exporting.", actionLabel: "Open MLS import", targetId: "mls-section"};
+    }
+    if (message === "Application requirements require compliance-profile confirmation before export") {
+      return {...item, id: "application-confirmation", title: "Confirm application requirements", detail: "Review these requirements against the selected compliance and brokerage process.", actionLabel: "Review requirements", targetId: "", targetPath: "compliance.applicationRequirementsConfirmed"};
+    }
+    if (message === "Application requirements require an informational disclaimer") {
+      return {...item, id: "application-disclaimer", title: "Add the application disclaimer", detail: "Explain that the requirements are informational and do not promise acceptance.", actionLabel: "Add disclaimer", targetId: "", targetPath: "compliance.applicationDisclaimer"};
+    }
+    if (message === "Missing required field: media.heroDataUrl") {
+      return {...item, id: "hero-required", title: "Add a hero photo", detail: "Choose the main listing image required for poster export.", actionLabel: "Choose hero photo", targetId: "hero-upload"};
+    }
+    if (message === "focal must be [x, y] with values between 0 and 1") {
+      return {...item, id: "hero-focal", title: "Choose a valid hero focal point", detail: "Place the focal point within the hero image before exporting.", actionLabel: "Adjust focal point", targetId: "focal-pad"};
+    }
+    if (message.startsWith("media.gallery")) {
+      return {...item, id: `gallery-${index + 1}`, title: "Review interior photos", detail: "Use no more than four locally selected interior images.", actionLabel: "Choose interior photos", targetId: "gallery-upload"};
+    }
+    if (message.startsWith("Lease detail ")) {
+      return {...item, id: `lease-detail-${index + 1}`, title: "Shorten the lease detail", detail: "Keep each active lease-detail row within the supported character limit.", actionLabel: "Review lease details", targetId: "lease-editor"};
+    }
+    if (message.includes("appears in both included and tenant-paid costs")) {
+      return {...item, id: `cost-conflict-${index + 1}`, title: "Resolve the duplicate cost", detail: "A cost cannot be both rent-included and tenant-paid. Keep it in one section only.", actionLabel: "Review rent costs", targetId: "costs-editor"};
+    }
+    if (message.includes("does not match listing.status")) {
+      return {...item, id: "compliance-profile-mismatch", title: "Match the compliance profile", detail: "Choose the profile that matches the current listing status.", actionLabel: "Choose compliance profile", targetId: "compliance-profile"};
+    }
+    if (message.endsWith("requires disclaimer text")) {
+      return {...item, id: "compliance-disclaimer", title: "Add the compliance disclaimer", detail: "Keep the required profile disclaimer visible before export.", actionLabel: "Add disclaimer", targetId: "", targetPath: "compliance.disclaimer"};
+    }
+    const path = validationPath(message);
+    if (path) {
+      const label = humanizePath(path);
+      const required = message.includes("Missing required field") || message.includes(`requires ${path}`);
+      return {...item, title: `Review ${label}`, detail: required ? `${label[0].toUpperCase()}${label.slice(1)} is required before export.` : message.replace(path, label), actionLabel: "Go to field", targetId: "", targetPath: path};
+    }
+    return item;
+  }
+
+  function warningPresentation(project, message, index) {
+    const item = {id: `warning-${index + 1}`, title: "Review recommended", detail: message, actionLabel: "Review warning", targetId: "compliance-section", targetPath: ""};
+    const overrideMatch = String(message).match(/^Authorized MLS import has (\d+) locally changed fields?$/);
+    if (overrideMatch) {
+      const overrides = Object.entries(getPath(project, "mlsImport.fields") || {}).filter(([_path, field]) => field && field.status === "user-overridden");
+      const count = Number(overrideMatch[1]);
+      const labels = overrides.map(([path]) => humanizePath(path).replace(/^./, letter => letter.toUpperCase()));
+      return {...item, id: "mls-local-overrides", title: "Changed since import", detail: `${count} field${count === 1 ? " differs" : "s differ"} from the MLS source. Changed: ${labels.join(", ")}.`, actionLabel: "View changed field", targetId: "", targetPath: overrides[0] ? overrides[0][0] : "listing.mls"};
+    }
+    if (message === "Authorized MLS source data is stale; refresh and review it before publication") {
+      return {...item, id: "mls-source-stale", title: "MLS data may be out of date", detail: "Reconnect, refresh the authorized record, and review any changes before publication.", actionLabel: "Open MLS import", targetId: "mls-section"};
+    }
+    if (message.startsWith("Authorized MLS source did not provide ")) {
+      return {...item, id: `mls-missing-${index + 1}`, title: "Incomplete MLS import", detail: message.replace("Authorized MLS source did not provide ", "The provider did not supply "), actionLabel: "Review MLS import", targetId: "mls-section"};
+    }
+    if (message.includes("property-facts") || message.startsWith("Property fact ")) return {...item, title: "Review property facts", actionLabel: "Open property facts", targetId: "facts-editor"};
+    if (message.includes("floor-plan") || message.includes("too low-resolution") || message.startsWith("Floor plan ") || message === "No floor plan selected") return {...item, title: message === "No floor plan selected" ? "Consider adding a floor plan" : "Review floor plans", actionLabel: "Open floor plans", targetId: "plans-editor"};
+    if (message.startsWith("Feature spotlight ")) return {...item, title: "Review feature spotlights", actionLabel: "Open spotlights", targetId: "spotlights-editor"};
+    if (message.startsWith("Lease profile ") || message.startsWith("Lease detail ")) return {...item, title: "Review lease details", actionLabel: "Open lease details", targetId: "lease-editor"};
+    if (message.startsWith("Included cost ")) return {...item, title: "Review rent inclusions", actionLabel: "Open rent inclusions", targetId: "costs-editor"};
+    if (message.startsWith("Tenant-paid cost ")) return {...item, title: "Review tenant-paid costs", actionLabel: "Open tenant costs", targetId: "tenant-costs-editor"};
+    if (message.startsWith("Amenity ")) return {...item, title: "Review amenities", actionLabel: "Open amenities", targetId: "amenities-editor"};
+    if (message.startsWith("Application requirement ")) return {...item, title: "Review application requirements", actionLabel: "Open requirements", targetId: "requirements-editor"};
+    if (message.includes("local portrait") || message.includes("agent portrait")) return {...item, title: "Review the agent portrait", actionLabel: "Choose portrait", targetId: "portrait-upload"};
+    if (message === "No interior photos selected") return {...item, title: "Consider adding interior photos", actionLabel: "Choose interior photos", targetId: "gallery-upload"};
+    if (message === "Agent call-to-action is missing a Chinese title") return {...item, title: "Add the Chinese call to action", actionLabel: "Go to field", targetId: "", targetPath: "contact.ctaTitleZh"};
+    if (message === "Chinese headline is missing; the English headline will be used as a fallback") return {...item, title: "Add the Chinese headline", actionLabel: "Go to field", targetId: "", targetPath: "listing.headlineZh"};
+    if (message === "Chinese features are missing; English features will be used as a fallback") return {...item, title: "Add Chinese features", actionLabel: "Go to field", targetId: "", targetPath: "content.featuresZh"};
+    if (message === "Brand website is blank") return {...item, title: "Add the brokerage website", actionLabel: "Go to field", targetId: "", targetPath: "brand.website"};
+    const path = validationPath(message);
+    if (path) return {...item, title: `Review ${humanizePath(path)}`, actionLabel: "Go to field", targetId: "", targetPath: path};
+    return item;
+  }
+
+  function preflightPresentation(project, validation = validateProject(project)) {
+    return {
+      blockers: validation.errors.map(blockerPresentation),
+      warnings: validation.warnings.map((message, index) => warningPresentation(project, message, index)),
+      profile: validation.profile,
+    };
   }
 
   function parseScalar(value) {
@@ -947,7 +1056,7 @@
     profileForStatus, activeComplianceProfile, activeTypography, buildTemplate, applyTemplate, duplicateTemplate,
     allPropertyFacts, resolvedPropertyFacts, activeFloorPlans, activeSpotlights, activeLeaseDetails, activeIncludedCosts, activeTenantPaidCosts,
     activeAmenities, activeApplicationRequirements, costConflicts, layoutSnapshot,
-    campaignCopy, buildApprovalRecord, validateProject, parseSimpleYaml, toSimpleYaml, toListingData,
+    campaignCopy, buildApprovalRecord, validateProject, preflightPresentation, parseSimpleYaml, toSimpleYaml, toListingData,
     buildMlsImportPlan, applyMlsImport, recordMlsOverride, confirmMlsImageRights, resolveMlsImageWithReplacement, mlsCompleteness, sanitizeMlsValue,
     projectFromListingData, normalizeProject, canonicalStringify, diffProjects, dataUrlToBytes, crc32, makeZip,
     sha256Bytes, sha256Text, buildManifest,

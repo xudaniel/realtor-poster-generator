@@ -52,13 +52,14 @@ function project() {
 }
 
 (async () => {
-  assert.equal(Core.APP_VERSION, "1.4.1");
+  assert.equal(Core.APP_VERSION, "1.4.2");
   assert.equal(Core.PROJECT_SCHEMA_VERSION, 5);
 
   const valid = Core.validateProject(project());
   assert.deepEqual(valid.errors, []);
   assert.equal(valid.profile.id, "lease");
   assert.ok(valid.warnings.includes("No floor plan selected"));
+  assert.equal(Core.preflightPresentation(project()).warnings.find(item => item.detail === "No floor plan selected").targetId, "plans-editor");
 
   const broken = project();
   broken.contact.email = "not-an-email";
@@ -77,6 +78,16 @@ function project() {
 
   const missingTitle = project(); missingTitle.contact.title = "";
   assert.match(Core.validateProject(missingTitle).errors.join("\n"), /requires contact\.title/);
+  const missingTitlePreflight = Core.preflightPresentation(missingTitle);
+  assert.equal(missingTitlePreflight.blockers.length, 1);
+  assert.equal(missingTitlePreflight.blockers.length, Core.validateProject(missingTitle).errors.length);
+  assert.equal(missingTitlePreflight.blockers.find(item => item.targetPath === "contact.title").title, "Review agent title");
+  assert.equal(missingTitlePreflight.blockers.find(item => item.targetPath === "contact.title").actionLabel, "Go to field");
+  assert.ok(Core.preflightPresentation(broken).blockers.length > 1);
+  const missingHero = project(); missingHero.media.heroDataUrl = "";
+  const heroBlocker = Core.preflightPresentation(missingHero).blockers.find(item => item.id === "hero-required");
+  assert.equal(heroBlocker.targetId, "hero-upload");
+  assert.doesNotMatch(heroBlocker.detail, /media\.heroDataUrl/);
 
   const licenceProfile = project();
   licenceProfile.compliance.profileId = "licensed-brokerage";
@@ -141,6 +152,24 @@ function project() {
   assert.equal(replacedImage.mlsImport.reviewConfirmed, false);
   assert.equal(replacedImage.mlsImport.reviewedAt, "");
   assert.equal(Core.mlsCompleteness(replacedImage).overridden, 1);
+  const actionableMlsPreflight = Core.preflightPresentation(replacedImage);
+  const mlsReviewBlocker = actionableMlsPreflight.blockers.find(item => item.id === "mls-review-required");
+  assert.equal(mlsReviewBlocker.title, "Review imported MLS facts");
+  assert.equal(mlsReviewBlocker.targetId, "mls-review-confirmed");
+  const overrideWarning = actionableMlsPreflight.warnings.find(item => item.id === "mls-local-overrides");
+  assert.equal(overrideWarning.title, "Changed since import");
+  assert.equal(overrideWarning.targetPath, "listing.price");
+  assert.match(overrideWarning.detail, /1 field differs/);
+  assert.match(overrideWarning.detail, /Changed: Price/);
+  assert.equal(actionableMlsPreflight.blockers.length, Core.validateProject(replacedImage).errors.length, "warnings must not increase the blocker count");
+  replacedImage.listing.beds = "3"; Core.recordMlsOverride(replacedImage, "listing.beds", replacedImage.listing.beds);
+  replacedImage.mlsImport.stale = true;
+  const multipleWarningPreflight = Core.preflightPresentation(replacedImage);
+  assert.ok(multipleWarningPreflight.warnings.length > 1);
+  assert.match(multipleWarningPreflight.warnings.find(item => item.id === "mls-local-overrides").detail, /2 fields differ.*Price, Bedrooms/);
+  replacedImage.mlsImport.reviewConfirmed = true;
+  assert.equal(Core.preflightPresentation(replacedImage).blockers.some(item => item.id === "mls-review-required"), false, "resolving review removes its blocker immediately");
+  replacedImage.mlsImport.reviewConfirmed = false;
   const refreshed = JSON.parse(JSON.stringify(exactResponse)); refreshed.matches[0].price = "$3,400"; refreshed.retrievedAt = "2026-08-21T13:00:00Z";
   const refreshPlan = Core.buildMlsImportPlan(replacedImage, refreshed, exactRequest);
   assert.equal(refreshPlan.refresh.sameListing, true);
@@ -251,6 +280,9 @@ function project() {
   assert.equal(Core.activeApplicationRequirements(project()).length, 2);
   const unconfirmedRequirements = project(); unconfirmedRequirements.compliance.applicationRequirementsConfirmed = false;
   assert.match(Core.validateProject(unconfirmedRequirements).errors.join("\n"), /require compliance-profile confirmation/);
+  const requirementsBlocker = Core.preflightPresentation(unconfirmedRequirements).blockers.find(item => item.id === "application-confirmation");
+  assert.equal(requirementsBlocker.targetPath, "compliance.applicationRequirementsConfirmed");
+  assert.equal(requirementsBlocker.actionLabel, "Review requirements");
   const tooManyAmenities = project(); tooManyAmenities.modules.amenities = Array.from({length: 13}, (_, index) => ({id: `amenity-${index}`, labelEn: "Amenity", labelZh: "设施", state: "active"}));
   assert.match(Core.validateProject(tooManyAmenities).errors.join("\n"), /at most 12 items/);
   const tooManyRequirements = project(); tooManyRequirements.modules.applicationRequirements = Array.from({length: 11}, (_, index) => ({id: `requirement-${index}`, labelEn: "Requirement", labelZh: "要求", state: "required"}));
@@ -294,7 +326,7 @@ function project() {
   planProject.modules.propertyFacts[4].visible = false;
   planProject.contact.portraitMode = "photo"; planProject.media.portraitName = "agent.png"; planProject.media.portraitDataUrl = "data:image/png;base64,BA==";
   const manifest = await Core.buildManifest(planProject, [output]);
-  assert.equal(manifest.generator, "realtor-poster-studio 1.4.1");
+  assert.equal(manifest.generator, "realtor-poster-studio 1.4.2");
   assert.equal(manifest.outputs[0].filename, "poster.png");
   assert.equal(manifest.outputs[0].sha256.length, 64);
   assert.equal(manifest.compliance.profile, "Residential lease");

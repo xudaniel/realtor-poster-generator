@@ -5,8 +5,8 @@
 ## 1. Document information
 
 - Product: Realtor Poster Generator
-- Current stable version: 1.4.1
-- Current release scope: Stories 1–10, cross-cutting recovery issue #20, and authorized MLS import issue #22
+- Current stable version: 1.4.2
+- Current release scope: Stories 1–10, cross-cutting recovery issue #20, authorized MLS import issue #22, and actionable export-preflight issue #25
 - Language: English
 - Product forms: browser-local visual editor, local Python command-line tools, a loopback-only authorized MLS connector, and a self-contained offline HTML preview
 - Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON/YAML, template and compliance profiles, approval ZIP, provenance manifest JSON, batch summary JSON, and focal-preview HTML
@@ -22,7 +22,7 @@ Real-estate agents creating rental or sale artwork repeatedly assemble addresses
 - Artwork made by different team members may not follow one brand system.
 - Output packages may lack traceable input and asset checksums.
 
-The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; v1.4.0 adds the full ten-story reference-informed module set; cross-cutting issue #20 makes the generate-review-correct loop recoverable; and v1.4.1 issue #22 deterministically creates an editable poster from an authorized record without giving provider secrets to the static page.
+The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; v1.4.0 adds the full ten-story reference-informed module set; cross-cutting issue #20 makes the generate-review-correct loop recoverable; v1.4.1 issue #22 deterministically creates an editable poster from an authorized record without giving provider secrets to the static page; and v1.4.2 issue #25 turns export blockers into plain-language tasks that lead directly to the relevant controls.
 
 ## 3. Product goals
 
@@ -360,7 +360,7 @@ The system must provide:
 
 ## 9. Acceptance criteria
 
-The v1.4.1 release is acceptable when:
+The v1.4.2 release is acceptable when:
 
 1. The sample YAML validates.
 2. It produces an 1800 × 2400 RGB PNG.
@@ -381,7 +381,7 @@ The v1.4.1 release is acceptable when:
 17. Focal-preview HTML references no external images or scripts.
 18. Repeated rendering of the same input is pixel-identical in one environment.
 19. Visual regression passes identical images and rejects meaningful changes.
-20. The manifest records version 1.4.1 and social-output SHA-256 hashes.
+20. The manifest records version 1.4.2 and social-output SHA-256 hashes.
 21. The browser editor has no upload or analytics code and processes data only in the current tab.
 22. The browser editor previews and exports the full poster and four social sizes.
 23. Project JSON preserves and reopens form, theme, focal, and selected images.
@@ -417,6 +417,11 @@ The v1.4.1 release is acceptable when:
 53. Images retain source ID, order, caption, pixel dimensions, and rights status. Without explicit reuse permission, an image blocks export until the user confirms rights or selects a local replacement.
 54. Authorized imports can export only after listing status, required fields, disclosures, image rights, and explicit human review pass. This gate is not legal, regulatory, MLS®, board, brokerage, or copyright approval.
 55. Automated tests use fully synthetic records and cover exact, ambiguous, incomplete, withdrawn, stale, overridden, refreshed, image-rights, authorization-expiry, rate-limit, and outage paths without real listing data.
+56. The red preflight panel contains and counts blocking issues only; non-blocking notices render in a separate amber panel and never increase the blocker count.
+57. Every blocker has a plain-language title, concise resolution guidance, a non-colour status symbol, and a direct action that opens, scrolls to, and focuses the relevant field or section.
+58. Imported-field overrides appear as **Changed since import**, list every changed field, and link to the first changed field without exposing internal validation phrases.
+59. Adding or resolving an issue updates blocker/warning counts and correct singular/plural copy without a reload; state changes use a live region and action buttons have visible keyboard focus.
+60. The actionable preflight reflows without clipped copy or controls on mobile and at 200% zoom, while the legal/compliance disclaimer remains visible outside the fixable status cards.
 
 ## 10. Risks and mitigations
 
@@ -434,6 +439,7 @@ The v1.4.1 release is acceptable when:
 | Editor input lost after generation, reload, or correction | Debounced IndexedDB autosave, pre-action snapshots, bilingual restore UI, and portable project download |
 | Newer work overwritten by another browser tab | Per-project identifiers, BroadcastChannel conflict detection, and paused autosave until user resolution |
 | Browser storage unavailable or full | Explicit bilingual warning and manual portable-project backup; never claim that a failed save succeeded |
+| Users cannot tell how to clear a technical export error | Separate blockers from warnings and provide plain-language, focusable direct actions |
 | English and Chinese documentation drifting | Same-release version updates, direct links, and scope checks |
 
 ## 11. Roadmap
@@ -475,6 +481,13 @@ The v1.4.1 release is acceptable when:
 - Exact matching, deterministic mapping, field-level provenance, completeness status, and refresh diffs
 - Blocking gates for image rights/replacement, listing status, disclosures, and explicit human review
 - Fully synthetic connector and browser tests with no real listing record or credential
+
+### Completed in 1.4.2 (Issue #25)
+
+- Blocker-only red action panel with accurate counts and plain-language resolution guidance
+- Separate amber source-change warnings that identify all overridden MLS fields
+- Direct keyboard-focusable actions to MLS review, changed fields, application requirements, and other validated controls
+- Accessible live updates, non-colour status symbols, mobile reflow, and 200% zoom support without changing compliance rules or schema 5
 
 ### 2.0 candidates
 

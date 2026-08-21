@@ -170,12 +170,33 @@ input[type="color"] { min-height: 43px; padding: 5px; }
 .lock-grid label { display: flex; grid-template-columns: auto 1fr; align-items: center; gap: 7px; }
 .lock-grid input { width: auto; }
 
-.validation-summary, .change-summary { margin: 15px 0 10px; padding: 13px 14px; border-radius: 13px; background: #f2f0ea; color: #4d5a57; font-size: 12px; }
-.validation-summary strong { display: block; margin-bottom: 6px; }
-.validation-summary ul, .change-summary ul { margin: 7px 0 0; padding-left: 20px; }
-.validation-summary.is-blocked { border: 1px solid #d9a39c; background: #fff0ee; color: #7d3029; }
-.validation-summary.has-warnings { border: 1px solid #e4c489; background: #fff8e7; color: #76551e; }
-.validation-summary.is-ready { border: 1px solid #b9d4c3; background: #edf8f1; color: #275b43; }
+.change-summary { margin: 15px 0 10px; padding: 13px 14px; border-radius: 13px; background: #f2f0ea; color: #4d5a57; font-size: 12px; }
+.change-summary ul { margin: 7px 0 0; padding-left: 20px; }
+.validation-summary { display: grid; gap: 10px; margin: 15px 0 10px; color: #4d5a57; font-size: 12px; }
+#mls-completeness.validation-summary { display: block; padding: 13px 14px; border-radius: 13px; background: #f2f0ea; }
+#mls-completeness strong { display: block; margin-bottom: 6px; }
+#mls-completeness.is-blocked { border: 1px solid #d9a39c; background: #fff0ee; color: #7d3029; }
+#mls-completeness.has-warnings { border: 1px solid #e4c489; background: #fff8e7; color: #76551e; }
+#mls-completeness.is-ready { border: 1px solid #b9d4c3; background: #edf8f1; color: #275b43; }
+.preflight-panel { overflow: hidden; border: 1px solid; border-radius: 15px; }
+.preflight-panel-blocked { border-color: #d9a39c; background: #fff6f4; color: #702b26; }
+.preflight-panel-warning { border-color: #dfbd76; background: #fffaf0; color: #684a17; }
+.preflight-panel-ready { border-color: #b9d4c3; background: #edf8f1; color: #275b43; }
+.preflight-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px 15px; }
+.preflight-heading strong { display: block; margin: 2px 0 3px; font-size: 14px; }
+.preflight-heading p, .preflight-copy p { margin: 0; line-height: 1.45; }
+.preflight-kicker { display: block; font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; opacity: .72; }
+.preflight-count { display: grid; flex: 0 0 auto; place-items: center; min-width: 28px; min-height: 28px; border-radius: 999px; background: #8f3c35; color: white; font-size: 12px; font-weight: 900; }
+.preflight-list { border-top: 1px solid currentColor; border-top-color: color-mix(in srgb, currentColor 22%, transparent); }
+.preflight-item { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 15px; }
+.preflight-item + .preflight-item { border-top: 1px solid currentColor; border-top-color: color-mix(in srgb, currentColor 16%, transparent); }
+.preflight-symbol { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 999px; background: #8f3c35; color: white; font-size: 11px; font-weight: 900; }
+.preflight-item-warning .preflight-symbol { background: #9b6a18; }
+.preflight-copy strong { display: block; margin-bottom: 2px; color: inherit; font-size: 12px; }
+.preflight-copy p { color: color-mix(in srgb, currentColor 82%, #24312e); }
+.preflight-action { min-height: 34px; border: 1px solid currentColor; border-radius: 9px; padding: 7px 10px; background: rgba(255, 255, 255, .72); color: inherit; font: inherit; font-weight: 850; white-space: nowrap; }
+.preflight-action:hover { background: white; transform: translateY(-1px); }
+.preflight-action:focus-visible { outline: 3px solid #1d6f68; outline-offset: 2px; }
 .active-profile { margin: 13px 2px 0; color: #775b34; font-size: 11px; font-weight: 800; }
 
 .button { border: 0; border-radius: 11px; padding: 11px 15px; font-weight: 820; letter-spacing: -.01em; }
@@ -224,6 +245,8 @@ footer {
   .span-2 { grid-column: span 1; }
   .module-card-grid .span-2 { grid-column: span 1; }
   .lock-grid { grid-template-columns: 1fr 1fr; }
+  .preflight-item { grid-template-columns: 24px minmax(0, 1fr); align-items: start; }
+  .preflight-action { grid-column: 2; width: 100%; white-space: normal; }
   .autosave-bar { align-items: flex-start; flex-direction: column; }
   .preview-toolbar { align-items: flex-start; flex-direction: column; }
   .preset-select { width: 100%; }

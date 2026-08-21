@@ -2,6 +2,31 @@
 
 All notable changes to Realtor Poster Generator are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.2] - 2026-08-21
+
+See the bilingual [v1.4.2 release notes](RELEASE_NOTES_v1.4.2.md).
+
+### Added
+
+- Plain-language action cards for every blocking export-preflight issue, with direct buttons that open, scroll to, and focus the relevant control
+- Separate amber source-change notices that identify every locally changed MLS field and link to the first changed field
+- Unit coverage for zero, one, and multiple blockers/warnings, blocker-only counts, direct action targets, and immediate MLS-review state changes
+
+### Changed
+
+- The red preflight panel now contains and counts only issues that block export; warnings no longer appear as blocking errors
+- Status copy avoids internal validation terminology and uses explicit action-required, warning, and ready states
+- Package, browser, connector, manifest, README, PRD, and release metadata now report v1.4.2 without changing browser project schema 5
+
+### Accessibility
+
+- Live-region state updates, text plus status symbols, visible keyboard focus, logical focus placement, and responsive action-card reflow for mobile and 200% zoom
+
+### Fixed
+
+- Imported-field overrides no longer appear inside the red export-blocked container
+- Users can return directly to MLS review, image rights, application requirements, or a validated field instead of manually searching the editor
+
 ## [1.4.1] - 2026-08-21
 
 See the bilingual [v1.4.1 release notes](RELEASE_NOTES_v1.4.1.md).
@@ -125,4 +150,5 @@ See the complete [bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md).
 [1.3.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.3.0
 [1.4.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.0
 [1.4.1]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.1
+[1.4.2]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.2
 [1.0.0]: https://github.com/xudaniel/realtor-poster-generator/commits/main/

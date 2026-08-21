@@ -6,9 +6,9 @@
 
 Created and maintained by **Daniel Xu**. 由 **Daniel Xu** 创建并维护。
 
-[中文 README](README.md) · [Bilingual v1.4.1 release notes](RELEASE_NOTES_v1.4.1.md) · [v1.4.0 release notes](RELEASE_NOTES_v1.4.0.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+[中文 README](README.md) · [Bilingual v1.4.2 release notes](RELEASE_NOTES_v1.4.2.md) · [v1.4.1 release notes](RELEASE_NOTES_v1.4.1.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-Current stable version: **1.4.1** · browser project schema: **5**
+Current stable version: **1.4.2** · browser project schema: **5**
 
 Realtor Poster Generator is a reusable, structured-data-driven toolkit for real-estate sale and rental artwork. Its information hierarchy includes a prominent listing status, address and price, property facts, interior photography, an optional floor plan, detail sections, neighbourhood highlights, and agent contact information. The composition, typography, colours, shapes, and layout are original rather than a pixel-for-pixel copy of any reference design.
 
@@ -28,7 +28,7 @@ Open the [live editor](https://xudaniel.github.io/realtor-poster-generator/) for
 4. Save versioned templates with selectively locked brand fields and switch among English, Chinese, and bilingual artwork.
 5. Preview five formats, download PNG, print to PDF, or export a social ZIP, SHA-256 manifest, and complete approval package.
 
-In manual mode, photos, contact details, and project files remain in browser-local storage on the current device and are not uploaded to a server. The v1.4.1 MLS flow contacts a configured provider only after the user explicitly connects the local authorized connector and submits one listing number. The editor contains no analytics code. It can also run entirely on your computer:
+In manual mode, photos, contact details, and project files remain in browser-local storage on the current device and are not uploaded to a server. The MLS flow contacts a configured provider only after the user explicitly connects the local authorized connector and submits one listing number. The editor contains no analytics code. It can also run entirely on your computer:
 
 ```bash
 python3 scripts/serve_web.py
@@ -37,6 +37,10 @@ python3 scripts/serve_web.py
 Then open `http://127.0.0.1:8765`. Browser projects can be saved as JSON or YAML and preserve the form, theme, focal point, images, template, compliance profile, and review record. Approval packages include five proofs, source data, the review record, a manifest, and checksums; they record workflow status but do not constitute legal or brokerage approval.
 
 The v1.4 editor also autosaves the complete editable project—including browser-local images—to IndexedDB after changes and immediately before project replacement, reset, or export. When the editor is reopened, a bilingual recovery panel offers the newest draft with its save time. Projects have separate identifiers, a newer draft from another tab triggers a conflict warning, storage failures are shown explicitly, and portable project downloads remain available as a manual backup. Use **Clear saved drafts** to remove recovery copies from this browser.
+
+## v1.4.2: actionable export preflight
+
+v1.4.2 implements [Issue #25](https://github.com/xudaniel/realtor-poster-generator/issues/25). The export preflight now presents only true blockers in the red action-required panel. Every blocker uses plain-language guidance and a button that opens, scrolls to, and focuses the relevant control. Non-blocking MLS source changes appear in a separate amber panel; it lists the changed fields and links to the first one. Counts, singular/plural copy, focus placement, and live-region updates respond immediately as the project changes. The legal and compliance explanation remains visible outside the actionable cards. Validation and compliance rules are unchanged, and the browser project schema remains version 5.
 
 ## v1.4.1: generate from an authorized MLS record
 
@@ -86,6 +90,7 @@ Open `http://127.0.0.1:8765`, then connect `http://127.0.0.1:8766` under **Autho
 - v1.4 unifies print and social artwork under an original dark-green/gold modular layout with priority-aware responsive reduction
 - v1.4 cross-cutting recovery ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20)) preserves editable fields and local images after generation, export, reload, reset, or project replacement without changing Stories 1–10 numbering
 - v1.4.1 adds the loopback authorized MLS connector, exact-match enforcement, deterministic mapping, field-level provenance, refresh diffs, image-rights gates, and a human-review gate
+- v1.4.2 separates blockers from warnings and gives every blocker a direct, keyboard-focusable route to the field that needs attention
 
 ## v1.4 release: Stories 1–10
 
