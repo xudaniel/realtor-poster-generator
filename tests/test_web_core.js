@@ -1,11 +1,13 @@
 "use strict";
 
 const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
 const Core = require("../web/core.js");
 
 function project() {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     appVersion: Core.APP_VERSION,
     listing: {
       address: "88 Harbour Street", unit: "2608", status: "FOR LEASE", city: "Toronto, ON", postalCode: "M5J 2N8",
@@ -50,8 +52,8 @@ function project() {
 }
 
 (async () => {
-  assert.equal(Core.APP_VERSION, "1.4.0");
-  assert.equal(Core.PROJECT_SCHEMA_VERSION, 4);
+  assert.equal(Core.APP_VERSION, "1.4.1");
+  assert.equal(Core.PROJECT_SCHEMA_VERSION, 5);
 
   const valid = Core.validateProject(project());
   assert.deepEqual(valid.errors, []);
@@ -109,6 +111,53 @@ function project() {
   assert.deepEqual(listingRoundTrip.modules.propertyFacts, project().modules.propertyFacts);
   assert.deepEqual(listingRoundTrip.modules.leaseDetails, project().modules.leaseDetails);
   assert.deepEqual(listingRoundTrip.modules.includedCosts, project().modules.includedCosts);
+
+  const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "mls", "synthetic_provider.json"), "utf8"));
+  const exactResponse = {...fixture.scenarios["SYN-EXACT"].body, provider: fixture.provider, retrievedAt: "2026-08-21T12:00:00Z"};
+  const exactRequest = {providerId: fixture.provider.id, board: fixture.provider.board, listingNumber: "SYN-EXACT"};
+  const importPlan = Core.buildMlsImportPlan(project(), exactResponse, exactRequest);
+  assert.equal(importPlan.exactMatch, true);
+  assert.equal(importPlan.candidate["listing.address"], "100 Test Avenue");
+  assert.equal(importPlan.candidate["content.featuresEn"], "Synthetic feature one\nSynthetic feature two");
+  assert.equal(importPlan.provider.board, "SYNTH-BOARD");
+  assert.deepEqual(importPlan.blocked, ["synthetic-plan", "synthetic-denied"]);
+  const importedProject = Core.applyMlsImport(project(), importPlan, {overwriteLocalImages: true, overwriteUserOverrides: true});
+  assert.equal(importedProject.listing.mls, "SYN-EXACT");
+  assert.equal(importedProject.contact.name, "Daniel Xu");
+  assert.equal(importedProject.brand.name, "Harbour Realty Group");
+  assert.equal(importedProject.media.heroName, "synthetic-hero.png");
+  assert.match(Core.validateProject(importedProject).errors.join("\n"), /image-rights/);
+  assert.match(Core.validateProject(importedProject).errors.join("\n"), /explicit human review/);
+  const confirmedImage = Core.confirmMlsImageRights(importedProject, "synthetic-plan");
+  assert.equal(confirmedImage.media.floorplans[0].name, "synthetic-plan.png");
+  assert.throws(() => Core.resolveMlsImageWithReplacement(confirmedImage, "synthetic-denied"), error => error.code === "MLS_IMAGE_REPLACEMENT_REQUIRED");
+  confirmedImage.media.gallery.push({name: "local-replacement.png", type: "image/png", dataUrl: "data:image/png;base64,BA=="});
+  const replacedImage = Core.resolveMlsImageWithReplacement(confirmedImage, "synthetic-denied");
+  assert.equal(Core.mlsCompleteness(replacedImage).blocked, 0);
+  replacedImage.mlsImport.reviewConfirmed = true; replacedImage.mlsImport.reviewedAt = "2026-08-21T12:10:00Z";
+  assert.doesNotMatch(Core.validateProject(replacedImage).errors.join("\n"), /Authorized MLS/);
+  replacedImage.listing.price = "$3,350"; Core.recordMlsOverride(replacedImage, "listing.price", replacedImage.listing.price);
+  assert.equal(replacedImage.mlsImport.fields["listing.price"].status, "user-overridden");
+  assert.equal(replacedImage.mlsImport.reviewConfirmed, false);
+  assert.equal(replacedImage.mlsImport.reviewedAt, "");
+  assert.equal(Core.mlsCompleteness(replacedImage).overridden, 1);
+  const refreshed = JSON.parse(JSON.stringify(exactResponse)); refreshed.matches[0].price = "$3,400"; refreshed.retrievedAt = "2026-08-21T13:00:00Z";
+  const refreshPlan = Core.buildMlsImportPlan(replacedImage, refreshed, exactRequest);
+  assert.equal(refreshPlan.refresh.sameListing, true);
+  assert.equal(refreshPlan.refresh.requiresConfirmation, true);
+  assert.ok(refreshPlan.refresh.changes.some(change => change.path === "listing.price"));
+  const preservedOverride = Core.applyMlsImport(replacedImage, refreshPlan, {overwriteUserOverrides: false});
+  assert.equal(preservedOverride.listing.price, "$3,350");
+  assert.equal(preservedOverride.mlsImport.fields["listing.price"].status, "user-overridden");
+  assert.equal(preservedOverride.mlsImport.fields["listing.price"].originalValue, "$3,400");
+  assert.equal(preservedOverride.mlsImport.fields["listing.price"].currentValue, "$3,350");
+  assert.throws(() => Core.buildMlsImportPlan(project(), {...fixture.scenarios["SYN-AMBIGUOUS"].body, provider: fixture.provider}, {...exactRequest, listingNumber: "SYN-AMBIGUOUS"}), error => error.code === "MLS_AMBIGUOUS");
+  assert.throws(() => Core.buildMlsImportPlan(project(), {...fixture.scenarios["SYN-INCOMPLETE"].body, provider: fixture.provider}, {...exactRequest, listingNumber: "SYN-INCOMPLETE"}), error => error.code === "MLS_INCOMPLETE_IDENTITY");
+  assert.throws(() => Core.buildMlsImportPlan(project(), {...fixture.scenarios["SYN-WITHDRAWN"].body, provider: fixture.provider}, {...exactRequest, listingNumber: "SYN-WITHDRAWN"}), error => error.code === "MLS_WITHDRAWN");
+  const stalePlan = Core.buildMlsImportPlan(project(), {...fixture.scenarios["SYN-STALE"].body, provider: fixture.provider}, {...exactRequest, listingNumber: "SYN-STALE"});
+  assert.equal(stalePlan.stale, true);
+  const sanitized = Core.sanitizeMlsValue({provider: "safe", accessToken: "do-not-export", nested: {password: "hidden", board: "visible"}});
+  assert.deepEqual(sanitized, {provider: "safe", nested: {board: "visible"}});
 
   const templateSource = project();
   templateSource.preset = "story";
@@ -245,7 +294,7 @@ function project() {
   planProject.modules.propertyFacts[4].visible = false;
   planProject.contact.portraitMode = "photo"; planProject.media.portraitName = "agent.png"; planProject.media.portraitDataUrl = "data:image/png;base64,BA==";
   const manifest = await Core.buildManifest(planProject, [output]);
-  assert.equal(manifest.generator, "realtor-poster-studio 1.4.0");
+  assert.equal(manifest.generator, "realtor-poster-studio 1.4.1");
   assert.equal(manifest.outputs[0].filename, "poster.png");
   assert.equal(manifest.outputs[0].sha256.length, 64);
   assert.equal(manifest.compliance.profile, "Residential lease");
@@ -268,6 +317,11 @@ function project() {
   assert.equal(manifest.assets.filter(asset => asset.role.startsWith("floorplan_")).length, 2);
   assert.equal(manifest.assets.filter(asset => asset.role.startsWith("spotlight_")).length, 1);
   assert.equal(manifest.assets.filter(asset => asset.role === "portrait").length, 1);
+  const importedManifest = await Core.buildManifest(replacedImage, [output]);
+  assert.equal(importedManifest.mlsImport.provider.board, "SYNTH-BOARD");
+  assert.equal(importedManifest.mlsImport.fields["listing.price"].status, "user-overridden");
+  assert.ok(importedManifest.mlsImport.images.every(image => image.dataUrl === undefined));
+  assert.match(importedManifest.provenance, /authorized provider/);
 
   console.log("Browser core tests passed.");
 })().catch(error => { console.error(error); process.exit(1); });

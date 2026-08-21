@@ -6,8 +6,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const APP_VERSION = "1.4.0";
-  const PROJECT_SCHEMA_VERSION = 4;
+  const APP_VERSION = "1.4.1";
+  const PROJECT_SCHEMA_VERSION = 5;
   const OUTPUT_DIMENSIONS = Object.freeze({
     poster: [1800, 2400], square: [1080, 1080], portrait: [1080, 1350], story: [1080, 1920], landscape: [1200, 630],
   });
@@ -32,7 +32,7 @@
       id: "lease",
       name: "Residential lease",
       version: "1.0.0",
-      required: ["listing.address", "listing.unit", "listing.price", "listing.mls", "listing.availability", "contact.name", "contact.title", "contact.phone", "contact.email", "brand.name"],
+      required: ["listing.address", "listing.price", "listing.mls", "listing.availability", "contact.name", "contact.title", "contact.phone", "contact.email", "brand.name"],
       disclaimer: "Information is deemed reliable but is not guaranteed. Verify listing facts, availability, brokerage disclosures, and local advertising requirements before publication.",
     },
     sale: {
@@ -105,6 +105,168 @@
     return String(value || "").split(/\r?\n/).map(item => item.trim()).filter(Boolean);
   }
   function populated(value) { return value != null && String(value).trim() !== ""; }
+  const MLS_SCALAR_MAPPING = Object.freeze([
+    ["status", "listing.status"], ["address", "listing.address"], ["unit", "listing.unit"],
+    ["city", "listing.city"], ["postalCode", "listing.postalCode"], ["price", "listing.price"],
+    ["rentPeriod", "listing.rentPeriod"], ["listingNumber", "listing.mls"], ["beds", "listing.beds"],
+    ["baths", "listing.baths"], ["sqft", "listing.sqft"], ["floor", "listing.floor"],
+    ["exposure", "listing.exposure"], ["balcony", "listing.balcony"], ["parking", "listing.parking"],
+    ["availability", "listing.availability"], ["openHouse", "listing.openHouse"],
+    ["descriptionEn", "listing.descriptionEn"], ["descriptionZh", "listing.descriptionZh"],
+    ["headlineEn", "listing.headlineEn"], ["headlineZh", "listing.headlineZh"],
+    ["featuresEn", "content.featuresEn"], ["featuresZh", "content.featuresZh"],
+  ]);
+  const MLS_MODULE_MAPPING = Object.freeze([
+    ["propertyFacts", "modules.propertyFacts"], ["spotlights", "modules.spotlights"],
+    ["leaseDetails", "modules.leaseDetails"], ["includedCosts", "modules.includedCosts"],
+    ["tenantPaidCosts", "modules.tenantPaidCosts"], ["amenities", "modules.amenities"],
+    ["applicationRequirements", "modules.applicationRequirements"],
+  ]);
+  const MLS_REQUIRED_TARGETS = Object.freeze([
+    "listing.status", "listing.address", "listing.price", "listing.mls", "listing.beds",
+    "listing.baths", "listing.sqft", "listing.floor", "listing.exposure", "listing.parking", "listing.availability",
+  ]);
+  const INACTIVE_MLS_STATUSES = new Set(["EXPIRED", "WITHDRAWN", "SUSPENDED", "TERMINATED", "CANCELLED", "CANCELED", "CLOSED", "SOLD", "LEASED", "OFF_MARKET", "INACTIVE"]);
+
+  function mlsFailure(code, message) {
+    const error = new Error(message || code); error.code = code; return error;
+  }
+  function sameIdentityValue(left, right) { return String(left == null ? "" : left).trim().toUpperCase() === String(right == null ? "" : right).trim().toUpperCase(); }
+  function sanitizeMlsValue(value, key = "") {
+    if (/secret|token|credential|password|api[-_]?key/i.test(key)) return undefined;
+    if (Array.isArray(value)) return value.map(item => sanitizeMlsValue(item)).filter(item => item !== undefined);
+    if (isObject(value)) return Object.entries(value).reduce((output, [childKey, child]) => {
+      const safe = sanitizeMlsValue(child, childKey); if (safe !== undefined) output[childKey] = safe; return output;
+    }, {});
+    return value;
+  }
+  function normalizedMlsFieldValue(sourceKey, value) {
+    if (sourceKey === "featuresEn" || sourceKey === "featuresZh") return list(value).join("\n");
+    if (sourceKey === "openHouse" && isObject(value)) return canonicalStringify(value);
+    return value == null ? "" : value;
+  }
+  function imageRightsBlocked(image) {
+    return image && !image.replaced && !image.confirmed && image.reuseAllowed !== true;
+  }
+  function mlsCompleteness(project) {
+    const imported = getPath(project, "mlsImport") || {}; const fields = Object.values(imported.fields || {});
+    return {
+      imported: fields.filter(field => field.status === "imported").length,
+      missing: fields.filter(field => field.status === "missing").length,
+      stale: fields.filter(field => field.status === "stale").length + (imported.stale ? 1 : 0),
+      overridden: fields.filter(field => field.status === "user-overridden").length,
+      blocked: (imported.images || []).filter(imageRightsBlocked).length,
+    };
+  }
+  function buildMlsImportPlan(project, rawResponse, request = {}) {
+    const response = sanitizeMlsValue(rawResponse || {});
+    if (response.error && response.error.code) throw mlsFailure(response.error.code, response.error.message);
+    const matches = Array.isArray(response.matches) ? response.matches : [];
+    if (!matches.length) throw mlsFailure("MLS_NOT_FOUND", "No permitted listing matched this provider, board, and MLS number.");
+    if (matches.length !== 1) throw mlsFailure("MLS_AMBIGUOUS", "More than one listing matched; import is blocked.");
+    const listing = matches[0] || {}; const provider = response.provider || {};
+    const providerId = listing.providerId || provider.id || ""; const board = listing.board || provider.board || "";
+    const listingNumber = listing.listingNumber || listing.mls || "";
+    if (!populated(providerId) || !populated(board) || !populated(listingNumber) || !populated(listing.status) || !populated(listing.address) || !Object.prototype.hasOwnProperty.call(listing, "unit")) {
+      throw mlsFailure("MLS_INCOMPLETE_IDENTITY", "Provider, board, listing number, status, address, and unit context are required.");
+    }
+    if (request.providerId && !sameIdentityValue(request.providerId, providerId)) throw mlsFailure("MLS_PROVIDER_MISMATCH", "The response provider does not match the connected provider.");
+    if (request.board && !sameIdentityValue(request.board, board)) throw mlsFailure("MLS_BOARD_MISMATCH", "The response board does not match the connected board.");
+    if (request.listingNumber && !sameIdentityValue(request.listingNumber, listingNumber)) throw mlsFailure("MLS_NUMBER_MISMATCH", "The returned listing number does not exactly match the request.");
+    const normalizedStatusValue = normalizedStatus(listing.status);
+    if (INACTIVE_MLS_STATUSES.has(normalizedStatusValue)) throw mlsFailure(`MLS_${normalizedStatusValue}`, `Listing status ${listing.status} cannot be imported for publication.`);
+    const retrievedAt = response.retrievedAt || new Date().toISOString(); const sourceUpdatedAt = listing.sourceUpdatedAt || response.sourceUpdatedAt || "";
+    const sourceAge = sourceUpdatedAt ? Date.now() - new Date(sourceUpdatedAt).getTime() : 0;
+    const stale = response.stale === true || (Number.isFinite(sourceAge) && sourceAge > 24 * 60 * 60 * 1000);
+    const fields = {}; const candidate = {};
+    [...MLS_SCALAR_MAPPING, ...MLS_MODULE_MAPPING].forEach(([sourceKey, targetPath]) => {
+      const hasValue = Object.prototype.hasOwnProperty.call(listing, sourceKey);
+      const value = normalizedMlsFieldValue(sourceKey, hasValue ? listing[sourceKey] : "");
+      const missing = !hasValue || (Array.isArray(value) ? !value.length : !populated(value));
+      fields[targetPath] = {
+        status: missing ? "missing" : (stale ? "stale" : "imported"), originalValue: missing ? null : clone(value),
+        currentValue: missing ? null : clone(value), providerId, board, listingNumber, retrievedAt, sourceUpdatedAt,
+      };
+      if (!missing) candidate[targetPath] = clone(value);
+    });
+    const previous = getPath(project, "mlsImport") || {}; const changes = [];
+    Object.entries(fields).forEach(([path, field]) => {
+      const prior = previous.fields && previous.fields[path];
+      if (prior && canonicalStringify(prior.originalValue) !== canonicalStringify(field.originalValue)) changes.push({path, before: prior.originalValue, after: field.originalValue});
+    });
+    const images = (Array.isArray(listing.images) ? listing.images : []).map((image, index) => ({
+      sourceId: String(image.sourceId || `image-${index + 1}`), role: image.role || (index ? "gallery" : "hero"), order: Number(image.order == null ? index : image.order),
+      caption: image.caption || "", pixelWidth: Number(image.pixelWidth || 0), pixelHeight: Number(image.pixelHeight || 0),
+      rightsStatus: image.rightsStatus || (image.reuseAllowed === true ? "permitted" : "unknown"), reuseAllowed: image.reuseAllowed === true,
+      confirmed: false, replaced: false, name: image.name || `${image.sourceId || `image-${index + 1}`}.jpg`, type: image.type || "image/jpeg",
+      dataUrl: typeof image.dataUrl === "string" && image.dataUrl.startsWith("data:image/") ? image.dataUrl : "",
+    })).sort((left, right) => left.order - right.order);
+    const sameListing = previous.active && sameIdentityValue(previous.provider && previous.provider.id, providerId) && sameIdentityValue(previous.provider && previous.provider.board, board) && sameIdentityValue(previous.listingNumber, listingNumber);
+    return {
+      provider: {id: providerId, name: provider.name || providerId, board}, listingNumber, retrievedAt, sourceUpdatedAt,
+      exactMatch: true, stale, status: listing.status, fields, candidate, images,
+      missing: MLS_REQUIRED_TARGETS.filter(path => !populated(candidate[path])), blocked: images.filter(imageRightsBlocked).map(image => image.sourceId),
+      refresh: {sameListing: Boolean(sameListing), changes, requiresConfirmation: Boolean(sameListing && changes.length)},
+    };
+  }
+  function applyMlsImage(project, image) {
+    if (!image.dataUrl || image.reuseAllowed !== true) return;
+    if (image.role === "hero") {
+      project.media.heroDataUrl = image.dataUrl; project.media.heroName = image.name; project.media.heroType = image.type;
+    } else if (image.role === "floorplan" || image.role === "furnished3d" || image.role === "technical2d") {
+      const role = image.role === "floorplan" ? "technical2d" : image.role; const plans = project.media.floorplans || [];
+      const index = Math.max(0, plans.findIndex(plan => plan.role === role)); const base = plans[index] || {fit: "contain", focal: [.5, .5], captionEn: "", captionZh: "", noteEn: "", noteZh: ""};
+      plans[index] = {...base, role, name: image.name, type: image.type, dataUrl: image.dataUrl, pixelWidth: image.pixelWidth, pixelHeight: image.pixelHeight}; project.media.floorplans = plans.slice(0, MODULE_LIMITS.floorPlans);
+    } else if ((project.media.gallery || []).length < 4) project.media.gallery.push({name: image.name, type: image.type, dataUrl: image.dataUrl});
+  }
+  function applyMlsImport(project, plan, options = {}) {
+    const output = clone(project); const previousFields = getPath(output, "mlsImport.fields") || {}; const nextFields = clone(plan.fields);
+    Object.entries(plan.candidate || {}).forEach(([path, value]) => {
+      if (previousFields[path] && previousFields[path].status === "user-overridden" && options.overwriteUserOverrides !== true) {
+        nextFields[path] = {...nextFields[path], status: "user-overridden", currentValue: clone(getPath(output, path)), overriddenAt: previousFields[path].overriddenAt || ""}; return;
+      }
+      setPath(output, path, clone(value));
+    });
+    if (options.overwriteLocalImages === true || !(output.media.heroDataUrl || (output.media.gallery || []).length || activeFloorPlans(output).length)) {
+      (plan.images || []).forEach(image => applyMlsImage(output, image));
+    }
+    output.mlsImport = {
+      active: true, provider: clone(plan.provider), listingNumber: plan.listingNumber, retrievedAt: plan.retrievedAt,
+      sourceUpdatedAt: plan.sourceUpdatedAt, exactMatch: true, stale: Boolean(plan.stale), status: plan.status,
+      fields: nextFields, images: clone(plan.images), missing: clone(plan.missing), blocked: clone(plan.blocked),
+      reviewConfirmed: false, reviewedAt: "", refresh: clone(plan.refresh),
+    };
+    return output;
+  }
+  function recordMlsOverride(project, path, value) {
+    const field = getPath(project, "mlsImport.fields") && project.mlsImport.fields[path]; if (!getPath(project, "mlsImport.active") || !field) return project;
+    field.currentValue = clone(value); field.status = canonicalStringify(value) === canonicalStringify(field.originalValue) ? (project.mlsImport.stale ? "stale" : "imported") : "user-overridden";
+    if (field.status === "user-overridden") field.overriddenAt = new Date().toISOString(); else delete field.overriddenAt;
+    project.mlsImport.reviewConfirmed = false; project.mlsImport.reviewedAt = "";
+    return project;
+  }
+  function confirmMlsImageRights(project, sourceId) {
+    const output = clone(project); const image = (getPath(output, "mlsImport.images") || []).find(item => item.sourceId === sourceId);
+    if (!image) throw mlsFailure("MLS_IMAGE_NOT_FOUND", "Imported image was not found.");
+    if (image.rightsStatus === "denied") throw mlsFailure("MLS_IMAGE_RIGHTS_DENIED", "Provider rights explicitly prohibit reuse; choose a local replacement.");
+    image.confirmed = true; image.reuseAllowed = true; image.rightsStatus = "user-confirmed"; applyMlsImage(output, image);
+    output.mlsImport.blocked = output.mlsImport.images.filter(imageRightsBlocked).map(item => item.sourceId); output.mlsImport.reviewConfirmed = false;
+    return output;
+  }
+  function resolveMlsImageWithReplacement(project, sourceId) {
+    const output = clone(project); const image = (getPath(output, "mlsImport.images") || []).find(item => item.sourceId === sourceId);
+    if (!image) throw mlsFailure("MLS_IMAGE_NOT_FOUND", "Imported image was not found.");
+    const importedData = new Set((output.mlsImport.images || []).map(item => item.dataUrl).filter(Boolean));
+    const isLocal = dataUrl => populated(dataUrl) && !importedData.has(dataUrl);
+    let replacementAvailable = false;
+    if (image.role === "hero") replacementAvailable = isLocal(getPath(output, "media.heroDataUrl"));
+    else if (image.role === "floorplan" || image.role === "furnished3d" || image.role === "technical2d") {
+      replacementAvailable = (getPath(output, "media.floorplans") || []).some(plan => isLocal(plan.dataUrl));
+    } else replacementAvailable = (getPath(output, "media.gallery") || []).some(item => isLocal(item.dataUrl));
+    if (!replacementAvailable) throw mlsFailure("MLS_IMAGE_REPLACEMENT_REQUIRED", "Upload a local replacement for this image role before marking it replaced.");
+    image.replaced = true; image.dataUrl = ""; output.mlsImport.blocked = output.mlsImport.images.filter(imageRightsBlocked).map(item => item.sourceId); output.mlsImport.reviewConfirmed = false;
+    return output;
+  }
   function moduleItems(project, name) {
     const items = getPath(project, `modules.${name}`);
     return Array.isArray(items) ? items : [];
@@ -271,6 +433,11 @@
       reviewedAt: project.review.reviewedAt,
       notes: project.review.notes,
       changes: clone(changes || []),
+      mlsImport: getPath(project, "mlsImport.active") ? sanitizeMlsValue({
+        provider: project.mlsImport.provider, listingNumber: project.mlsImport.listingNumber,
+        retrievedAt: project.mlsImport.retrievedAt, reviewedAt: project.mlsImport.reviewedAt,
+        completeness: mlsCompleteness(project),
+      }) : null,
       statement: "Internal workflow record only; not an electronic signature or legal, regulatory, MLS, or brokerage approval.",
     };
   }
@@ -278,7 +445,7 @@
   function validateProject(project) {
     const errors = []; const warnings = [];
     const required = [
-      "listing.address", "listing.unit", "listing.price", "listing.mls", "listing.beds", "listing.baths",
+      "listing.address", "listing.price", "listing.mls", "listing.beds", "listing.baths",
       "listing.sqft", "listing.floor", "listing.exposure", "listing.parking", "listing.availability",
       "contact.name", "contact.phone", "contact.email", "brand.name", "media.heroDataUrl",
     ];
@@ -435,6 +602,18 @@
       if (!String(getPath(project, "review.reviewer") || "").trim()) errors.push("Approved projects require review.reviewer");
       if (!String(getPath(project, "review.reviewedAt") || "").trim()) errors.push("Approved projects require review.reviewedAt");
     }
+    if (getPath(project, "mlsImport.active")) {
+      if (!getPath(project, "mlsImport.exactMatch")) errors.push("Authorized MLS import requires one exact provider, board, and listing-number match");
+      ["provider.id", "provider.board", "listingNumber", "retrievedAt", "status"].forEach(path => {
+        if (!populated(getPath(project.mlsImport, path))) errors.push(`Authorized MLS import is missing mlsImport.${path}`);
+      });
+      if (INACTIVE_MLS_STATUSES.has(normalizedStatus(getPath(project, "mlsImport.status")))) errors.push("Authorized MLS listing status is not publishable");
+      const blockedImages = (getPath(project, "mlsImport.images") || []).filter(imageRightsBlocked);
+      if (blockedImages.length) errors.push(`Authorized MLS import has ${blockedImages.length} image-rights item(s) requiring confirmation or local replacement`);
+      if (!getPath(project, "mlsImport.reviewConfirmed")) errors.push("Authorized MLS imports require explicit human review before export");
+      if (getPath(project, "mlsImport.stale")) warnings.push("Authorized MLS source data is stale; refresh and review it before publication");
+      (getPath(project, "mlsImport.missing") || []).forEach(path => warnings.push(`Authorized MLS source did not provide ${path}`));
+    }
     return {errors: [...new Set(errors)], warnings: [...new Set(warnings)], profile};
   }
 
@@ -515,7 +694,8 @@
         rent: project.listing.price, rent_period: project.listing.rentPeriod, mls: project.listing.mls,
         beds: Number(project.listing.beds), baths: Number(project.listing.baths), sqft: project.listing.sqft,
         floor: project.listing.floor, exposure: project.listing.exposure, balcony: project.listing.balcony, parking: project.listing.parking,
-        availability: project.listing.availability,
+        availability: project.listing.availability, open_house: project.listing.openHouse || "",
+        description_en: project.listing.descriptionEn || "", description_zh: project.listing.descriptionZh || "",
       },
       brand: {name: project.brand.name, tagline: project.brand.tagline, website: project.brand.website, logo: project.media.logoLightName || "assets/logo.png"},
       contact: clone(project.contact),
@@ -537,6 +717,7 @@
       studio: {
         project_schema_version: PROJECT_SCHEMA_VERSION, language_mode: project.language.mode,
         compliance: clone(project.compliance), template: clone(project.template), review: clone(project.review), media: clone(project.media), modules: clone(project.modules),
+        mls_import: project.mlsImport ? sanitizeMlsValue(project.mlsImport) : null,
       },
     };
   }
@@ -549,7 +730,8 @@
       headlineZh: getPath(content, "translations.headline_zh") || "", price: listing.rent || listing.price || "",
       rentPeriod: listing.rent_period || "", mls: listing.mls || "", beds: listing.beds || "", baths: listing.baths || "",
       sqft: listing.sqft || "", floor: listing.floor || "", exposure: listing.exposure || "", balcony: listing.balcony || "", parking: listing.parking || "",
-      availability: listing.availability || "",
+      availability: listing.availability || "", openHouse: listing.open_house || "",
+      descriptionEn: listing.description_en || "", descriptionZh: listing.description_zh || "",
     });
     Object.assign(project.brand, raw.brand || {}); Object.assign(project.contact, raw.contact || {}); Object.assign(project.theme, raw.theme || {});
     project.content.featuresEn = list(content.features).join("\n"); project.content.featuresZh = list(getPath(content, "translations.features_zh")).join("\n");
@@ -575,6 +757,7 @@
       if (raw.studio.review) project.review = deepMerge(project.review, raw.studio.review);
       if (raw.studio.media) project.media = deepMerge(project.media, raw.studio.media);
       if (raw.studio.modules) project.modules = deepMerge(project.modules, raw.studio.modules);
+      if (raw.studio.mls_import) project.mlsImport = deepMerge(project.mlsImport || {}, sanitizeMlsValue(raw.studio.mls_import));
     }
     return normalizeProject(project, defaults);
   }
@@ -603,6 +786,12 @@
     if (!migrated.contact.portraitMode) migrated.contact.portraitMode = "none";
     if (typeof migrated.compliance.applicationRequirementsConfirmed !== "boolean") migrated.compliance.applicationRequirementsConfirmed = false;
     if (!migrated.compliance.disclaimer) migrated.compliance.disclaimer = activeComplianceProfile(migrated).disclaimer;
+    if (migrated.mlsImport) {
+      if (!isObject(migrated.mlsImport.fields)) migrated.mlsImport.fields = {};
+      if (!Array.isArray(migrated.mlsImport.images)) migrated.mlsImport.images = [];
+      if (!Array.isArray(migrated.mlsImport.missing)) migrated.mlsImport.missing = [];
+      if (!Array.isArray(migrated.mlsImport.blocked)) migrated.mlsImport.blocked = [];
+    }
     return migrated;
   }
 
@@ -619,6 +808,7 @@
     media.gallery = (media.gallery || []).map(item => ({name: item.name, type: item.type, embedded: Boolean(item.dataUrl), signature: item.dataUrl ? embeddedSignature(item.dataUrl) : ""}));
     media.floorplans = (media.floorplans || []).map(item => ({...item, dataUrl: item.dataUrl ? embeddedSignature(item.dataUrl) : ""}));
     if (copy.modules) copy.modules.spotlights = (copy.modules.spotlights || []).map(item => ({...item, dataUrl: item.dataUrl ? embeddedSignature(item.dataUrl) : ""}));
+    if (copy.mlsImport) copy.mlsImport.images = (copy.mlsImport.images || []).map(item => ({...item, dataUrl: item.dataUrl ? embeddedSignature(item.dataUrl) : ""}));
     return copy;
   }
   function diffProjects(previous, current) {
@@ -680,6 +870,13 @@
   async function buildManifest(project, outputFiles) {
     const projectCopy = clone(project); delete projectCopy.review.baseline;
     const typography = activeTypography(project);
+    const mlsProvenance = getPath(project, "mlsImport.active") ? sanitizeMlsValue({
+      provider: project.mlsImport.provider, listingNumber: project.mlsImport.listingNumber,
+      retrievedAt: project.mlsImport.retrievedAt, sourceUpdatedAt: project.mlsImport.sourceUpdatedAt,
+      exactMatch: project.mlsImport.exactMatch, stale: project.mlsImport.stale, status: project.mlsImport.status,
+      fields: project.mlsImport.fields, images: (project.mlsImport.images || []).map(({dataUrl, ...image}) => image),
+      completeness: mlsCompleteness(project), reviewedAt: project.mlsImport.reviewedAt,
+    }) : null;
     const assets = [
       ["hero", project.media.heroName, project.media.heroDataUrl], ["portrait", project.media.portraitName, project.media.portraitDataUrl], ["logo_light", project.media.logoLightName, project.media.logoLightDataUrl],
       ["logo_dark", project.media.logoDarkName, project.media.logoDarkDataUrl], ["floorplan", project.media.floorplanName, project.media.floorplanDataUrl],
@@ -738,16 +935,20 @@
       },
       assets: await Promise.all(assets.map(async ([role, name, dataUrl]) => ({role, filename: name, sha256: await sha256Bytes(dataUrlToBytes(dataUrl))}))),
       outputs: await Promise.all((outputFiles || []).map(async file => ({filename: file.name, bytes: file.data.length, sha256: await sha256Bytes(file.data)}))),
-      provenance: "Listing and module text comes from validated user input. Images are fitted or cropped locally and are never generated or uploaded by this tool.",
+      mlsImport: mlsProvenance,
+      provenance: mlsProvenance
+        ? "Imported listing values retain authorized provider, board, retrieval-time, original-value, and user-override provenance. Images are exportable only after provider permission, explicit user confirmation, or local replacement."
+        : "Listing and module text comes from validated user input. Images are fitted or cropped locally and are never generated or uploaded by this tool.",
     };
   }
 
   return {
-    APP_VERSION, PROJECT_SCHEMA_VERSION, OUTPUT_DIMENSIONS, MODULE_LIMITS, MODULE_ORDER, COMPLIANCE_PROFILES, TYPOGRAPHY_PRESETS, clone, getPath, setPath, deepMerge, list,
+    APP_VERSION, PROJECT_SCHEMA_VERSION, OUTPUT_DIMENSIONS, MODULE_LIMITS, MODULE_ORDER, COMPLIANCE_PROFILES, TYPOGRAPHY_PRESETS, MLS_SCALAR_MAPPING, MLS_MODULE_MAPPING, clone, getPath, setPath, deepMerge, list,
     profileForStatus, activeComplianceProfile, activeTypography, buildTemplate, applyTemplate, duplicateTemplate,
     allPropertyFacts, resolvedPropertyFacts, activeFloorPlans, activeSpotlights, activeLeaseDetails, activeIncludedCosts, activeTenantPaidCosts,
     activeAmenities, activeApplicationRequirements, costConflicts, layoutSnapshot,
     campaignCopy, buildApprovalRecord, validateProject, parseSimpleYaml, toSimpleYaml, toListingData,
+    buildMlsImportPlan, applyMlsImport, recordMlsOverride, confirmMlsImageRights, resolveMlsImageWithReplacement, mlsCompleteness, sanitizeMlsValue,
     projectFromListingData, normalizeProject, canonicalStringify, diffProjects, dataUrlToBytes, crc32, makeZip,
     sha256Bytes, sha256Text, buildManifest,
   };

@@ -1,0 +1,37 @@
+{
+  "provider": {"id": "synthetic-provider", "name": "Synthetic Authorized Provider", "board": "SYNTH-BOARD"},
+  "scenarios": {
+    "SYN-EXACT": {
+      "status": 200,
+      "body": {
+        "matches": [{
+          "providerId": "synthetic-provider", "board": "SYNTH-BOARD", "listingNumber": "SYN-EXACT",
+          "status": "FOR LEASE", "address": "100 Test Avenue", "unit": "1201", "city": "Toronto, ON", "postalCode": "M5V 0A1",
+          "price": "$3,200", "rentPeriod": "per month", "beds": "2", "baths": "2", "sqft": "800-899", "floor": "12th",
+          "exposure": "South", "balcony": "Open balcony", "parking": "1 space", "availability": "2026-09-01",
+          "openHouse": "2026-08-29 14:00-16:00", "descriptionEn": "Synthetic fixture description.", "descriptionZh": "合成测试资料说明。",
+          "headlineEn": "A synthetic waterfront home", "headlineZh": "合成测试湖滨住宅",
+          "featuresEn": ["Synthetic feature one", "Synthetic feature two"], "featuresZh": ["合成特色一", "合成特色二"],
+          "sourceUpdatedAt": "2026-08-21T11:55:00Z",
+          "amenities": [{"id": "fitness", "icon": "tool", "labelEn": "Fitness centre", "labelZh": "健身中心", "state": "active"}],
+          "leaseDetails": [{"id": "term", "labelEn": "Lease term", "labelZh": "租期", "valueEn": "12 months", "valueZh": "12 个月", "state": "active"}, {"id": "availability", "labelEn": "Available", "labelZh": "可入住", "valueEn": "2026-09-01", "valueZh": "2026-09-01", "state": "active"}],
+          "includedCosts": [{"id": "water", "icon": "droplet", "labelEn": "Water", "labelZh": "水费", "state": "included"}],
+          "tenantPaidCosts": [{"id": "hydro", "icon": "bolt", "labelEn": "Hydro", "labelZh": "电费", "state": "tenant-paid"}],
+          "applicationRequirements": [{"id": "credit", "icon": "receipt", "labelEn": "Credit report", "labelZh": "信用报告", "state": "required"}],
+          "images": [
+            {"sourceId": "synthetic-hero", "role": "hero", "order": 0, "name": "synthetic-hero.png", "type": "image/png", "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "pixelWidth": 1800, "pixelHeight": 1200, "rightsStatus": "permitted", "reuseAllowed": true},
+            {"sourceId": "synthetic-plan", "role": "technical2d", "order": 1, "name": "synthetic-plan.png", "type": "image/png", "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "pixelWidth": 1200, "pixelHeight": 1200, "rightsStatus": "unknown", "reuseAllowed": false},
+            {"sourceId": "synthetic-denied", "role": "gallery", "order": 2, "name": "synthetic-denied.png", "type": "image/png", "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "pixelWidth": 1200, "pixelHeight": 800, "rightsStatus": "denied", "reuseAllowed": false}
+          ]
+        }]
+      }
+    },
+    "SYN-AMBIGUOUS": {"status": 200, "body": {"matches": [{"providerId": "synthetic-provider", "board": "SYNTH-BOARD", "listingNumber": "SYN-AMBIGUOUS", "status": "FOR SALE", "address": "1 Test Road", "unit": ""}, {"providerId": "synthetic-provider", "board": "SYNTH-BOARD", "listingNumber": "SYN-AMBIGUOUS", "status": "FOR SALE", "address": "2 Test Road", "unit": ""}]}},
+    "SYN-INCOMPLETE": {"status": 200, "body": {"matches": [{"providerId": "synthetic-provider", "board": "SYNTH-BOARD", "listingNumber": "SYN-INCOMPLETE", "status": "FOR SALE", "address": "3 Test Road"}]}},
+    "SYN-WITHDRAWN": {"status": 200, "body": {"matches": [{"providerId": "synthetic-provider", "board": "SYNTH-BOARD", "listingNumber": "SYN-WITHDRAWN", "status": "WITHDRAWN", "address": "4 Test Road", "unit": ""}]}},
+    "SYN-STALE": {"status": 200, "body": {"stale": true, "matches": [{"providerId": "synthetic-provider", "board": "SYNTH-BOARD", "listingNumber": "SYN-STALE", "status": "FOR SALE", "address": "5 Test Road", "unit": "", "price": "$999,000", "beds": "3", "baths": "2", "sqft": "1200", "floor": "5th", "exposure": "East", "parking": "1 space", "availability": "Immediately", "sourceUpdatedAt": "2026-08-01T00:00:00Z"}]}},
+    "SYN-AUTH-EXPIRED": {"status": 401, "body": {"error": {"code": "MLS_AUTH_EXPIRED", "message": "Synthetic authorization expired"}}},
+    "SYN-RATE-LIMIT": {"status": 429, "body": {"error": {"code": "MLS_RATE_LIMITED", "message": "Synthetic rate limit"}}},
+    "SYN-OUTAGE": {"status": 503, "body": {"error": {"code": "MLS_PROVIDER_UNAVAILABLE", "message": "Synthetic outage"}}}
+  }
+}
