@@ -13,7 +13,8 @@ listing:
   rent: "$0,000"                 # REQUIRED; include the desired currency symbol
   rent_period: "per month"
   mls: "REQUIRED"
-  beds: 1                         # REQUIRED; positive number
+  beds: 1                         # REQUIRED; whole number from 0 to 20
+  beds_additional: 0              # Optional room/den count; whole number from 0 to 10
   baths: 1                        # REQUIRED; positive number
   sqft: "600-699"                 # REQUIRED; positive number or ASCII-hyphen range
   floor: "10th"                   # REQUIRED

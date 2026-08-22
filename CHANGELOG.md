@@ -2,6 +2,33 @@
 
 All notable changes to Realtor Poster Generator are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.3] - 2026-08-22
+
+See the bilingual [v1.4.3 release notes](RELEASE_NOTES_v1.4.3.md).
+
+### Added
+
+- Separate **Main bedrooms** (`0–20`) and **Additional room / den** (`0–10`) whole-number controls with immediate canonical `1`, `1 + 1`, `2`, and `2 + 1` preview
+- Browser project schema 6 plus two-field preservation through portable JSON/YAML, IndexedDB recovery, project comparison, provenance manifests, and approval packages
+- Automated coverage for display values, bounds, bilingual accessible copy, legacy migration, round trips, five-format layouts, explicit MLS values, provenance, and review invalidation
+
+### Changed
+
+- Compound property facts use the safe labels **“Beds + room/den”** and **“卧室 + 额外房间/书房”** instead of describing an additional room as a bedroom
+- Print, square, portrait, story, and landscape output now share the structured bedroom expression without summing or changing either count
+- Legacy single-value projects migrate with an additional count of `0`; explicit legacy compound values split into the two fields without changing their displayed expression
+- Authorized MLS import maps an additional count only from explicit separate or compound provider data and retains the original value in field-level provenance
+
+### Accessibility
+
+- English, Chinese, and bilingual artwork describe the separate counts explicitly, such as `2 bedrooms + 1 additional room/den` and `2 间卧室 + 1 个额外房间/书房`
+- Invalid values use actionable preflight errors that focus the relevant control; controls and derived preview remain responsive on mobile and at 200% zoom
+
+### Integrity
+
+- The application never adds the two counts, infers `+1` from descriptions, remarks, photographs, or floor plans, or represents a room/den as a legal bedroom
+- Editing either imported count records a local override, invalidates the previous MLS human review, and requires review again before export
+
 ## [1.4.2] - 2026-08-21
 
 See the bilingual [v1.4.2 release notes](RELEASE_NOTES_v1.4.2.md).
@@ -151,4 +178,5 @@ See the complete [bilingual v1.3.0 release notes](RELEASE_NOTES_v1.3.0.md).
 [1.4.0]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.0
 [1.4.1]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.1
 [1.4.2]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.2
+[1.4.3]: https://github.com/xudaniel/realtor-poster-generator/releases/tag/v1.4.3
 [1.0.0]: https://github.com/xudaniel/realtor-poster-generator/commits/main/

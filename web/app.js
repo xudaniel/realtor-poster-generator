@@ -18,7 +18,7 @@
     schemaVersion: Core.PROJECT_SCHEMA_VERSION, appVersion: Core.APP_VERSION,
     listing: {
       address: "88 Harbour Street", unit: "2608", status: "FOR LEASE", city: "Toronto, ON", postalCode: "M5J 2N8",
-      price: "$3,850", rentPeriod: "per month", mls: "C1234567", beds: "2", baths: "2", sqft: "815",
+      price: "$3,850", rentPeriod: "per month", mls: "C1234567", beds: "2", bedsAdditional: "0", baths: "2", sqft: "815",
       floor: "26th", exposure: "South-East", balcony: "Open balcony", parking: "1 Space", availability: "Immediately",
       openHouse: "", descriptionEn: "", descriptionZh: "",
       headlineEn: "Lake views. Downtown energy. A home above it all.", headlineZh: "湖景之上，都市生活触手可及",
@@ -623,14 +623,16 @@
   }
 
   function updateArtworkDescription() {
-    const facts = Core.resolvedPropertyFacts(state, state.preset).map(fact => `${moduleCopy(fact, "labelEn", "labelZh")}: ${fact.value}`);
+    const facts = Core.resolvedPropertyFacts(state, state.preset).map(fact => fact.id === "beds" || fact.source === "listing.beds"
+      ? Core.bedroomAccessibleCopy(state, state.language.mode)
+      : `${moduleCopy(fact, "labelEn", "labelZh")}: ${fact.value}`);
     const plans = Core.activeFloorPlans(state).map(plan => moduleCopy(plan, "captionEn", "captionZh") || plan.name);
     const spots = Core.activeSpotlights(state).map(item => moduleCopy(item, "titleEn", "titleZh"));
     const tenantCosts = Core.activeTenantPaidCosts(state).map(item => moduleCopy(item, "labelEn", "labelZh"));
     const amenities = Core.activeAmenities(state).map(item => moduleCopy(item, "labelEn", "labelZh"));
     const requirements = Core.activeApplicationRequirements(state).map(item => moduleCopy(item, "labelEn", "labelZh"));
     document.getElementById("artwork-description").textContent = [
-      `${statusCopy()} ${state.listing.address}, unit ${state.listing.unit}, ${priceCopy()}.`,
+      `${statusCopy()} ${state.listing.address}, unit ${state.listing.unit}, ${priceCopy()}. ${Core.bedroomAccessibleCopy(state, state.language.mode)}.`,
       facts.length ? `Property facts: ${facts.join("; ")}.` : "",
       plans.length ? `Floor plans: ${plans.join("; ")}.` : "",
       spots.length ? `Feature spotlights: ${spots.join("; ")}.` : "",
@@ -666,7 +668,11 @@
     </div>`).join("");
     const review = document.getElementById("mls-review-confirmed"); review.disabled = !imported.active || blocked.length > 0; review.checked = Boolean(imported.reviewConfirmed);
   }
-  function render(options = {}) { drawPoster(canvas); updateArtworkDescription(); renderMlsImport(); updateValidation(); updateChangeSummary(); if (options.autosave !== false) scheduleAutosave(); }
+  function updateBedroomPreview() {
+    const preview = document.getElementById("bedroom-display-preview");
+    if (preview) preview.textContent = `Poster display: ${Core.bedroomDisplay(state)} · ${Core.bedroomAccessibleCopy(state, state.language.mode)}`;
+  }
+  function render(options = {}) { drawPoster(canvas); updateArtworkDescription(); updateBedroomPreview(); renderMlsImport(); updateValidation(); updateChangeSummary(); if (options.autosave !== false) scheduleAutosave(); }
   function mediaDescriptors() {
     const output = [];
     if (state.media.heroDataUrl || state.media.heroName) output.push({kind: "hero", name: state.media.heroName || "Hero photo", dataUrl: state.media.heroDataUrl});
@@ -700,9 +706,10 @@
   function renderFactsEditor() {
     const container = document.getElementById("facts-editor"); const facts = state.modules.propertyFacts;
     container.innerHTML = facts.length ? facts.map((fact, index) => {
-      const value = fact.source ? Core.getPath(state, fact.source) : fact.value;
+      const displayFact = Core.allPropertyFacts(state)[index] || fact;
+      const value = displayFact.value;
       return `<div class="module-card">
-        <div class="module-card-header"><strong>${escapeHtml(fact.labelEn || `Fact ${index + 1}`)}</strong>${moduleActions("propertyFacts", index, facts.length)}</div>
+        <div class="module-card-header"><strong>${escapeHtml(displayFact.labelEn || `Fact ${index + 1}`)}</strong>${moduleActions("propertyFacts", index, facts.length)}</div>
         <div class="module-card-grid">
           <label>English label<input data-collection="propertyFacts" data-index="${index}" data-field="labelEn" value="${escapeHtml(fact.labelEn || "")}"></label>
           <label>中文标签<input lang="zh-Hans" data-collection="propertyFacts" data-index="${index}" data-field="labelZh" value="${escapeHtml(fact.labelZh || "")}"></label>
@@ -1069,7 +1076,7 @@
     if (state.template.lockedFields.includes(input.dataset.path)) { syncControls(); return; }
     Core.setPath(state, input.dataset.path, input.type === "checkbox" ? input.checked : input.value);
     Core.recordMlsOverride(state, input.dataset.path, input.type === "checkbox" ? input.checked : input.value);
-    if (state.modules.propertyFacts.some(fact => fact.source === input.dataset.path)) renderFactsEditor();
+    if (state.modules.propertyFacts.some(fact => fact.source === input.dataset.path) || input.dataset.path === "listing.bedsAdditional") renderFactsEditor();
     if (input.dataset.path === "listing.status" && !state.compliance.profile) {
       const id = Core.profileForStatus(input.value); state.compliance.profileId = id; state.compliance.disclaimer = Core.COMPLIANCE_PROFILES[id].disclaimer; syncControls();
     }
@@ -1205,7 +1212,8 @@
     if (!exportGuard()) return; const popup = window.open("", "poster-print", "width=900,height=1000");
     if (!popup) { setStatus("Allow pop-ups to print or save the poster as PDF."); return; }
     await prepareAction("before-pdf-export");
-    const data = canvas.toDataURL("image/png"); popup.document.write(`<!doctype html><title>${escapeHtml(slug())}</title><style>@page{margin:0}body{margin:0;display:grid;place-items:center;background:white}img{display:block;max-width:100%;max-height:100vh;object-fit:contain}</style><img src="${data}" alt="Poster">`);
+    const data = canvas.toDataURL("image/png"); const description = document.getElementById("artwork-description").textContent;
+    popup.document.write(`<!doctype html><title>${escapeHtml(slug())}</title><style>@page{margin:0}body{margin:0;display:grid;place-items:center;background:white}img{display:block;max-width:100%;max-height:100vh;object-fit:contain}</style><img src="${data}" alt="${escapeHtml(description)}">`);
     popup.document.close(); popup.focus(); popup.onload = () => popup.print(); setStatus("Print dialog opened — choose Save as PDF.");
   });
 
@@ -1223,9 +1231,10 @@
     downloadBlob(new Blob([`${JSON.stringify(manifest, null, 2)}\n`], {type: "application/json"}), `${slug()}.manifest.json`); setStatus("Provenance manifest downloaded.");
   });
   function proofHtml(files, changes) {
-    const imagesHtml = files.filter(file => file.name.endsWith(".png")).map(file => `<figure><img src="${escapeHtml(file.name)}" alt="${escapeHtml(file.name)}"><figcaption>${escapeHtml(file.name)}</figcaption></figure>`).join("");
+    const artworkAlt = `${state.listing.address}. ${Core.bedroomAccessibleCopy(state, "bilingual")}.`;
+    const imagesHtml = files.filter(file => file.name.endsWith(".png")).map(file => `<figure><img src="${escapeHtml(file.name)}" alt="${escapeHtml(`${file.name}. ${artworkAlt}`)}"><figcaption>${escapeHtml(file.name)}</figcaption></figure>`).join("");
     const changesHtml = changes.length ? `<ul>${changes.map(change => `<li>${escapeHtml(change.path)}</li>`).join("")}</ul>` : "<p>No baseline changes recorded.</p>";
-    const factsHtml = Core.resolvedPropertyFacts(state, "poster").map(fact => `<li>${escapeHtml(fact.labelEn)} / ${escapeHtml(fact.labelZh)}: ${escapeHtml(fact.value)}</li>`).join("");
+    const factsHtml = Core.resolvedPropertyFacts(state, "poster").map(fact => `<li>${escapeHtml(fact.labelEn)} / ${escapeHtml(fact.labelZh)}: ${escapeHtml(fact.id === "beds" || fact.source === "listing.beds" ? Core.bedroomAccessibleCopy(state, "bilingual") : fact.value)}</li>`).join("");
     const plansHtml = Core.activeFloorPlans(state).map(plan => `<li>${escapeHtml(plan.captionEn || plan.name)} / ${escapeHtml(plan.captionZh || "")} · ${escapeHtml(plan.pixelWidth || "unknown")} × ${escapeHtml(plan.pixelHeight || "unknown")} px</li>`).join("");
     const spotsHtml = Core.activeSpotlights(state).map(item => `<li>${escapeHtml(item.titleEn)} / ${escapeHtml(item.titleZh)}</li>`).join("");
     const leaseHtml = Core.activeLeaseDetails(state).map(item => `<li>${escapeHtml(item.labelEn)}: ${escapeHtml(item.valueEn)} / ${escapeHtml(item.valueZh)}</li>`).join("");

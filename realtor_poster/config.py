@@ -14,6 +14,8 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Tuple
 
 import yaml
 
+from .bedrooms import bedroom_counts, has_mixed_bedroom_representation, normalize_bedroom_listing
+
 
 class ConfigError(ValueError):
     """Raised when a listing input file is incomplete or malformed."""
@@ -105,6 +107,8 @@ def load_config(path: Path) -> Dict[str, Any]:
     data.setdefault("contact", {})
     data.setdefault("photos", {})
     data.setdefault("content", {})
+    if isinstance(data["listing"], MutableMapping):
+        normalize_bedroom_listing(data["listing"])
 
     # Store a stable base path once. The renderer never relies on its launch directory.
     data["_input_path"] = str(path)
@@ -161,13 +165,22 @@ def validate_config(data: Mapping[str, Any]) -> None:
     if phone and (not PHONE_ALLOWED_RE.fullmatch(phone) or not 10 <= len(digits) <= 15):
         errors.append("Invalid contact.phone: use 10-15 digits with normal phone punctuation")
 
-    for name in ("beds", "baths"):
-        value = _value_at(data, f"listing.{name}")
-        try:
-            if float(value) <= 0:
-                raise ValueError
-        except (TypeError, ValueError):
-            errors.append(f"listing.{name} must be a positive number")
+    listing = data.get("listing", {})
+    if has_mixed_bedroom_representation(listing):
+        errors.append("listing.beds cannot use main + additional notation when listing.beds_additional is provided; use the two separate whole-number fields")
+    else:
+        primary_beds, additional_rooms = bedroom_counts(listing)
+        if primary_beds is None or not 0 <= primary_beds <= 20:
+            errors.append("listing.beds must be a whole number from 0 to 20")
+        if additional_rooms is None or not 0 <= additional_rooms <= 10:
+            errors.append("listing.beds_additional must be a whole number from 0 to 10")
+
+    baths = _value_at(data, "listing.baths")
+    try:
+        if float(baths) <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        errors.append("listing.baths must be a positive number")
 
     sqft = _value_at(data, "listing.sqft")
     sqft_valid = False

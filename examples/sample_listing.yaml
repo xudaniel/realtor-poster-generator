@@ -10,6 +10,7 @@ listing:
   rent_period: "per month"
   mls: "DEMO2608"
   beds: 2
+  beds_additional: 0
   baths: 2
   sqft: 815
   floor: "26th"

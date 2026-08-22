@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -62,6 +63,15 @@ class AuthorizedMlsConnectorTests(unittest.TestCase):
         self.assertTrue(all(set(image_required).issubset(image) for image in match["images"]))
         for image in match["images"]:
             self.assertTrue(base64.b64decode(image["dataUrl"].split(",", 1)[1]).startswith(b"\x89PNG\r\n\x1a\n"))
+        listing_properties = schema["properties"]["matches"]["items"]["properties"]
+        beds_integer, beds_string = listing_properties["beds"]["oneOf"]
+        additional_integer, additional_string = listing_properties["bedsAdditional"]["oneOf"]
+        self.assertEqual((beds_integer["minimum"], beds_integer["maximum"]), (0, 20))
+        self.assertEqual((additional_integer["minimum"], additional_integer["maximum"]), (0, 10))
+        self.assertIsNotNone(re.fullmatch(beds_string["pattern"], "20 + 10"))
+        self.assertIsNone(re.fullmatch(beds_string["pattern"], "21 + 1"))
+        self.assertIsNotNone(re.fullmatch(additional_string["pattern"], "10"))
+        self.assertIsNone(re.fullmatch(additional_string["pattern"], "11"))
 
     def test_provider_context_mismatch_is_blocked(self):
         status, payload = lookup(self.config, "another-provider", "SYN-EXACT")

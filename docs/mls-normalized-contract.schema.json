@@ -1,5 +1,5 @@
 {
-  "title": "Realtor Poster v1.4.1 normalized authorized listing response",
+  "title": "Realtor Poster v1.4.3 normalized authorized listing response",
   "type": "object",
   "required": ["provider", "retrievedAt", "matches"],
   "properties": {
@@ -20,7 +20,20 @@
           "providerId": {"type": "string"}, "board": {"type": "string"}, "listingNumber": {"type": "string"},
           "status": {"type": "string"}, "address": {"type": "string"}, "unit": {"type": "string"},
           "city": {"type": "string"}, "postalCode": {"type": "string"}, "price": {"type": "string"},
-          "rentPeriod": {"type": "string"}, "beds": {}, "baths": {}, "sqft": {}, "floor": {}, "exposure": {},
+          "rentPeriod": {"type": "string"},
+          "beds": {
+            "oneOf": [
+              {"type": "integer", "minimum": 0, "maximum": 20},
+              {"type": "string", "pattern": "^(?:[0-9]|1[0-9]|20)(?:\\s*\\+\\s*(?:[0-9]|10))?$"}
+            ]
+          },
+          "bedsAdditional": {
+            "oneOf": [
+              {"type": "integer", "minimum": 0, "maximum": 10},
+              {"type": "string", "pattern": "^(?:[0-9]|10)$"}
+            ]
+          },
+          "baths": {}, "sqft": {}, "floor": {}, "exposure": {},
           "balcony": {}, "parking": {}, "availability": {}, "openHouse": {}, "descriptionEn": {}, "descriptionZh": {},
           "headlineEn": {}, "headlineZh": {}, "featuresEn": {"type": "array"}, "featuresZh": {"type": "array"},
           "sourceUpdatedAt": {"type": "string"},
