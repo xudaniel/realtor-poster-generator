@@ -6,9 +6,9 @@
 
 Created and maintained by **Daniel Xu**. 由 **Daniel Xu** 创建并维护。
 
-[中文 README](README.md) · [Bilingual v1.4.2 release notes](RELEASE_NOTES_v1.4.2.md) · [v1.4.1 release notes](RELEASE_NOTES_v1.4.1.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+[中文 README](README.md) · [Bilingual v1.4.3 release notes](RELEASE_NOTES_v1.4.3.md) · [v1.4.2 release notes](RELEASE_NOTES_v1.4.2.md) · [English PRD](PRD.en.md) · [中文产品需求文档](PRD.md) · [Live visual editor / 在线可视化编辑器](https://xudaniel.github.io/realtor-poster-generator/) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-Current stable version: **1.4.2** · browser project schema: **5**
+Current stable version: **1.4.3** · browser project schema: **6**
 
 Realtor Poster Generator is a reusable, structured-data-driven toolkit for real-estate sale and rental artwork. Its information hierarchy includes a prominent listing status, address and price, property facts, interior photography, an optional floor plan, detail sections, neighbourhood highlights, and agent contact information. The composition, typography, colours, shapes, and layout are original rather than a pixel-for-pixel copy of any reference design.
 
@@ -38,6 +38,14 @@ Then open `http://127.0.0.1:8765`. Browser projects can be saved as JSON or YAML
 
 The v1.4 editor also autosaves the complete editable project—including browser-local images—to IndexedDB after changes and immediately before project replacement, reset, or export. When the editor is reopened, a bilingual recovery panel offers the newest draft with its save time. Projects have separate identifiers, a newer draft from another tab triggers a conflict warning, storage failures are shown explicitly, and portable project downloads remain available as a manual backup. Use **Clear saved drafts** to remove recovery copies from this browser.
 
+## v1.4.3: Beds + room/den
+
+v1.4.3 implements [Issue #27](https://github.com/xudaniel/realtor-poster-generator/issues/27). The editor stores **Main bedrooms** and **Additional room / den** as separate non-negative whole-number controls: `0–20` for main bedrooms and `0–10` for additional rooms/dens. The property-facts ribbon uses the safe label **“Beds + room/den.”** An additional count of `0` displays only the main count; a positive count uses the canonical `2 + 1` form. The application never adds the values into `3 bedrooms` and never describes the additional room/den as a legal bedroom.
+
+Browser project schema 6 stores `listing.beds` and `listing.bedsAdditional` separately; YAML/JSON interchange uses `beds` and `beds_additional`. Portable projects, IndexedDB recovery, comparisons, provenance manifests, and approval packages preserve both counts exactly. A schema-5 or older single bedroom value migrates to the same main count plus `0` additional rooms. An explicit legacy compound value such as `1 + 1` is split between the two fields without changing the displayed expression.
+
+The print poster, square, portrait, story, and landscape formats share the same structured expression and accessible description, such as “`2 bedrooms + 1 additional room/den`.” Authorized MLS import sets an additional count only when the provider explicitly supplies a separate count or an explicit compound value, and field-level provenance retains the original provider value. It never infers `+1` from descriptions, remarks, photographs, or floor plans. Editing either imported count records a local override, invalidates the existing MLS human review, and requires review again before export.
+
 ## v1.4.2: actionable export preflight
 
 v1.4.2 implements [Issue #25](https://github.com/xudaniel/realtor-poster-generator/issues/25). The export preflight now presents only true blockers in the red action-required panel. Every blocker uses plain-language guidance and a button that opens, scrolls to, and focuses the relevant control. Non-blocking MLS source changes appear in a separate amber panel; it lists the changed fields and links to the first one. Counts, singular/plural copy, focus placement, and live-region updates respond immediately as the project changes. The legal and compliance explanation remains visible outside the actionable cards. Validation and compliance rules are unchanged, and the browser project schema remains version 5.
@@ -62,7 +70,7 @@ Open `http://127.0.0.1:8765`, then connect `http://127.0.0.1:8766` under **Autho
 
 ## Features
 
-- Address, unit, rent or price, MLS®, bedrooms, bathrooms, area, floor, exposure, parking, and availability
+- Address, unit, rent or price, MLS®, separate main-bedroom and additional-room/den counts, bathrooms, area, floor, exposure, parking, and availability
 - Property features, building amenities, utilities, lease terms, and neighbourhood highlights
 - Hero image, up to four interior images, optional floor plan, and transparent brand logo
 - EXIF orientation, proportional scaling, crop control, and hero-image focal point
@@ -91,6 +99,7 @@ Open `http://127.0.0.1:8765`, then connect `http://127.0.0.1:8766` under **Autho
 - v1.4 cross-cutting recovery ([#20](https://github.com/xudaniel/realtor-poster-generator/issues/20)) preserves editable fields and local images after generation, export, reload, reset, or project replacement without changing Stories 1–10 numbering
 - v1.4.1 adds the loopback authorized MLS connector, exact-match enforcement, deterministic mapping, field-level provenance, refresh diffs, image-rights gates, and a human-review gate
 - v1.4.2 separates blockers from warnings and gives every blocker a direct, keyboard-focusable route to the field that needs attention
+- v1.4.3 adds structured **Beds + room/den** data, safe `2 + 1` display, schema-6 migration, consistent five-format output, and explicit-source MLS provenance with review invalidation after edits
 
 ## v1.4 release: Stories 1–10
 
@@ -268,7 +277,7 @@ The template supports:
 
 - Listing status, address, unit, city, postal code, and headline
 - Rent or price, billing period, and MLS® number
-- Bedrooms, bathrooms, area, floor, exposure, parking, and availability
+- Main bedrooms (`0–20`), additional rooms/dens (`0–10`), bathrooms, area, floor, exposure, parking, and availability
 - Lease terms, property features, building amenities, utilities, and neighbourhood highlights
 - Agent name, title, phone, email, company, website, and brand tagline
 - Hero image, up to four interior images, floor plan, and brand logo
@@ -357,6 +366,7 @@ Coverage includes:
 - Multi-listing discovery, preflight validation, and batch output
 - Browser-editor privacy boundaries, export functions, and core assets
 - Browser YAML round-trips, compliance gates, template manifests, approval requirements, and project comparison
+- Main-bedroom and additional-room/den bounds, `2 + 1` display, legacy migration, five-format layouts, explicit MLS provenance, and review invalidation
 - Multi-version Python CI, JavaScript syntax, sample rendering, and package builds
 
 ## Pre-publication checklist
@@ -364,6 +374,7 @@ Coverage includes:
 Before publishing real listing artwork, the responsible agent or brokerage must verify:
 
 - The address, price, MLS®, area, and every advertising claim are accurate
+- Main-bedroom and additional-room/den counts separately match the listing source; no room/den is represented as a legal bedroom
 - The listing photos, floor plan, logo, and fonts are licensed for the intended use
 - The advertisement follows applicable real-estate regulations and brokerage rules
 - Required disclaimers, registered brokerage name, and agent identity information are complete

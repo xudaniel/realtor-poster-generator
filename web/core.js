@@ -106,28 +106,32 @@
   }
   function populated(value) { return value != null && String(value).trim() !== ""; }
   function parseBedroomCount(value) {
-    const text = String(value == null ? "" : value).trim();
-    return /^\d+$/.test(text) ? Number(text) : null;
+    if (typeof value !== "string" && typeof value !== "number") return null;
+    const text = String(value).trim(); const parsed = Number(text);
+    return /^\d+$/.test(text) && Number.isSafeInteger(parsed) ? parsed : null;
   }
   function parseCompoundBedrooms(value) {
-    const match = String(value == null ? "" : value).match(/^\s*(\d+)\s*\+\s*(\d+)\s*$/);
+    if (typeof value !== "string") return null;
+    const match = value.match(/^\s*(\d+)\s*\+\s*(\d+)\s*$/);
     return match ? {primary: Number(match[1]), additional: Number(match[2]), sourceValue: String(value)} : null;
   }
   function bedroomCounts(value) {
     const listing = value && value.listing ? value.listing : (value || {});
     const compound = parseCompoundBedrooms(listing.beds);
     const primary = compound ? compound.primary : parseBedroomCount(listing.beds);
-    const additionalValue = Object.prototype.hasOwnProperty.call(listing, "bedsAdditional") ? listing.bedsAdditional : (compound ? compound.additional : 0);
-    return {primary, additional: parseBedroomCount(additionalValue)};
+    const hasAdditional = Object.prototype.hasOwnProperty.call(listing, "bedsAdditional");
+    const additionalValue = hasAdditional ? listing.bedsAdditional : (compound ? compound.additional : 0);
+    return {primary, additional: parseBedroomCount(additionalValue), conflict: Boolean(compound && hasAdditional), compoundAdditional: compound ? compound.additional : null};
   }
   function bedroomDisplay(value) {
-    const {primary, additional} = bedroomCounts(value);
+    const {primary, additional, conflict, compoundAdditional} = bedroomCounts(value);
     if (primary == null) return String((value && value.listing ? value.listing.beds : value && value.beds) || "").trim();
+    if (conflict) return `${primary} + ${compoundAdditional}`;
     return additional > 0 ? `${primary} + ${additional}` : String(primary);
   }
   function bedroomAccessibleCopy(value, mode = "english") {
-    const {primary, additional} = bedroomCounts(value); const display = bedroomDisplay(value);
-    if (primary == null || additional == null) return display;
+    const {primary, additional, conflict} = bedroomCounts(value); const display = bedroomDisplay(value);
+    if (primary == null || additional == null || conflict) return display;
     const english = `${primary} ${primary === 1 ? "bedroom" : "bedrooms"}${additional > 0 ? ` + ${additional} additional ${additional === 1 ? "room/den" : "rooms/dens"}` : ""}`;
     const chinese = `${primary} 间卧室${additional > 0 ? ` + ${additional} 个额外房间/书房` : ""}`;
     if (mode === "chinese") return chinese;
@@ -210,6 +214,9 @@
     const stale = response.stale === true || (Number.isFinite(sourceAge) && sourceAge > 24 * 60 * 60 * 1000);
     const fields = {}; const candidate = {};
     const compoundBedrooms = parseCompoundBedrooms(listing.beds);
+    if (compoundBedrooms && Object.prototype.hasOwnProperty.call(listing, "bedsAdditional")) {
+      throw mlsFailure("MLS_BEDROOM_CONFLICT", "The provider returned both compound beds and a separate additional-room count; import is blocked until the adapter supplies one unambiguous representation.");
+    }
     [...MLS_SCALAR_MAPPING, ...MLS_MODULE_MAPPING].forEach(([sourceKey, targetPath]) => {
       const compoundComponent = compoundBedrooms && (sourceKey === "beds" || sourceKey === "bedsAdditional");
       const hasValue = compoundComponent || Object.prototype.hasOwnProperty.call(listing, sourceKey);
@@ -228,8 +235,15 @@
     const previous = getPath(project, "mlsImport") || {}; const changes = [];
     Object.entries(fields).forEach(([path, field]) => {
       const prior = previous.fields && previous.fields[path];
-      if (prior && canonicalStringify(prior.originalValue) !== canonicalStringify(field.originalValue)) changes.push({path, before: prior.originalValue, after: field.originalValue});
+      const priorSource = prior && Object.prototype.hasOwnProperty.call(prior, "sourceValue") ? prior.sourceValue : prior && prior.originalValue;
+      const nextSource = Object.prototype.hasOwnProperty.call(field, "sourceValue") ? field.sourceValue : field.originalValue;
+      if (prior && canonicalStringify(priorSource) !== canonicalStringify(nextSource)) changes.push({path, before: clone(priorSource), after: clone(nextSource)});
     });
+    const additionalPath = "listing.bedsAdditional"; const previousAdditional = previous.fields && previous.fields[additionalPath];
+    if (previousAdditional && !fields[additionalPath] && previousAdditional.sourceMissing !== true) {
+      const priorSource = Object.prototype.hasOwnProperty.call(previousAdditional, "sourceValue") ? previousAdditional.sourceValue : previousAdditional.originalValue;
+      changes.push({path: additionalPath, before: clone(priorSource), after: null});
+    }
     const images = (Array.isArray(listing.images) ? listing.images : []).map((image, index) => ({
       sourceId: String(image.sourceId || `image-${index + 1}`), role: image.role || (index ? "gallery" : "hero"), order: Number(image.order == null ? index : image.order),
       caption: image.caption || "", pixelWidth: Number(image.pixelWidth || 0), pixelHeight: Number(image.pixelHeight || 0),
@@ -263,6 +277,17 @@
       }
       setPath(output, path, clone(value));
     });
+    const additionalPath = "listing.bedsAdditional"; const previousAdditional = previousFields[additionalPath];
+    if (previousAdditional && !nextFields[additionalPath]) {
+      const previousSource = Object.prototype.hasOwnProperty.call(previousAdditional, "previousOriginalValue") ? previousAdditional.previousOriginalValue
+        : (Object.prototype.hasOwnProperty.call(previousAdditional, "sourceValue") ? previousAdditional.sourceValue : previousAdditional.originalValue);
+      nextFields[additionalPath] = {
+        status: "user-overridden", originalValue: null, previousOriginalValue: clone(previousSource), currentValue: clone(getPath(output, additionalPath)),
+        providerId: plan.provider.id, board: plan.provider.board, listingNumber: plan.listingNumber,
+        retrievedAt: plan.retrievedAt, sourceUpdatedAt: plan.sourceUpdatedAt, sourceMissing: true,
+        overriddenAt: previousAdditional.overriddenAt || new Date().toISOString(),
+      };
+    }
     if (options.overwriteLocalImages === true || !(output.media.heroDataUrl || (output.media.gallery || []).length || activeFloorPlans(output).length)) {
       (plan.images || []).forEach(image => applyMlsImage(output, image));
     }
@@ -275,7 +300,19 @@
     return output;
   }
   function recordMlsOverride(project, path, value) {
-    const field = getPath(project, "mlsImport.fields") && project.mlsImport.fields[path]; if (!getPath(project, "mlsImport.active") || !field) return project;
+    if (!getPath(project, "mlsImport.active")) return project;
+    if (!isObject(project.mlsImport.fields)) project.mlsImport.fields = {};
+    let field = project.mlsImport.fields[path];
+    if (!field && path === "listing.bedsAdditional") {
+      field = {
+        status: "user-overridden", originalValue: null, currentValue: clone(value),
+        providerId: getPath(project, "mlsImport.provider.id") || "", board: getPath(project, "mlsImport.provider.board") || "",
+        listingNumber: getPath(project, "mlsImport.listingNumber") || "", retrievedAt: getPath(project, "mlsImport.retrievedAt") || "",
+        sourceUpdatedAt: getPath(project, "mlsImport.sourceUpdatedAt") || "", sourceMissing: true,
+      };
+      project.mlsImport.fields[path] = field;
+    }
+    if (!field) return project;
     field.currentValue = clone(value); field.status = canonicalStringify(value) === canonicalStringify(field.originalValue) ? (project.mlsImport.stale ? "stale" : "imported") : "user-overridden";
     if (field.status === "user-overridden") field.overriddenAt = new Date().toISOString(); else delete field.overriddenAt;
     project.mlsImport.reviewConfirmed = false; project.mlsImport.reviewedAt = "";
@@ -309,8 +346,11 @@
   }
   function allPropertyFacts(project) {
     return moduleItems(project, "propertyFacts").map((fact, order) => {
-      const value = fact.id === "beds" || fact.source === "listing.beds" ? bedroomDisplay(project) : (fact.source ? getPath(project, fact.source) : fact.value);
-      return {...clone(fact), value: value == null ? "" : String(value), order};
+      const isBedroom = fact.id === "beds" || fact.source === "listing.beds";
+      const value = isBedroom ? bedroomDisplay(project) : (fact.source ? getPath(project, fact.source) : fact.value);
+      const bedroomValues = bedroomCounts(project); const safeLabels = isBedroom && !bedroomValues.conflict && bedroomValues.additional > 0
+        ? {labelEn: "Beds + room/den", labelZh: "卧室 + 额外房间/书房"} : {};
+      return {...clone(fact), ...safeLabels, value: value == null ? "" : String(value), order};
     });
   }
   function resolvedPropertyFacts(project, preset = "poster") {
@@ -500,8 +540,11 @@
       errors.push("Invalid contact.phone: use 10-15 digits with normal phone punctuation");
     }
     const bedroomValues = bedroomCounts(project);
-    if (bedroomValues.primary == null || bedroomValues.primary < 0 || bedroomValues.primary > 20) errors.push("listing.beds must be a whole number from 0 to 20");
-    if (bedroomValues.additional == null || bedroomValues.additional < 0 || bedroomValues.additional > 10) errors.push("listing.bedsAdditional must be a whole number from 0 to 10");
+    if (bedroomValues.conflict) errors.push("listing.beds cannot use main + additional notation when listing.bedsAdditional is provided; use the two separate whole-number fields");
+    else {
+      if (bedroomValues.primary == null || bedroomValues.primary < 0 || bedroomValues.primary > 20) errors.push("listing.beds must be a whole number from 0 to 20");
+      if (bedroomValues.additional == null || bedroomValues.additional < 0 || bedroomValues.additional > 10) errors.push("listing.bedsAdditional must be a whole number from 0 to 10");
+    }
     const baths = Number(getPath(project, "listing.baths"));
     if (!Number.isFinite(baths) || baths <= 0) errors.push("listing.baths must be a positive number");
     const sqft = String(getPath(project, "listing.sqft") || "").trim();
@@ -835,12 +878,13 @@
   }
 
   function toListingData(project) {
+    const bedrooms = bedroomCounts(project);
     return {
       listing: {
         status: project.listing.status, demo: false, address: project.listing.address, unit: project.listing.unit,
         city: project.listing.city, postal_code: project.listing.postalCode, tagline: project.listing.headlineEn,
         rent: project.listing.price, rent_period: project.listing.rentPeriod, mls: project.listing.mls,
-        beds: Number(project.listing.beds), beds_additional: Number(project.listing.bedsAdditional || 0), baths: Number(project.listing.baths), sqft: project.listing.sqft,
+        beds: bedrooms.primary, beds_additional: bedrooms.additional, baths: Number(project.listing.baths), sqft: project.listing.sqft,
         floor: project.listing.floor, exposure: project.listing.exposure, balcony: project.listing.balcony, parking: project.listing.parking,
         availability: project.listing.availability, open_house: project.listing.openHouse || "",
         description_en: project.listing.descriptionEn || "", description_zh: project.listing.descriptionZh || "",
@@ -873,12 +917,13 @@
     if (raw && raw.schemaVersion) return normalizeProject(raw, defaults);
     const project = clone(defaults); const listing = raw.listing || {}; const photos = raw.photos || {}; const content = raw.content || {};
     const importedCompoundBedrooms = parseCompoundBedrooms(listing.beds);
+    const importedHasAdditionalBedrooms = Object.prototype.hasOwnProperty.call(listing, "beds_additional");
     Object.assign(project.listing, {
       status: listing.status || project.listing.status, address: listing.address || "", unit: listing.unit || "",
       city: listing.city || "", postalCode: listing.postal_code || "", headlineEn: listing.tagline || "",
       headlineZh: getPath(content, "translations.headline_zh") || "", price: listing.rent || listing.price || "",
-      rentPeriod: listing.rent_period || "", mls: listing.mls || "", beds: importedCompoundBedrooms ? String(importedCompoundBedrooms.primary) : (listing.beds == null ? "" : String(listing.beds)),
-      bedsAdditional: importedCompoundBedrooms ? String(importedCompoundBedrooms.additional) : String(listing.beds_additional == null ? 0 : listing.beds_additional), baths: listing.baths || "",
+      rentPeriod: listing.rent_period || "", mls: listing.mls || "", beds: importedCompoundBedrooms && !importedHasAdditionalBedrooms ? String(importedCompoundBedrooms.primary) : (listing.beds == null ? "" : String(listing.beds)),
+      bedsAdditional: importedCompoundBedrooms && !importedHasAdditionalBedrooms ? String(importedCompoundBedrooms.additional) : String(listing.beds_additional == null ? 0 : listing.beds_additional), baths: listing.baths || "",
       sqft: listing.sqft || "", floor: listing.floor || "", exposure: listing.exposure || "", balcony: listing.balcony || "", parking: listing.parking || "",
       availability: listing.availability || "", openHouse: listing.open_house || "",
       descriptionEn: listing.description_en || "", descriptionZh: listing.description_zh || "",
@@ -948,6 +993,13 @@
       if (!Array.isArray(migrated.mlsImport.images)) migrated.mlsImport.images = [];
       if (!Array.isArray(migrated.mlsImport.missing)) migrated.mlsImport.missing = [];
       if (!Array.isArray(migrated.mlsImport.blocked)) migrated.mlsImport.blocked = [];
+      if (migrated.mlsImport.active) {
+        ["listing.beds", "listing.bedsAdditional"].forEach(path => {
+          const currentValue = getPath(migrated, path); const field = migrated.mlsImport.fields[path];
+          if (field && canonicalStringify(currentValue) !== canonicalStringify(field.currentValue)) recordMlsOverride(migrated, path, currentValue);
+          else if (!field && path === "listing.bedsAdditional" && String(currentValue == null ? "" : currentValue).trim() !== "0") recordMlsOverride(migrated, path, currentValue);
+        });
+      }
     }
     return migrated;
   }
@@ -1064,7 +1116,12 @@
         },
       },
       modules: {
-        bedrooms: {primary: bedroomCounts(project).primary, additional: bedroomCounts(project).additional, display: bedroomDisplay(project)},
+        bedrooms: {
+          primary: bedroomCounts(project).primary, additional: bedroomCounts(project).additional, display: bedroomDisplay(project),
+          accessible: {
+            english: bedroomAccessibleCopy(project, "english"), chinese: bedroomAccessibleCopy(project, "chinese"), bilingual: bedroomAccessibleCopy(project, "bilingual"),
+          },
+        },
         propertyFacts: allPropertyFacts(project).map(({id, icon, source, value, labelEn, labelZh, visible, priority, order}) => ({id, icon, source, value, labelEn, labelZh, visible: visible !== false, priority, order})),
         floorPlans: activeFloorPlans(project).map(({role, name, fit, focal, captionEn, captionZh, noteEn, noteZh, pixelWidth, pixelHeight}) => ({role, name, fit, focal, captionEn, captionZh, noteEn, noteZh, pixelWidth, pixelHeight})),
         spotlights: activeSpotlights(project).map(({id, name, mask, focal, titleEn, titleZh, detailEn, detailZh}) => ({id, name, mask, focal, titleEn, titleZh, detailEn, detailZh})),

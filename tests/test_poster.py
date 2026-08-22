@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from copy import deepcopy
@@ -9,11 +10,11 @@ import yaml
 from PIL import Image, ImageChops
 
 from realtor_poster.batch import discover_listing_files, export_batch
-from realtor_poster.bedrooms import bedroom_display
+from realtor_poster.bedrooms import bedroom_accessible_copy, bedroom_display
 from realtor_poster.cli import main as cli_main
 from realtor_poster.config import ConfigError, load_config, validate_config
 from realtor_poster.preview import create_focal_preview
-from realtor_poster.renderer import render_poster
+from realtor_poster.renderer import export_poster, render_poster
 from realtor_poster.social import SOCIAL_PRESETS, render_social
 from realtor_poster.visual_regression import compare_images
 from realtor_poster import __version__
@@ -65,20 +66,63 @@ class PosterTests(unittest.TestCase):
         data = load_config(ROOT / "examples" / "sample_listing.yaml")
         self.assertEqual(data["listing"]["beds_additional"], 0)
         self.assertEqual(bedroom_display(data["listing"]), "2")
-        data["listing"]["beds"] = 2
-        data["listing"]["beds_additional"] = 1
-        validate_config(data)
-        self.assertEqual(bedroom_display(data["listing"]), "2 + 1")
-        invalid = deepcopy(data); invalid["listing"]["beds_additional"] = 1.5
+        for primary, additional, expected in ((1, 0, "1"), (1, 1, "1 + 1"), (2, 0, "2"), (2, 1, "2 + 1"), (3, 0, "3"), (3, 1, "3 + 1"), (0, 0, "0"), (20, 10, "20 + 10")):
+            with self.subTest(primary=primary, additional=additional):
+                candidate = deepcopy(data); candidate["listing"]["beds"] = primary; candidate["listing"]["beds_additional"] = additional
+                validate_config(candidate)
+                self.assertEqual(bedroom_display(candidate["listing"]), expected)
+        compound = deepcopy(data); compound["listing"]["beds"] = 2; compound["listing"]["beds_additional"] = 1
+        self.assertEqual(bedroom_accessible_copy(compound["listing"]), "2 bedrooms + 1 additional room/den")
+        self.assertEqual(bedroom_accessible_copy(compound["listing"], "chinese"), "2 间卧室 + 1 个额外房间/书房")
+        for field, value, message in (
+            ("beds", -1, "listing.beds must be a whole number"),
+            ("beds", 1.5, "listing.beds must be a whole number"),
+            ("beds", 21, "listing.beds must be a whole number"),
+            ("beds", True, "listing.beds must be a whole number"),
+            ("beds", [2], "listing.beds must be a whole number"),
+            ("beds", {"value": 2}, "listing.beds must be a whole number"),
+            ("beds", "9" * 100, "listing.beds must be a whole number"),
+            ("beds_additional", -1, "listing.beds_additional must be a whole number"),
+            ("beds_additional", 1.5, "listing.beds_additional must be a whole number"),
+            ("beds_additional", 11, "listing.beds_additional must be a whole number"),
+            ("beds_additional", False, "listing.beds_additional must be a whole number"),
+            ("beds_additional", [1], "listing.beds_additional must be a whole number"),
+        ):
+            with self.subTest(field=field, value=value):
+                invalid = deepcopy(data); invalid["listing"][field] = value
+                with self.assertRaises(ConfigError) as caught:
+                    validate_config(invalid)
+                self.assertIn(message, str(caught.exception))
+        mixed = deepcopy(data); mixed["listing"]["beds"] = "2 + 1"; mixed["listing"]["beds_additional"] = 0
         with self.assertRaises(ConfigError) as caught:
-            validate_config(invalid)
-        self.assertIn("listing.beds_additional must be a whole number", str(caught.exception))
+            validate_config(mixed)
+        self.assertIn("use the two separate whole-number fields", str(caught.exception))
+
+    def test_bedroom_plus_den_renders_all_formats_and_manifest(self) -> None:
+        if self.skip_reason:
+            self.skipTest(self.skip_reason)
+        data = load_config(ROOT / "examples" / "sample_listing.yaml")
+        data["listing"]["beds"] = 20
+        data["listing"]["beds_additional"] = 10
+        with tempfile.TemporaryDirectory() as folder:
+            outputs = export_poster(data, Path(folder) / "poster.png", social_presets=tuple(SOCIAL_PRESETS))
+            with Image.open(outputs["png"]) as rendered:
+                self.assertEqual(rendered.size, (1800, 2400))
+            for preset, expected_size in SOCIAL_PRESETS.items():
+                with Image.open(outputs[f"social_{preset}"]) as rendered:
+                    self.assertEqual(rendered.size, expected_size)
+            manifest = json.loads(outputs["manifest"].read_text(encoding="utf-8"))
+        self.assertEqual(manifest["bedrooms"]["primary"], 20)
+        self.assertEqual(manifest["bedrooms"]["additional"], 10)
+        self.assertEqual(manifest["bedrooms"]["display"], "20 + 10")
+        self.assertIn("additional rooms/dens", manifest["bedrooms"]["accessible"]["english"])
 
     def test_compound_bedroom_input_migrates_without_inference(self) -> None:
         if self.skip_reason:
             self.skipTest(self.skip_reason)
         raw = yaml.safe_load((ROOT / "examples" / "sample_listing.yaml").read_text(encoding="utf-8"))
         raw["listing"]["beds"] = "1 + 1"
+        raw["listing"].pop("beds_additional", None)
         asset_dir = ROOT / "examples" / "assets"
         raw["photos"]["hero"] = str(asset_dir / "sample_exterior.png")
         raw["photos"]["gallery"] = [str(asset_dir / "sample_living_room.png"), str(asset_dir / "sample_kitchen.png")]

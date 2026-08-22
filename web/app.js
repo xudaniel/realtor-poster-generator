@@ -706,9 +706,10 @@
   function renderFactsEditor() {
     const container = document.getElementById("facts-editor"); const facts = state.modules.propertyFacts;
     container.innerHTML = facts.length ? facts.map((fact, index) => {
-      const value = fact.id === "beds" || fact.source === "listing.beds" ? Core.bedroomDisplay(state) : (fact.source ? Core.getPath(state, fact.source) : fact.value);
+      const displayFact = Core.allPropertyFacts(state)[index] || fact;
+      const value = displayFact.value;
       return `<div class="module-card">
-        <div class="module-card-header"><strong>${escapeHtml(fact.labelEn || `Fact ${index + 1}`)}</strong>${moduleActions("propertyFacts", index, facts.length)}</div>
+        <div class="module-card-header"><strong>${escapeHtml(displayFact.labelEn || `Fact ${index + 1}`)}</strong>${moduleActions("propertyFacts", index, facts.length)}</div>
         <div class="module-card-grid">
           <label>English label<input data-collection="propertyFacts" data-index="${index}" data-field="labelEn" value="${escapeHtml(fact.labelEn || "")}"></label>
           <label>中文标签<input lang="zh-Hans" data-collection="propertyFacts" data-index="${index}" data-field="labelZh" value="${escapeHtml(fact.labelZh || "")}"></label>
@@ -1211,7 +1212,8 @@
     if (!exportGuard()) return; const popup = window.open("", "poster-print", "width=900,height=1000");
     if (!popup) { setStatus("Allow pop-ups to print or save the poster as PDF."); return; }
     await prepareAction("before-pdf-export");
-    const data = canvas.toDataURL("image/png"); popup.document.write(`<!doctype html><title>${escapeHtml(slug())}</title><style>@page{margin:0}body{margin:0;display:grid;place-items:center;background:white}img{display:block;max-width:100%;max-height:100vh;object-fit:contain}</style><img src="${data}" alt="Poster">`);
+    const data = canvas.toDataURL("image/png"); const description = document.getElementById("artwork-description").textContent;
+    popup.document.write(`<!doctype html><title>${escapeHtml(slug())}</title><style>@page{margin:0}body{margin:0;display:grid;place-items:center;background:white}img{display:block;max-width:100%;max-height:100vh;object-fit:contain}</style><img src="${data}" alt="${escapeHtml(description)}">`);
     popup.document.close(); popup.focus(); popup.onload = () => popup.print(); setStatus("Print dialog opened — choose Save as PDF.");
   });
 
@@ -1229,7 +1231,8 @@
     downloadBlob(new Blob([`${JSON.stringify(manifest, null, 2)}\n`], {type: "application/json"}), `${slug()}.manifest.json`); setStatus("Provenance manifest downloaded.");
   });
   function proofHtml(files, changes) {
-    const imagesHtml = files.filter(file => file.name.endsWith(".png")).map(file => `<figure><img src="${escapeHtml(file.name)}" alt="${escapeHtml(file.name)}"><figcaption>${escapeHtml(file.name)}</figcaption></figure>`).join("");
+    const artworkAlt = `${state.listing.address}. ${Core.bedroomAccessibleCopy(state, "bilingual")}.`;
+    const imagesHtml = files.filter(file => file.name.endsWith(".png")).map(file => `<figure><img src="${escapeHtml(file.name)}" alt="${escapeHtml(`${file.name}. ${artworkAlt}`)}"><figcaption>${escapeHtml(file.name)}</figcaption></figure>`).join("");
     const changesHtml = changes.length ? `<ul>${changes.map(change => `<li>${escapeHtml(change.path)}</li>`).join("")}</ul>` : "<p>No baseline changes recorded.</p>";
     const factsHtml = Core.resolvedPropertyFacts(state, "poster").map(fact => `<li>${escapeHtml(fact.labelEn)} / ${escapeHtml(fact.labelZh)}: ${escapeHtml(fact.id === "beds" || fact.source === "listing.beds" ? Core.bedroomAccessibleCopy(state, "bilingual") : fact.value)}</li>`).join("");
     const plansHtml = Core.activeFloorPlans(state).map(plan => `<li>${escapeHtml(plan.captionEn || plan.name)} / ${escapeHtml(plan.captionZh || "")} · ${escapeHtml(plan.pixelWidth || "unknown")} × ${escapeHtml(plan.pixelHeight || "unknown")} px</li>`).join("");

@@ -1,12 +1,12 @@
 # Realtor Poster Generator Product Requirements Document
 
-[中文产品需求文档](PRD.md) · [English README](README.en.md) · [中文 README](README.md)
+[中文产品需求文档](PRD.md) · [v1.4.3 release notes](RELEASE_NOTES_v1.4.3.md) · [English README](README.en.md) · [中文 README](README.md)
 
 ## 1. Document information
 
 - Product: Realtor Poster Generator
-- Current stable version: 1.4.2
-- Current release scope: Stories 1–10, cross-cutting recovery issue #20, authorized MLS import issue #22, and actionable export-preflight issue #25
+- Current stable version: 1.4.3
+- Current release scope: Stories 1–10, cross-cutting recovery issue #20, authorized MLS import issue #22, actionable export-preflight issue #25, and structured **Beds + room/den** issue #27
 - Language: English
 - Product forms: browser-local visual editor, local Python command-line tools, a loopback-only authorized MLS connector, and a self-contained offline HTML preview
 - Primary outputs: full-poster PNG/PDF, social-media PNG/ZIP, portable project JSON/YAML, template and compliance profiles, approval ZIP, provenance manifest JSON, batch summary JSON, and focal-preview HTML
@@ -22,7 +22,7 @@ Real-estate agents creating rental or sale artwork repeatedly assemble addresses
 - Artwork made by different team members may not follow one brand system.
 - Output packages may lack traceable input and asset checksums.
 
-The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; v1.4.0 adds the full ten-story reference-informed module set; cross-cutting issue #20 makes the generate-review-correct loop recoverable; v1.4.1 issue #22 deterministically creates an editable poster from an authorized record without giving provider secrets to the static page; and v1.4.2 issue #25 turns export blockers into plain-language tasks that lead directly to the relevant controls.
+The product transforms structured listing data into a professional vertical poster and responsive social artwork through validation, deterministic text rendering, automatic layout, and configurable branding. Version 1.3 expands the browser flow into a complete local campaign workspace; v1.4.0 adds the full ten-story reference-informed module set; cross-cutting issue #20 makes the generate-review-correct loop recoverable; v1.4.1 issue #22 deterministically creates an editable poster from an authorized record without giving provider secrets to the static page; v1.4.2 issue #25 turns export blockers into plain-language tasks that lead directly to the relevant controls; and v1.4.3 issue #27 separates main bedrooms from additional rooms/dens as editable, traceable data that is never misleadingly summed.
 
 ## 3. Product goals
 
@@ -42,6 +42,7 @@ The product transforms structured listing data into a professional vertical post
 12. Provide equivalent English and Chinese user and product documentation.
 13. Gate browser exports with configurable compliance preflight and preserve a traceable local review record.
 14. Make brand templates and bilingual content portable, reusable, and selectively lockable.
+15. Enter, store, and review main-bedroom and additional-room/den counts separately, never summing or inferring them as a legal-bedroom total.
 
 ### 3.2 Non-goals
 
@@ -51,6 +52,7 @@ The product transforms structured listing data into a professional vertical post
 - Generating or altering real listing photographs
 - Replacing a professional designer for highly customized campaigns
 - Providing multi-user cloud collaboration or account management
+- Reclassifying a den, office, alcove, or flex space as a legal bedroom, or inferring an additional room from descriptions, photographs, or floor plans
 
 ## 4. Users
 
@@ -105,6 +107,10 @@ An agent generates or exports a poster, notices an error, returns to the editor,
 
 An agent starts the connector locally, connects one approved official or contractual provider endpoint, and enters one exact listing number. The system imports only one provider/board/number/status/address/unit identity, shows completeness and image-rights summaries, preserves saved brand and agent data, allows every field to be corrected, and requires explicit human review before export.
 
+### Use case J: represent bedrooms and an additional room/den accurately
+
+The agent enters main bedrooms and additional rooms/dens separately. The editor immediately displays `1`, `1 + 1`, `2`, or `2 + 1`, preserves both counts across all five formats, portable projects, and approval records, and never turns `2 + 1` into `3 bedrooms`.
+
 ## 6. User flow
 
 1. Install Python dependencies or open the browser editor.
@@ -132,7 +138,7 @@ The system must support YAML and JSON with these field groups:
 |---|---|
 | Listing identity | Status, address, unit, city, postal code, headline |
 | Price | Rent or sale price, billing period, MLS® number |
-| Property facts | Bedrooms, bathrooms, area, floor, exposure, parking, availability |
+| Property facts | Main bedrooms, additional room/den, bathrooms, area, floor, exposure, parking, availability |
 | Details | Lease terms, features, amenities, utilities, neighbourhood highlights |
 | Agent | Name, title, telephone, email |
 | Brand | Company or team name, tagline, website, logo |
@@ -147,7 +153,7 @@ The system must:
 - Check every required field.
 - Validate a basic email-address format.
 - Require 10 to 15 digits in telephone numbers.
-- Validate positive bedroom, bathroom, and area values.
+- Validate main bedrooms as a whole number from `0–20`, additional rooms/dens as a whole number from `0–10`, and bathrooms and area as valid positive values.
 - Support area ranges such as `600-699`.
 - Validate six-digit hexadecimal theme colours.
 - Verify photograph, floor-plan, logo, and custom-font files.
@@ -298,6 +304,11 @@ The system must:
 - Preserve up to twelve bilingual amenity items with reusable local icons and up to ten bilingual application requirements.
 - Require explicit confirmation and a visible informational disclaimer before exporting artwork with active application requirements.
 - Support photo, illustrated, initials, and no-portrait agent-profile modes with portrait focal controls, bilingual taglines, bilingual calls to action, and contact details.
+- Provide separately labelled whole-number controls for main bedrooms and additional rooms/dens and immediately derive the canonical `main + additional` expression; omit `+ 0` when the additional count is zero.
+- Use the safe property-fact label **“Beds + room/den”** for compound values and bilingual accessible descriptions that never call the additional space a bedroom.
+- Preserve both counts separately in schema 6, JSON/YAML, IndexedDB, comparisons, manifests, and approval packages; legacy single-value projects must migrate without changing their display.
+- Map an authorized MLS additional count only when the provider explicitly supplies a separate or compound value, retain the original value in provenance, and never infer it from remarks, descriptions, photographs, or floor plans.
+- Record a local override, invalidate the previous MLS human review, and require review again whenever either imported count changes.
 - Render one original modular print hierarchy and priority-aware social summaries without copying the supplied reference artwork.
 - Autosave the complete schema-driven project, including local images, to IndexedDB after a short debounce and immediately before export, reset, or project replacement.
 - Offer the newest compatible draft with its project name and save time when the editor is reopened; restore its controls, local media, and scroll position only after the user chooses recovery.
@@ -360,7 +371,7 @@ The system must provide:
 
 ## 9. Acceptance criteria
 
-The v1.4.2 release is acceptable when:
+The v1.4.3 release is acceptable when:
 
 1. The sample YAML validates.
 2. It produces an 1800 × 2400 RGB PNG.
@@ -372,7 +383,7 @@ The v1.4.2 release is acceptable when:
 8. Invalid email addresses and telephone numbers are rejected.
 9. Missing images are reported before rendering.
 10. The `600-699` area range validates and displays.
-11. All twelve automated tests pass.
+11. All current Python and browser automated test suites pass.
 12. Both README documents provide complete commands from installation to output.
 13. Folder input generates multiple listings and a batch summary in one operation.
 14. An invalid batch does not leave partial generated results.
@@ -381,7 +392,7 @@ The v1.4.2 release is acceptable when:
 17. Focal-preview HTML references no external images or scripts.
 18. Repeated rendering of the same input is pixel-identical in one environment.
 19. Visual regression passes identical images and rejects meaningful changes.
-20. The manifest records version 1.4.2 and social-output SHA-256 hashes.
+20. The manifest records version 1.4.3 and social-output SHA-256 hashes.
 21. The browser editor has no upload or analytics code and processes data only in the current tab.
 22. The browser editor previews and exports the full poster and four social sizes.
 23. Project JSON preserves and reopens form, theme, focal, and selected images.
@@ -391,7 +402,7 @@ The v1.4.2 release is acceptable when:
 27. Versioned brand templates carry colours, typography, dual logos, and a default layout; they support duplication, renaming, and selected-field locks while unlocked project overrides remain editable.
 28. English, Chinese, and bilingual content each render in all five formats with suitable CJK font fallback and independently measured and wrapped bilingual headlines and features.
 29. Approved status requires a reviewer and date; the approval package contains five proofs, source data, the review record, manifest, and SHA-256 catalog.
-30. The property-facts ribbon supports bedrooms, bathrooms, area, floor, exposure, balcony, parking, and custom items; print shows up to eight, social formats show four priority facts, and hidden facts leave no gaps.
+30. The property-facts ribbon supports separate main-bedroom and additional-room/den values under the safe **“Beds + room/den”** label, plus bathrooms, area, floor, exposure, balcony, parking, and custom items; print shows up to eight, social formats show four priority facts, and hidden facts leave no gaps.
 31. Furnished 3D and technical 2D plans can be added, replaced, removed, reordered, contained, fit to width, or cropped independently; low resolution produces a warning and the manifest records source pixels and SHA-256 hashes.
 32. Up to three spotlights preserve a local image, separate English/Chinese title and detail, circle/rounded-square/rectangle mask, and focal point; empty items consume no poster space.
 33. Lease details render up to nine rows selected from term, availability, deposit, payment, insurance, keys, pets, smoking, parking, and custom entries, with reorder, hidden, and not-applicable states; sale campaigns collapse the module.
@@ -410,9 +421,9 @@ The v1.4.2 release is acceptable when:
 46. The connector binds only to `127.0.0.1`; its upstream target is fixed at startup and must use HTTPS, so the page cannot select arbitrary remote targets.
 47. Provider authorization comes only from an environment variable and never appears in page responses, browser projects, manifests, logs, fixtures, or the repository.
 48. Withdrawn, expired, suspended, unauthorized, authorization-expired, rate-limited, and provider-outage cases show bilingual errors and leave the current project unchanged.
-49. Status, address, unit, city, postal code, price, period, MLS number, beds, baths, area, floor, exposure, balcony, parking, availability, open house, property facts, amenities, lease details, descriptions, and images use a fixed mapping; missing content is never guessed, translated, summarized, or rewritten.
+49. Status, address, unit, city, postal code, price, period, MLS number, main bedrooms, additional room/den, baths, area, floor, exposure, balcony, parking, availability, open house, property facts, amenities, lease details, descriptions, and images use a fixed mapping; missing content is never guessed, translated, summarized, or rewritten.
 50. Saved agent, brokerage, licence, brand, language, template, and compliance values are user-owned and are not replaced by provider records.
-51. Browser project schema 5 stores provider, board, MLS number, retrieval time, original value, current value, and user-override state per imported field without storing authorization.
+51. Browser project schema 6 stores provider, board, MLS number, retrieval time, original value, current value, and user-override state per imported field without storing authorization.
 52. A same-listing refresh shows a diff and asks again before replacing user edits or local images.
 53. Images retain source ID, order, caption, pixel dimensions, and rights status. Without explicit reuse permission, an image blocks export until the user confirms rights or selects a local replacement.
 54. Authorized imports can export only after listing status, required fields, disclosures, image rights, and explicit human review pass. This gate is not legal, regulatory, MLS®, board, brokerage, or copyright approval.
@@ -422,6 +433,16 @@ The v1.4.2 release is acceptable when:
 58. Imported-field overrides appear as **Changed since import**, list every changed field, and link to the first changed field without exposing internal validation phrases.
 59. Adding or resolving an issue updates blocker/warning counts and correct singular/plural copy without a reload; state changes use a live region and action buttons have visible keyboard focus.
 60. The actionable preflight reflows without clipped copy or controls on mobile and at 200% zoom, while the legal/compliance disclaimer remains visible outside the fixable status cards.
+61. The editor provides clearly labelled, independent controls for main bedrooms and additional rooms/dens and updates the preview immediately when either value changes.
+62. Main bedrooms accept only whole numbers from `0–20`, and additional rooms/dens accept only whole numbers from `0–10`; decimals, negatives, and out-of-range values produce plain-language errors whose preflight actions focus the relevant control.
+63. A zero additional count displays only the main count; a positive count uses the canonical `2 + 1` expression and safe **“Beds + room/den”** label, with no summing or representation of the additional space as a legal bedroom.
+64. English, Chinese, and bilingual accessible descriptions state both counts accurately, such as `2 bedrooms + 1 additional room/den` and `2 间卧室 + 1 个额外房间/书房`.
+65. Print, square, portrait, story, and landscape output preserve the same expression without clipping, overlap, or changed numbers.
+66. JSON/YAML, IndexedDB recovery, comparison, manifests, and approval packages preserve both counts separately. A schema-5 or older single value migrates with `0` additional rooms, while an explicit compound value splits without changing its display.
+67. Authorized MLS import sets the additional field only from an explicitly supplied separate or compound provider value. Provenance retains that original value, and missing data is never inferred from descriptions, remarks, photographs, or floor plans.
+68. Editing either imported count records a local override, invalidates the prior human review, and blocks export until review is completed again.
+69. Both controls, the immediate preview, and direct preflight actions remain usable on mobile and at 200% zoom.
+70. Automated tests cover single values, `1 + 1`, `2 + 1`, zero additional rooms, invalid decimals/negatives/bounds, migration, round trips, five-format layouts, explicit MLS provenance, no inference, and review invalidation.
 
 ## 10. Risks and mitigations
 
@@ -440,6 +461,7 @@ The v1.4.2 release is acceptable when:
 | Newer work overwritten by another browser tab | Per-project identifiers, BroadcastChannel conflict detection, and paused autosave until user resolution |
 | Browser storage unavailable or full | Explicit bilingual warning and manual portable-project backup; never claim that a failed save succeeded |
 | Users cannot tell how to clear a technical export error | Separate blockers from warnings and provide plain-language, focusable direct actions |
+| `2 + 1` is misrepresented as three legal bedrooms | Store main and additional counts separately, use a safe label, prohibit summing/inference, and require provenance plus human review |
 | English and Chinese documentation drifting | Same-release version updates, direct links, and scope checks |
 
 ## 11. Roadmap
@@ -489,6 +511,13 @@ The v1.4.2 release is acceptable when:
 - Direct keyboard-focusable actions to MLS review, changed fields, application requirements, and other validated controls
 - Accessible live updates, non-colour status symbols, mobile reflow, and 200% zoom support without changing compliance rules or schema 5
 
+### Completed in 1.4.3 (Issue #27)
+
+- Independent `0–20` main-bedroom and `0–10` additional-room/den controls with the safe **“Beds + room/den”** label
+- Deterministic `2 + 1` display and bilingual accessible descriptions without summing or reclassifying a room/den as a legal bedroom
+- Schema 6, legacy migration, and two-field round trips through JSON/YAML, recovery, comparison, manifests, and approval packages
+- Consistent five-format output plus explicit-only MLS mapping, original-value provenance, and review invalidation after either count changes
+
 ### 2.0 candidates
 
 - Optional desktop application
@@ -502,6 +531,7 @@ The v1.4.2 release is acceptable when:
 - Do not publish sample data as a real advertisement.
 - Do not store account passwords or access tokens.
 - Do not place unnecessary personal data in manifests.
+- Do not sum, guess, or reclassify main-bedroom and additional-room/den counts; verify both source values before publication.
 - Require review of every final advertisement by the responsible agent or brokerage.
 
 Copyright © 2026 **Daniel Xu**. This document and project are released under the [MIT License](LICENSE).
